@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MARK: - Title -->
+    <!-- Application title -->
+    <string name="app_name">My Transit Makers</string>
+    <string name="myTransitMakers">My Transit Makers</string>
+
+    <!-- MARK: - Main Content View -->
+    <!-- Main screen buttons and labels -->
+    <string name="back">Back</string>
+    <string name="go">Go</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="loadingData">Loading data…</string>
+    <string name="loadingLines">Loading lines…</string>
+    <string name="loadingStations">Loading stations…</string>
+    <string name="loadingBusStops">Loading bus stops…</string>
+    <string name="generatingTimetable">Generating timetable…</string>
+    <string name="routeDestinationPrefix"> for </string>
+    <string name="routeDestinationSuffix"></string>
+
+    <!-- MARK: - Route Data -->
+    <!-- Default locations and station labels -->
+    <string name="office">Office</string>
+    <string name="home">Home</string>
+    <string name="depSt">Dep. St.</string>
+    <string name="arrSt">Arr. St.</string>
+    <string name="departurePlace">Departure place</string>
+    <string name="from">From</string>
+    <string name="to">To</string>
+    <string name="destination">Destination</string>
+    <string name="line">Line </string>
+    <string name="lineLower">line </string>
+    <string name="ofDepartureStation">of departure station </string>
+    <string name="ofArrivalStation">of arrival station </string>
+    <string name="of">of </string>
+    <string name="fromLower">from </string>
+    <string name="fromCapital">From </string>
+    <string name="toSpace"> to </string>
+    <string name="toCapital">To </string>
+    <string name="he"></string>
+    <string name="on">on </string>
+    <string name="min"> min</string>
+    <string name="minBrackets"> [min]</string>
+    <string name="notSet">Not set</string>
+    <string name="returnRoute1">Return Route 1</string>
+    <string name="returnRoute2">Return Route 2</string>
+    <string name="outboundRoute1">Outbound Route 1</string>
+    <string name="outboundRoute2">Outbound Route 2</string>
+
+    <!-- MARK: - Settings Content View -->
+    <!-- Settings screen labels and options -->
+    <string name="settings">Settings</string>
+    <string name="backToHomepage">Back</string>
+    <string name="settingReturnRoute1">Setting Return Route 1</string>
+    <string name="settingReturnRoute2">Setting Return Route 2</string>
+    <string name="settingOutboundRoute1">Setting Outbound Route 1</string>
+    <string name="settingOutboundRoute2">Setting Outbound Route 2</string>
+    <string name="manageYourDataAfterLogin">Manage your data after login</string>
+    <string name="variousSettings">Various settings</string>
+    <string name="account">Account</string>
+    <string name="about">About</string>
+    <string name="version">Version</string>
+    <string name="termsAndPrivacyPolicy">Terms and privacy policy</string>
+    <string name="termsUrl">https://nakajimamasao-appstudio.web.app/terms</string>
+    <string name="contact">Contact</string>
+    <string name="contactUrl">https://nakajimamasao-appstudio.web.app/contact/</string>
+    <string name="settingYourTimetable">Setting your timetable</string>
+
+    <!-- MARK: - Settings Transfer Sheet -->
+    <!-- Home and destination transportation settings -->
+    <string name="homeDestinationSettings">Home &amp; Destination Settings</string>
+    <string name="homeDestination">Home &amp; Destination</string>
+    <string name="enterDeparturePoint">Enter departure point</string>
+    <string name="enterDestination">Enter destination</string>
+    <string name="settingDeparturePoint">Setting departure point</string>
+    <string name="settingDestination">Setting destination</string>
+    <string name="route1">Route 1</string>
+    <string name="route2">Route 2</string>
+
+    <!-- MARK: - Data Management -->
+    <!-- Firestore data get and save operations -->
+    <string name="getSavedData">Get saved data</string>
+    <string name="getDataError">Get data error</string>
+    <string name="overwrittenCurrentData">Overwritten current data?</string>
+    <string name="dataGotSuccessfully">Data got successfully</string>
+    <string name="dataCouldNotBeGot">Data could not be got</string>
+    <string name="saveCurrentData">Save current data</string>
+    <string name="saveDataError">Save data error</string>
+    <string name="overwrittenSavedData">Overwritten saved data?</string>
+    <string name="dataSavedSuccessfully">Data saved successfully</string>
+    <string name="dataCouldNotBeSaved">Data could not be saved</string>
+
+    <!-- MARK: - Authentication -->
+    <!-- Login, logout and account management -->
+    <string name="logout">Logout</string>
+    <string name="logoutYourAccount">Logout your account?</string>
+    <string name="logoutError">Logout error</string>
+    <string name="loggedOutSuccessfully">Logged out successfully</string>
+    <string name="deleteAccount">Delete Account</string>
+    <string name="deleteYourAccount">Delete your account?</string>
+    <string name="deleteAccountError">Delete account error</string>
+    <string name="deleteAccountSuccessfully">Delete account successfully</string>
+    <string name="accountDeletedSuccessfully">Account deleted successfully</string>
+    <string name="accountCouldNotBeDeleted">Account could not be deleted</string>
+
+    <!-- MARK: - Timetable Content View -->
+    <!-- Timetable editing and calendar type selection -->
+    <string name="arrow"> &gt; </string>
+    <string name="add">Add</string>
+    <string name="update">Update</string>
+    <string name="delete">Delete</string>
+    <string name="copyingYourTimetable">Copying your timetable</string>
+    <string name="weekdaysExceptPublicHolidays">Weekdays (Except Public Holidays)</string>
+    <string name="departureTime">Departure Time</string>
+    <string name="rideTime">Ride Time</string>
+    <string name="dateFormat">E, MMM d, yyyy</string>
+    <string name="hour">:00-</string>
+    <string name="forLabel"> for </string>
+    <string name="houmen"></string>
+    <string name="otherRouteOfLine1">Other route of line 1</string>
+    <string name="otherRouteOfLine2">Other route of line 2</string>
+    <string name="otherRouteOfLine3">Other route of line 3</string>
+
+    <!-- MARK: - Login Content View -->
+    <!-- Login screen labels and actions -->
+    <string name="email">Email</string>
+    <string name="password">Password (8+ chars: alnum !@#$&amp;~)</string>
+    <string name="login">Login</string>
+    <string name="signup">Sign up</string>
+    <string name="forgotPassword">Forgot Password?</string>
+    <string name="resetYourPassword">Reset your password?</string>
+    <string name="passwordReset">Password Reset</string>
+
+    <!-- MARK: - Sign Up Content View -->
+    <!-- Account creation form labels -->
+    <string name="createAccount">Create Account</string>
+    <string name="confirmPassword">Confirm Password</string>
+    <string name="iHaveReadAndAgreeToThe">I have read and agree to the </string>
+    <string name="termsAndPrivacyPolicyLower">terms and privacy policy</string>
+    <string name="kakunin"></string>
+
+    <!-- MARK: - Input Validation -->
+    <!-- Error messages for input validation -->
+    <string name="inputError">Input error</string>
+    <string name="enterYourEmail">Enter your email</string>
+    <string name="enterYourPassword">Enter your password</string>
+    <string name="enterYourConfirmPassword">Enter your confirm password</string>
+    <string name="enterYourEmailAgain">Enter your email again</string>
+    <string name="confirmYourEmail">Confirm your email</string>
+    <string name="incorrectEmail">Incorrect email</string>
+    <string name="incorrectEmailFormat">Incorrect email format</string>
+    <string name="incorrectPasswordFormat">Incorrect password format</string>
+    <string name="incorrectEmailOrPassword">Incorrect email or password</string>
+    <string name="confirmPasswordDontMatch">Confirm password don\'t match</string>
+
+    <!-- MARK: - Login Messages -->
+    <!-- Login success and error messages -->
+    <string name="loginSuccessfully">Login successfully</string>
+    <string name="loginError">Login error</string>
+    <string name="notVerifiedAccount">Not verified account</string>
+    <string name="thisAccountIsDisabled">This account is disabled</string>
+    <string name="checkError">Check error</string>
+    <string name="checkTheTermsAndPrivacyPolicy">Check the terms and privacy policy</string>
+    <string name="signupSuccessfully">Signup successfully</string>
+    <string name="signupError">Sign up error</string>
+    <string name="verificationEmailSentSuccessfully">Verification email Sent successfully</string>
+    <string name="thisEmailHasAlreadyBeenRegistered">This email has already been registered</string>
+    <string name="passwordResetError">Password reset error</string>
+    <string name="passwordResetEmailSentSuccessfully">Password reset email Sent successfully</string>
+
+    <!-- MARK: - Enums -->
+    <!-- Transfer count and transportation method options -->
+    <string name="walking">Walking</string>
+    <string name="bicycle">Bicycle</string>
+    <string name="car">Car</string>
+    <string name="bicycleLower">Bicycle</string>
+    <string name="carLower">Car</string>
+    <string name="walkingLower">Walking</string>
+    <string name="none">None</string>
+
+    <!-- MARK: - Colors -->
+    <string name="red">RED</string>
+    <string name="darkRed">DARK RED</string>
+    <string name="orange">ORANGE</string>
+    <string name="brown">BROWN</string>
+    <string name="yellow">YELLOW</string>
+    <string name="beige">BEIGE</string>
+    <string name="yellowGreen">YELLOW GREEN</string>
+    <string name="orive">ORIVE</string>
+    <string name="green">GREEN</string>
+    <string name="darkGreen">DARK GREEN</string>
+    <string name="blueGreen">BLUE GREEN</string>
+    <string name="lightBlue">LIGHT BLUE</string>
+    <string name="blue">BLUE</string>
+    <string name="navyBlue">NAVY BLUE</string>
+    <string name="indigo">INDIGO</string>
+    <string name="purple">PURPLE</string>
+    <string name="magenta">MAGENTA</string>
+    <string name="lavender">LAVENDER</string>
+    <string name="pink">PINK</string>
+    <string name="gold">GOLD</string>
+    <string name="silver">SILVER</string>
+    <string name="gray">GRAY</string>
+    <string name="black">BLACK</string>
+    <string name="defaultColor">DEFAULT</string>
+
+    <!-- MARK: - Railway Operators -->
+    <!-- Railway and bus operator display names -->
+    <string name="jrEast">JR-East</string>
+    <string name="tokyoMetro">TokyoMetro</string>
+    <string name="toeiMetro">ToeiMetro</string>
+    <string name="tokyu">Tokyu</string>
+    <string name="keikyu">Keikyu</string>
+    <string name="odakyu">Odakyu</string>
+    <string name="tobu">Tobu</string>
+    <string name="seibu">Seibu</string>
+    <string name="sotetsu">Sotetsu</string>
+    <string name="yokohamaMetro">Yokohama</string>
+    <string name="tokyoWaterfrontAreaRapidTransit">TWR</string>
+    <string name="yurikamome">Yurikamome</string>
+    <string name="metropolitanIntercityRailway">MIR</string>
+    <string name="tamaMonorail">Tama</string>
+    <string name="toeiBus">Toei Bus</string>
+    <string name="yokohamaBus">Yokohama Bus</string>
+    <string name="kanachu">Kanachu</string>
+    <string name="sotetsuBus">Sotetsu</string>
+    <string name="kokusaiKogyo">KokusaiKogyo</string>
+    <string name="seibuBus">Seibu</string>
+    <string name="tokyuBus">Tokyu</string>
+    <string name="keioBus">Keio</string>
+    <string name="nishitokyoBus">Nishitokyo</string>
+    <string name="kawasakiBus">Kawasaki Bus</string>
+    <string name="kawasakiTsurumiRinkoBus">Kawasaki Tsurumi Rinko</string>
+    <string name="kantoBus">Kanto Bus</string>
+    <string name="izuhakoneBus">Izuhakone</string>
+    <string name="keiseiTransitBus">Keisei Transit</string>
+    <string name="jrE">JR-E</string>
+    <string name="metro">Metro</string>
+    <string name="toei">Toei</string>
+    <string name="tokyuShort">Tokyu</string>
+    <string name="keikyuShort">Keikyu</string>
+    <string name="odakyuShort">Odakyu</string>
+    <string name="tobuShort">Tobu</string>
+    <string name="seibuShort">Seibu</string>
+    <string name="sotetsuShort">Sotetsu</string>
+    <string name="yokohama">Yokohama</string>
+    <string name="twr">TWR</string>
+    <string name="yurikamomeShort">Yurikamome</string>
+    <string name="mir">MIR</string>
+    <string name="tama">Tama</string>
+    <string name="kanachuShort">Kanachu</string>
+    <string name="kokusaiKogyoShort">KokusaiKogyo</string>
+    <string name="keio">Keio</string>
+    <string name="nishitokyo">Nishitokyo</string>
+    <string name="kawasaki">Kawasaki</string>
+    <string name="rinko">Rinko</string>
+    <string name="kanto">Kanto</string>
+    <string name="izuhakone">Izuhakone</string>
+    <string name="keiseiTransit">Keisei Transit</string>
+
+    <!-- MARK: - Settings Line Sheet -->
+    <!-- Route and line configuration labels -->
+    <string name="routeSettings">Route Settings</string>
+    <string name="lineColor">Line Color</string>
+    <string name="selectLineColor">Line Color Select</string>
+    <string name="timetableSettings">Timetable Settings</string>
+    <string name="timetableRidingTime">Timetable (Riding Time)</string>
+    <string name="autoGenerateTimetable">Auto Generate Timetable</string>
+    <string name="updated">Updated: </string>
+    <string name="clear">Clear</string>
+    <string name="select">Select</string>
+    <string name="save">Save</string>
+    <string name="inputSave">Input Save</string>
+    <string name="rideTimeLabel">Ride Time</string>
+    <string name="operatorName">Operator Name</string>
+    <string name="lineName">Line Name</string>
+    <string name="enterOperatorName">Enter operator name</string>
+    <string name="enterLineName">Enter line name</string>
+    <string name="enterBusRouteName">Enter bus route name</string>
+    <string name="lineLabel">Line</string>
+    <string name="colon">: </string>
+    <string name="toSpaceLabel"> to </string>
+    <string name="stationInput">Station Input</string>
+    <string name="departureStation">Departure</string>
+    <string name="enterDepartureStation">Enter departure station</string>
+    <string name="arrivalStation">Arrival</string>
+    <string name="enterArrivalStation">Enter arrival station</string>
+    <string name="departureStop">Departure</string>
+    <string name="enterDepartureStop">Enter departure stop</string>
+    <string name="arrivalStop">Arrival</string>
+    <string name="enterArrivalStop">Enter arrival stop</string>
+    <string name="busStopInput">Bus Stop Input</string>
+    <string name="railway">Railway</string>
+    <string name="bus">Bus</string>
+    <string name="nextTransfer">Next Transfer</string>
+    <string name="transferTime">Transfer Time</string>
+    <string name="noneLabel">None</string>
+    <string name="timeSettings">Time Settings</string>
+
+    <!-- MARK: - Train Types -->
+    <!-- Train type display names for timetable -->
+    <string name="accessExpress">Access Express</string>
+    <string name="airportRapidLimitedExpress">Airport Rapid Limited Express</string>
+    <string name="chuoSpecialRapid">Chuo Special Rapid</string>
+    <string name="commuterExpress">Commuter Express</string>
+    <string name="commuterLimitedExpress">Commuter Limited Express</string>
+    <string name="commuterRapid">Commuter Rapid</string>
+    <string name="commuterSemiExpress">Commuter Semi Express</string>
+    <string name="commuterSpecialRapid">Commuter Special Rapid</string>
+    <string name="eveningWing">Evening Wing</string>
+    <string name="express">Express</string>
+    <string name="haijimaLiner">Haijima Liner</string>
+    <string name="kawagoeLimitedExpress">Kawagoe Limited Express</string>
+    <string name="limitedExpress">Limited Express</string>
+    <string name="liner">Liner</string>
+    <string name="local">Local</string>
+    <string name="morningWing">Morning Wing</string>
+    <string name="omeSpecialRapid">Ome Special Rapid</string>
+    <string name="rapid">Rapid</string>
+    <string name="rapidExpress">RapidExpress</string>
+    <string name="rapidLimitedExpress">Rapid Limited Express</string>
+    <string name="semiExpress">Semi Express</string>
+    <string name="semiRapid">Semi Rapid</string>
+    <string name="sectionExpress">Section Express</string>
+    <string name="sectionSemiExpress">Section Semi Express</string>
+    <string name="specialRapid">Special Rapid</string>
+    <string name="fLiner">F Liner</string>
+    <string name="sTrain">S TRAIN</string>
+    <string name="slTaiju">SLTaiju</string>
+    <string name="thLiner">TH LINER</string>
+    <string name="tjLiner">TJ Liner</string>
+    <string name="editTimetable">Edit Timetable</string>
+    <string name="registerTimetable">Register Timetable</string>
+    <string name="selectType">Train Type</string>
+    <string name="defaultLocal">Local</string>
+    <string name="defaultExpress">Express</string>
+    <string name="defaultRapid">Rapid</string>
+    <string name="defaultSpecialRapid">Special Rapid</string>
+    <string name="defaultLimitedExpress">Limited Express</string>
+
+    <!-- MARK: - Settings Transfer Sheet (Additional) -->
+    <string name="route">Route</string>
+    <string name="anotherRoute">Another route</string>
+    <string name="display">Display</string>
+    <string name="hide">Hide</string>
+
+    <!-- MARK: - ODPT Calendar Types -->
+    <!-- Calendar type labels for timetable schedule -->
+    <string name="dash">-</string>
+    <string name="weekday">Weekday</string>
+    <string name="holiday">Holiday</string>
+    <string name="saturdayHoliday">Saturday/Holiday</string>
+    <string name="sunday">Sunday</string>
+    <string name="monday">Monday</string>
+    <string name="tuesday">Tuesday</string>
+    <string name="wednesday">Wednesday</string>
+    <string name="thursday">Thursday</string>
+    <string name="friday">Friday</string>
+    <string name="saturday">Saturday</string>
+</resources>

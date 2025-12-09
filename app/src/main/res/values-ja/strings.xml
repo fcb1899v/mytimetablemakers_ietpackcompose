@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- MARK: - Title -->
+    <!-- Application title -->
+    <string name="app_name">マイ乗換ルートメーカー</string>
+    <string name="myTransitMakers">マイ乗換ルートメーカー</string>
+
+    <!-- MARK: - Main Content View -->
+    <!-- Main screen buttons and labels -->
+    <string name="back">帰宅</string>
+    <string name="go">外出</string>
+    <string name="start">開始</string>
+    <string name="stop">停止</string>
+    <string name="ok">OK</string>
+    <string name="cancel">キャンセル</string>
+    <string name="loadingData">データ読み込み中…</string>
+    <string name="loadingLines">路線読み込み中…</string>
+    <string name="loadingStations">駅読み込み中…</string>
+    <string name="loadingBusStops">バス停読み込み中…</string>
+    <string name="generatingTimetable">時刻表生成中…</string>
+    <string name="routeDestinationPrefix"> </string>
+    <string name="routeDestinationSuffix"> 行</string>
+
+    <!-- MARK: - Route Data -->
+    <!-- Default locations and station labels -->
+    <string name="office">オフィス</string>
+    <string name="home">自宅</string>
+    <string name="depSt">乗車駅</string>
+    <string name="arrSt">降車駅</string>
+    <string name="departurePlace">出発地</string>
+    <string name="from">出発地</string>
+    <string name="to">目的地</string>
+    <string name="destination">目的地</string>
+    <string name="line">路線</string>
+    <string name="lineLower">路線</string>
+    <string name="ofDepartureStation">乗車駅</string>
+    <string name="ofArrivalStation">降車駅</string>
+    <string name="of"></string>
+    <string name="fromLower"></string>
+    <string name="fromCapital"></string>
+    <string name="toSpace">から</string>
+    <string name="toCapital"></string>
+    <string name="he">へ</string>
+    <string name="on"></string>
+    <string name="min"> 分</string>
+    <string name="minBrackets"> [分]</string>
+    <string name="notSet">未設定</string>
+    <string name="returnRoute1">帰宅ルート1</string>
+    <string name="returnRoute2">帰宅ルート2</string>
+    <string name="outboundRoute1">外出ルート1</string>
+    <string name="outboundRoute2">外出ルート2</string>
+
+    <!-- MARK: - Settings Content View -->
+    <!-- Settings screen labels and options -->
+    <string name="settings">設定</string>
+    <string name="backToHomepage">戻る</string>
+    <string name="settingReturnRoute1">帰宅ルート1の設定</string>
+    <string name="settingReturnRoute2">帰宅ルート2の設定</string>
+    <string name="settingOutboundRoute1">外出ルート1の設定</string>
+    <string name="settingOutboundRoute2">外出ルート2の設定</string>
+    <string name="manageYourDataAfterLogin">ログインしてデータを管理</string>
+    <string name="variousSettings">各種設定</string>
+    <string name="account">アカウント</string>
+    <string name="about">このアプリについて</string>
+    <string name="version">バージョン</string>
+    <string name="termsAndPrivacyPolicy">利用規約・プライバシーポリシー</string>
+    <string name="termsUrl">https://nakajimamasao-appstudio.web.app/terms/ja</string>
+    <string name="contact">お問い合わせ</string>
+    <string name="contactUrl">https://nakajimamasao-appstudio.web.app/contact/ja</string>
+    <string name="settingYourTimetable">Setting your timetable</string>
+
+    <!-- MARK: - Settings Transfer Sheet -->
+    <!-- Home and destination transportation settings -->
+    <string name="homeDestinationSettings">自宅・行き先設定</string>
+    <string name="homeDestination">自宅・行き先設定</string>
+    <string name="enterDeparturePoint">出発地を入力</string>
+    <string name="enterDestination">目的地を入力</string>
+    <string name="settingDeparturePoint">出発地の設定</string>
+    <string name="settingDestination">目的地の設定</string>
+    <string name="route1">ルート1</string>
+    <string name="route2">ルート2</string>
+
+    <!-- MARK: - Data Management -->
+    <!-- Firestore data get and save operations -->
+    <string name="getSavedData">保存データの取得</string>
+    <string name="getDataError">データ取得エラー</string>
+    <string name="overwrittenCurrentData">現在のデータが上書きされます</string>
+    <string name="dataGotSuccessfully">データの取得成功</string>
+    <string name="dataCouldNotBeGot">データの取得失敗</string>
+    <string name="saveCurrentData">データの保存</string>
+    <string name="saveDataError">データ保存エラー</string>
+    <string name="overwrittenSavedData">保存データが上書きされます</string>
+    <string name="dataSavedSuccessfully">データの保存成功</string>
+    <string name="dataCouldNotBeSaved">データの保存失敗</string>
+
+    <!-- MARK: - Authentication -->
+    <!-- Login, logout and account management -->
+    <string name="logout">ログアウト</string>
+    <string name="logoutYourAccount">ログアウトしますか？</string>
+    <string name="logoutError">ログアウトエラー</string>
+    <string name="loggedOutSuccessfully">ログアウトしました</string>
+    <string name="deleteAccount">アカウント削除</string>
+    <string name="deleteYourAccount">アカウントを削除しますか？</string>
+    <string name="deleteAccountError">アカウント削除エラー</string>
+    <string name="deleteAccountSuccessfully">アカウント削除成功</string>
+    <string name="accountDeletedSuccessfully">アカウントの削除成功</string>
+    <string name="accountCouldNotBeDeleted">アカウントの削除失敗</string>
+
+    <!-- MARK: - Timetable Content View -->
+    <!-- Timetable editing and calendar type selection -->
+    <string name="arrow">→</string>
+    <string name="add">追加</string>
+    <string name="update">更新</string>
+    <string name="delete">削除</string>
+    <string name="copyingYourTimetable">発車時刻のコピー</string>
+    <string name="departureTime">発車時刻</string>
+    <string name="rideTime">乗車時間</string>
+    <string name="dateFormat">yyyy/M/d (E)</string>
+    <string name="hour">時台</string>
+    <string name="forLabel">：</string>
+    <string name="houmen">方面</string>
+    <string name="otherRouteOfLine1">別ルートの路線1</string>
+    <string name="otherRouteOfLine2">別ルートの路線2</string>
+    <string name="otherRouteOfLine3">別ルートの路線3</string>
+
+    <!-- MARK: - Login Content View -->
+    <!-- Login screen labels and actions -->
+    <string name="email">Eメールアドレス</string>
+    <string name="password">パスワード (8字以上：半角英数字!@#$&amp;~)</string>
+    <string name="login">ログイン</string>
+    <string name="signup">アカウント登録</string>
+    <string name="forgotPassword">パスワードを忘れた場合</string>
+    <string name="resetYourPassword">パスワードリセットしますか？</string>
+    <string name="passwordReset">パスワードリセット</string>
+
+    <!-- MARK: - Sign Up Content View -->
+    <!-- Account creation form labels -->
+    <string name="createAccount">アカウント登録</string>
+    <string name="confirmPassword">確認用パスワード</string>
+    <string name="iHaveReadAndAgreeToThe"></string>
+    <string name="termsAndPrivacyPolicyLower">利用規約・プライバシーポリシー</string>
+    <string name="kakunin">を確認しました</string>
+
+    <!-- MARK: - Input Validation -->
+    <!-- Error messages for input validation -->
+    <string name="inputError">入力エラー</string>
+    <string name="enterYourEmail">Eメールアドレスを入力してください</string>
+    <string name="enterYourPassword">パスワードを入力してください</string>
+    <string name="enterYourConfirmPassword">確認用パスワードを入力してください</string>
+    <string name="enterYourEmailAgain">もう一度Eメールアドレスを入力してください</string>
+    <string name="confirmYourEmail">メールを確認してください</string>
+    <string name="incorrectEmail">メールアドレスが正しくありません</string>
+    <string name="incorrectEmailFormat">メールアドレスの形式が正しくありません</string>
+    <string name="incorrectPasswordFormat">パスワードの形式が正しくありません</string>
+    <string name="incorrectEmailOrPassword">メールアドレスまたはパスワードが正しくありません</string>
+    <string name="confirmPasswordDontMatch">確認用パスワードが一致しません</string>
+
+    <!-- MARK: - Login Messages -->
+    <!-- Login success and error messages -->
+    <string name="loginSuccessfully">ログイン成功</string>
+    <string name="loginError">ログインエラー</string>
+    <string name="notVerifiedAccount">認証が完了していません</string>
+    <string name="thisAccountIsDisabled">このアカウントは無効になっています</string>
+    <string name="checkError">チェックエラー</string>
+    <string name="checkTheTermsAndPrivacyPolicy">利用規約およびプライバシーポリシーにチェックしてください</string>
+    <string name="signupSuccessfully">アカウント登録成功</string>
+    <string name="signupError">アカウント登録エラー</string>
+    <string name="verificationEmailSentSuccessfully">認証用メールの送信成功</string>
+    <string name="thisEmailHasAlreadyBeenRegistered">このメールアドレスは登録されています</string>
+    <string name="passwordResetError">パスワードリセットエラー</string>
+    <string name="passwordResetEmailSentSuccessfully">パスワードリセット用メールの送信成功</string>
+
+    <!-- MARK: - Enums -->
+    <!-- Transfer count and transportation method options -->
+    <string name="walking">徒歩</string>
+    <string name="bicycle">自転車</string>
+    <string name="car">車</string>
+    <string name="bicycleLower">自転車</string>
+    <string name="carLower">車</string>
+    <string name="walkingLower">徒歩</string>
+    <string name="none">なし</string>
+
+    <!-- MARK: - Colors -->
+    <string name="red">赤</string>
+    <string name="darkRed">えんじ</string>
+    <string name="orange">オレンジ</string>
+    <string name="brown">茶</string>
+    <string name="yellow">黄</string>
+    <string name="beige">ベージュ</string>
+    <string name="yellowGreen">黄緑</string>
+    <string name="orive">オリーブ</string>
+    <string name="green">緑</string>
+    <string name="darkGreen">深緑</string>
+    <string name="blueGreen">青緑</string>
+    <string name="lightBlue">水色</string>
+    <string name="blue">青</string>
+    <string name="navyBlue">紺</string>
+    <string name="indigo">インディゴ</string>
+    <string name="purple">紫</string>
+    <string name="magenta">マゼンタ</string>
+    <string name="lavender">ラベンダー</string>
+    <string name="pink">ピンク</string>
+    <string name="gold">ゴールド</string>
+    <string name="silver">シルバー</string>
+    <string name="gray">グレー</string>
+    <string name="black">黒</string>
+    <string name="defaultColor">デフォルト</string>
+
+    <!-- MARK: - Railway Operators -->
+    <!-- Railway and bus operator display names -->
+    <string name="lineColor">路線カラー</string>
+    <string name="jrEast">JR東日本</string>
+    <string name="tokyoMetro">東京メトロ</string>
+    <string name="toeiMetro">都営地下鉄</string>
+    <string name="tokyu">東急電鉄</string>
+    <string name="keikyu">京急電鉄</string>
+    <string name="odakyu">小田急電鉄</string>
+    <string name="tobu">東武鉄道</string>
+    <string name="seibu">西武鉄道</string>
+    <string name="sotetsu">相模鉄道</string>
+    <string name="yokohamaMetro">横浜市営地下鉄</string>
+    <string name="tokyoWaterfrontAreaRapidTransit">東京臨海高速鉄道</string>
+    <string name="yurikamome">ゆりかもめ</string>
+    <string name="metropolitanIntercityRailway">首都圏新都市鉄道</string>
+    <string name="tamaMonorail">多摩都市モノレール</string>
+    <string name="toeiBus">都営バス</string>
+    <string name="yokohamaBus">横浜市営バス</string>
+    <string name="kanachu">神奈中バス</string>
+    <string name="sotetsuBus">相鉄バス</string>
+    <string name="kokusaiKogyo">国際興業</string>
+    <string name="seibuBus">西武バス</string>
+    <string name="tokyuBus">東急バス</string>
+    <string name="keioBus">京王バス</string>
+    <string name="nishitokyoBus">西東京バス</string>
+    <string name="kawasakiBus">川崎市バス</string>
+    <string name="kawasakiTsurumiRinkoBus">川崎鶴見臨港バス</string>
+    <string name="kantoBus">関東バス</string>
+    <string name="izuhakoneBus">伊豆箱根バス</string>
+    <string name="keiseiTransitBus">京成トランジットバス</string>
+    <string name="jrE">JR東</string>
+    <string name="metro">東京メトロ</string>
+    <string name="toei">都営</string>
+    <string name="tokyuShort">東急</string>
+    <string name="keikyuShort">京急</string>
+    <string name="odakyuShort">小田急</string>
+    <string name="tobuShort">東武</string>
+    <string name="seibuShort">西武</string>
+    <string name="sotetsuShort">相鉄</string>
+    <string name="yokohama">横浜市</string>
+    <string name="twr">TWR</string>
+    <string name="yurikamomeShort">ゆりかもめ</string>
+    <string name="mir">MIR</string>
+    <string name="tama">多摩</string>
+    <string name="kanachuShort">神奈中</string>
+    <string name="kokusaiKogyoShort">国際興業</string>
+    <string name="keio">京王</string>
+    <string name="nishitokyo">西東京</string>
+    <string name="kawasaki">川崎</string>
+    <string name="rinko">臨港</string>
+    <string name="kanto">関東</string>
+    <string name="izuhakone">伊豆箱根</string>
+    <string name="keiseiTransit">京成トランジット</string>
+
+    <!-- MARK: - Settings Line Sheet -->
+    <!-- Route and line configuration labels -->
+    <string name="routeSettings">ルート設定</string>
+    <string name="selectLineColor">路線カラー選択</string>
+    <string name="timetableSettings">時刻表設定</string>
+    <string name="timetableRidingTime">時刻表（乗車時間）</string>
+    <string name="autoGenerateTimetable">時刻表の自動生成</string>
+    <string name="updated">更新: </string>
+    <string name="clear">クリア</string>
+    <string name="select">選択</string>
+    <string name="save">保存</string>
+    <string name="inputSave">入力保存</string>
+    <string name="rideTimeLabel">乗車時間</string>
+    <string name="operatorName">事業者名</string>
+    <string name="lineName">路線名</string>
+    <string name="enterOperatorName">事業者名を入力</string>
+    <string name="enterLineName">路線名を入力</string>
+    <string name="enterBusRouteName">バス路線名を入力</string>
+    <string name="lineLabel">路線</string>
+    <string name="colon">：</string>
+    <string name="toSpaceLabel">〜</string>
+    <string name="stationInput">駅の入力</string>
+    <string name="departureStation">乗車駅</string>
+    <string name="enterDepartureStation">乗車駅を入力</string>
+    <string name="arrivalStation">降車駅</string>
+    <string name="enterArrivalStation">降車駅を入力</string>
+    <string name="departureStop">乗車停</string>
+    <string name="enterDepartureStop">乗車停を入力</string>
+    <string name="arrivalStop">降車停</string>
+    <string name="enterArrivalStop">降車停を入力</string>
+    <string name="busStopInput">バス停の入力</string>
+    <string name="railway">鉄道</string>
+    <string name="bus">バス</string>
+    <string name="nextTransfer">次の乗換</string>
+    <string name="transferTime">乗換時間</string>
+    <string name="noneLabel">なし</string>
+    <string name="timeSettings">時間設定</string>
+
+    <!-- MARK: - Train Types -->
+    <!-- Train type display names for timetable -->
+    <string name="accessExpress">アクセス特急</string>
+    <string name="airportRapidLimitedExpress">エアポート快特</string>
+    <string name="chuoSpecialRapid">中央特快</string>
+    <string name="commuterExpress">通勤急行</string>
+    <string name="commuterLimitedExpress">通勤特急</string>
+    <string name="commuterRapid">通勤快速</string>
+    <string name="commuterSemiExpress">通勤準急</string>
+    <string name="commuterSpecialRapid">通勤特快</string>
+    <string name="eveningWing">イブニング・ウィング</string>
+    <string name="express">急行</string>
+    <string name="haijimaLiner">拝島ライナー</string>
+    <string name="kawagoeLimitedExpress">川越特急</string>
+    <string name="limitedExpress">特急</string>
+    <string name="liner">ライナー</string>
+    <string name="local">普通</string>
+    <string name="morningWing">モーニング・ウィング</string>
+    <string name="omeSpecialRapid">青梅特快</string>
+    <string name="rapid">快速</string>
+    <string name="rapidExpress">快速急行</string>
+    <string name="rapidLimitedExpress">快特</string>
+    <string name="semiExpress">準急</string>
+    <string name="semiRapid">区間快速</string>
+    <string name="sectionExpress">区間急行</string>
+    <string name="sectionSemiExpress">区間準急</string>
+    <string name="specialRapid">特別快速</string>
+    <string name="fLiner">Fライナー</string>
+    <string name="sTrain">Sトレイン</string>
+    <string name="slTaiju">SL大樹</string>
+    <string name="thLiner">THライナー</string>
+    <string name="tjLiner">TJライナー</string>
+    <string name="editTimetable">時刻表設定</string>
+    <string name="registerTimetable">時刻表の登録</string>
+    <string name="selectType">列車種別</string>
+    <string name="defaultLocal">普通</string>
+    <string name="defaultExpress">急行</string>
+    <string name="defaultRapid">快速</string>
+    <string name="defaultSpecialRapid">特別快速</string>
+    <string name="defaultLimitedExpress">特急</string>
+
+    <!-- MARK: - Settings Transfer Sheet (Additional) -->
+    <string name="route">ルート</string>
+    <string name="anotherRoute">別ルート</string>
+    <string name="display">表示</string>
+    <string name="hide">非表示</string>
+
+    <!-- MARK: - ODPT Calendar Types -->
+    <!-- Calendar type labels for timetable schedule -->
+    <string name="dash">-</string>
+    <string name="weekday">平日</string>
+    <string name="holiday">休日</string>
+    <string name="saturdayHoliday">土休日</string>
+    <string name="sunday">日曜日</string>
+    <string name="monday">月曜日</string>
+    <string name="tuesday">火曜日</string>
+    <string name="wednesday">水曜日</string>
+    <string name="thursday">木曜日</string>
+    <string name="friday">金曜日</string>
+    <string name="saturday">土曜日</string>
+</resources>
+
