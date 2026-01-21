@@ -1,12 +1,11 @@
 package com.mytimetablemaker.ui.settings
 
-import android.app.Application
 import android.content.Intent
-import android.net.Uri
 import android.content.pm.PackageManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
@@ -15,11 +14,9 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.WindowInsets
@@ -29,10 +26,14 @@ import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.ui.res.stringResource
 import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.*
+import com.mytimetablemaker.extensions.ScreenSize
+import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.main.MainViewModel
-import com.mytimetablemaker.ui.theme.Primary
-import com.mytimetablemaker.ui.theme.Gray
+import com.mytimetablemaker.ui.theme.*
 import android.content.SharedPreferences
+import androidx.core.net.toUri
+import androidx.core.content.edit
+import java.util.Locale
 
 // MARK: - Settings Content Screen
 // Main settings screen with route configuration, account management, and app information
@@ -40,6 +41,7 @@ import android.content.SharedPreferences
 @Composable
 fun SettingsContentScreen(
     mainViewModel: MainViewModel,
+    loginViewModel: com.mytimetablemaker.ui.login.LoginViewModel,
     firestoreViewModel: FirestoreViewModel,
     onNavigateToMain: () -> Unit = {},
     onNavigateToTransferSheet: () -> Unit = {},
@@ -48,7 +50,8 @@ fun SettingsContentScreen(
 ) {
     val context = LocalContext.current
     val application = context.applicationContext as android.app.Application
-    val sharedPreferences = application.getSharedPreferences("SettingsContentScreen", Application.MODE_PRIVATE)
+    // Use the same SharedPreferences instance as MainViewModel to ensure listeners work
+    val sharedPreferences = context.getSharedPreferences("MainViewModel", android.content.Context.MODE_PRIVATE)
     
     // MARK: - State Properties
     // Control visibility of sheets, alerts, and navigation state
@@ -61,10 +64,11 @@ fun SettingsContentScreen(
     var showGetFirestoreAlert by remember { mutableStateOf(false) }
     var showSaveFirestoreAlert by remember { mutableStateOf(false) }
     
-    // Check login status from SharedPreferences
-    val isLoginSuccess = remember {
-        sharedPreferences.getBoolean("Login", false)
-    }
+    // Language setting state
+    var isJapaneseSelected by remember { mutableStateOf(true) }
+    
+    // Observe login status from LoginViewModel (matches SwiftUI myLogin.isLoginSuccess)
+    val isLoginSuccess by loginViewModel.isLoginSuccess.collectAsState()
     
     // Set status bar color to Primary
     val view = LocalView.current
@@ -86,12 +90,31 @@ fun SettingsContentScreen(
         loadRoute2Setting(sharedPreferences) { value ->
             showRoute2 = value
         }
+        // Load language setting
+        loadLanguageSetting(sharedPreferences) { isJapanese ->
+            isJapaneseSelected = isJapanese
+        }
+    }
+    
+    // Listen to SharedPreferences changes for route2 setting
+    DisposableEffect(Unit) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "back2".isShowRoute2Key() || key == "go2".isShowRoute2Key()) {
+                loadRoute2Setting(sharedPreferences) { value ->
+                    showRoute2 = value
+                }
+            }
+        }
+        sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener)
+        }
     }
     
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(White)
     ) {
         // MARK: - Status Bar Background
         Box(
@@ -113,9 +136,9 @@ fun SettingsContentScreen(
                 title = {
                     Text(
                         text = stringResource(R.string.settings),
-                        fontSize = 20.sp,
+                        fontSize = ScreenSize.settingsTitleFontSize().value.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = White
                     )
                 },
                 navigationIcon = {
@@ -123,7 +146,7 @@ fun SettingsContentScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.backToHomepage),
-                            tint = Color.White
+                            tint = White
                         )
                     }
                 },
@@ -137,15 +160,15 @@ fun SettingsContentScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Gray.copy(alpha = 0.8f)),
+                        .background(Gray.copy(alpha = 0.8f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
-                        modifier = Modifier.padding(16.dp),
-                        shape = MaterialTheme.shapes.medium
+                        modifier = Modifier.padding(ScreenSize.settingsSheetHorizontalPadding()),
+                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(ScreenSize.settingsSheetHorizontalPadding())
                         )
                     }
                 }
@@ -180,22 +203,28 @@ fun SettingsContentScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical()),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = stringResource(R.string.anotherRoute),
-                            fontSize = 16.sp,
-                            color = Color.Black
+                            fontSize = ScreenSize.settingsFontSize().value.sp,
+                            color = Black
                         )
-                        // TODO: Implement CustomToggle
-                        Switch(
-                            checked = showRoute2,
-                            onCheckedChange = { newValue ->
-                                showRoute2 = newValue
-                                saveRoute2Setting(sharedPreferences, newValue, mainViewModel)
-                            }
+                        CommonComponents.CustomToggle(
+                            isLeftSelected = !showRoute2,
+                            onToggle = { isLeftSelected ->
+                                val newShowRoute2 = !isLeftSelected
+                                showRoute2 = newShowRoute2
+                                saveRoute2Setting(sharedPreferences, newShowRoute2, mainViewModel)
+                            },
+                            leftText = stringResource(R.string.hide),
+                            leftColor = Gray,
+                            rightText = stringResource(R.string.display),
+                            rightColor = Primary,
+                            circleColor = White,
+                            offColor = Gray
                         )
                     }
                     
@@ -252,21 +281,48 @@ fun SettingsContentScreen(
                             openUrl(context, termsUrl)
                         }
                     )
+                    // Language setting toggle
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical()),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = stringResource(R.string.language),
+                            fontSize = ScreenSize.settingsFontSize().value.sp,
+                            color = Black
+                        )
+                        CommonComponents.CustomToggle(
+                            isLeftSelected = isJapaneseSelected,
+                            onToggle = { isLeftSelected ->
+                                isJapaneseSelected = isLeftSelected
+                                saveLanguageSetting(sharedPreferences, isLeftSelected, context)
+                            },
+                            leftText = stringResource(R.string.japanese),
+                            leftColor = Primary,
+                            rightText = stringResource(R.string.english),
+                            rightColor = Primary,
+                            circleColor = White,
+                            offColor = Gray
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical()),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = stringResource(R.string.version),
-                            fontSize = 16.sp,
-                            color = Color.Black
+                            fontSize = ScreenSize.settingsFontSize().value.sp,
+                            color = Black
                         )
                         Text(
                             text = getAppVersion(context),
-                            fontSize = 16.sp,
+                            fontSize = ScreenSize.settingsFontSize().value.sp,
                             color = Gray
                         )
                     }
@@ -290,8 +346,7 @@ fun SettingsContentScreen(
                 TextButton(
                     onClick = {
                         showLogoutAlert = false
-                        // TODO: Implement logout
-                        // loginViewModel.logOut()
+                        loginViewModel.logOut()
                     }
                 ) {
                     Text(stringResource(R.string.ok))
@@ -317,8 +372,7 @@ fun SettingsContentScreen(
                 TextButton(
                     onClick = {
                         showDeleteAlert = false
-                        // TODO: Implement delete account
-                        // loginViewModel.delete()
+                        loginViewModel.delete()
                     }
                 ) {
                     Text(stringResource(R.string.ok))
@@ -414,10 +468,10 @@ private fun SettingsSection(
     ) {
         Text(
             text = title,
-            fontSize = 18.sp,
+            fontSize = ScreenSize.settingsHeaderFontSize().value.sp,
             fontWeight = FontWeight.Bold,
             color = Gray,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+            modifier = Modifier.padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsHeaderFontSize())
         )
         content()
     }
@@ -434,7 +488,7 @@ private fun SettingsButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical())
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -443,13 +497,14 @@ private fun SettingsButton(
         ) {
             Text(
                 text = title,
-                fontSize = 16.sp,
-                color = Color.Black
+                fontSize = ScreenSize.settingsFontSize().value.sp,
+                color = Black
             )
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Gray
+                tint = Gray,
+                modifier = Modifier.size(ScreenSize.settingsFontSize())
             )
         }
     }
@@ -462,55 +517,49 @@ private fun AdBannerSection() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(50.dp)
+            .height(ScreenSize.admobBannerHeight())
             .background(Primary),
         contentAlignment = Alignment.Center
     ) {
         // TODO: Implement AdMob banner
-        Text(
-            text = "Ad Banner",
-            color = Color.White
-        )
+        com.mytimetablemaker.ui.common.AdMobBannerView()
     }
 }
 
 // MARK: - Helper Functions
 
 // Load Route 2 display setting from SharedPreferences
-// Checks both back2 and go2 settings, uses OR logic
+// Since saveRoute2Setting saves the same value to both back2 and go2, we can read either one
 private fun loadRoute2Setting(
     sharedPreferences: SharedPreferences,
     onLoaded: (Boolean) -> Unit
 ) {
-    val back2Route2Value = sharedPreferences.getBoolean("back2".isShowRoute2Key(), false)
-    val go2Route2Value = sharedPreferences.getBoolean("go2".isShowRoute2Key(), false)
-    
-    // Use OR logic: show Route 2 if either back2 or go2 is enabled
-    onLoaded(back2Route2Value || go2Route2Value)
+    val route2Value = "back2".isShowRoute2Key().userDefaultsBool(sharedPreferences, false)
+    onLoaded(route2Value)
 }
 
 // Save Route 2 display setting to SharedPreferences and update ViewModel
-// Saves the same value to both back2 and go2
+// Match SwiftUI implementation: save the same value to both back2 and go2
 private fun saveRoute2Setting(
     sharedPreferences: SharedPreferences,
     value: Boolean,
     mainViewModel: MainViewModel
 ) {
-    // Save to SharedPreferences for both routes
-    sharedPreferences.edit()
-        .putBoolean("back2".isShowRoute2Key(), value)
-        .putBoolean("go2".isShowRoute2Key(), value)
-        .apply()
+    // Save to SharedPreferences for both routes (match SwiftUI implementation)
+    // Use commit() to ensure synchronous save
+    sharedPreferences.edit(commit = true) {
+        putBoolean("back2".isShowRoute2Key(), value)
+        putBoolean("go2".isShowRoute2Key(), value)
+    }
     
-    // Update MainViewModel
-    mainViewModel.isShowBackRoute2 = value
-    mainViewModel.isShowGoRoute2 = value
+    // Update MainViewModel (update both back and go route flags)
+    mainViewModel.setRoute2Value(value)
 }
 
 // Open URL in browser
 private fun openUrl(context: android.content.Context, url: String) {
     try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        val intent = Intent(Intent.ACTION_VIEW, url.toUri())
         context.startActivity(intent)
     } catch (e: Exception) {
         // Handle error
@@ -524,6 +573,48 @@ private fun getAppVersion(context: android.content.Context): String {
         packageInfo.versionName ?: "Unknown"
     } catch (e: PackageManager.NameNotFoundException) {
         "Unknown"
+    }
+}
+
+// Load language setting from SharedPreferences
+private fun loadLanguageSetting(
+    sharedPreferences: SharedPreferences,
+    onLoaded: (Boolean) -> Unit
+) {
+    val currentLanguage = Locale.getDefault().language
+    val savedLanguage = sharedPreferences.getString("app_language", currentLanguage) ?: currentLanguage
+    onLoaded(savedLanguage == "ja")
+}
+
+// Save language setting to SharedPreferences and apply it
+private fun saveLanguageSetting(
+    sharedPreferences: SharedPreferences,
+    isJapanese: Boolean,
+    context: android.content.Context
+) {
+    val languageCode = if (isJapanese) "ja" else "en"
+    sharedPreferences.edit {
+        putString("app_language", languageCode)
+    }
+    
+    // Apply language setting
+    applyLanguageSetting(context, languageCode)
+}
+
+// Apply language setting to the app
+private fun applyLanguageSetting(context: android.content.Context, languageCode: String) {
+    val locale = Locale.forLanguageTag(languageCode)
+    Locale.setDefault(locale)
+    
+    val configuration = context.resources.configuration
+    configuration.setLocale(locale)
+    // Use createConfigurationContext for API 17+ instead of deprecated updateConfiguration
+    // This creates a new context with the updated configuration
+    context.createConfigurationContext(configuration)
+    
+    // Restart activity to apply language change to the entire app
+    if (context is android.app.Activity) {
+        context.recreate()
     }
 }
 

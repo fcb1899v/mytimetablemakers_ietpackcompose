@@ -2,11 +2,13 @@ package com.mytimetablemaker.services
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.mytimetablemaker.BuildConfig
 import com.mytimetablemaker.models.*
 import com.mytimetablemaker.extensions.*
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +33,7 @@ data class RailwayDTO(
     val lineCode: String? = null,
     val ascendingRailDirection: String? = null,
     val descendingRailDirection: String? = null,
+    val stationOrder: List<TransportationStop>? = null,
     val date: String? = null
 )
 
@@ -38,8 +41,8 @@ data class RailwayDTO(
 // DTO for bus route pattern data from ODPT API.
 // Maps external JSON structure to internal bus data model.
 data class BusRoutePatternDTO(
-    val title: String,
-    val sameAs: String,
+    val title: String? = null,
+    val sameAs: String? = null,
     val operatorCode: String? = null,
     val busRoute: String? = null,
     val pattern: String? = null,
@@ -76,32 +79,112 @@ object ODPTParser {
             return emptyList()
         }
         
-        // Convert filtered data to DTOs
-        val gson = Gson()
+        // Convert filtered data to DTOs manually (same approach as RailwayDTO)
+        // This ensures proper mapping of ODPT JSON keys like "owl:sameAs" and "dc:title"
         val dtos = busOnlyData.mapNotNull { element: JsonElement ->
             try {
-                gson.fromJson(element, BusRoutePatternDTO::class.java)
+                val jsonObject = element.asJsonObject
+                
+                // Extract required fields manually from JSON
+                // JSON uses "owl:sameAs" not "odpt:sameAs" for bus route patterns
+                val sameAs = jsonObject.get("owl:sameAs")?.asString
+                    ?: jsonObject.get("odpt:sameAs")?.asString
+                    ?: jsonObject.get("sameAs")?.asString
+                val title = jsonObject.get("dc:title")?.asString
+                    ?: jsonObject.get("title")?.asString
+                
+                // Skip if required fields are missing
+                if (sameAs == null || title == null) {
+                    null
+                } else {
+                    // Parse odpt:busstopPoleOrder to create TransportationStop list
+                    val busstopPoleOrderArray = jsonObject.get("odpt:busstopPoleOrder")?.asJsonArray
+                    val busstopPoleOrder = busstopPoleOrderArray?.mapNotNull { stopElement ->
+                        if (stopElement is JsonObject) {
+                            val busstopPole = stopElement.get("odpt:busstopPole")?.asString
+                            val index = stopElement.get("odpt:index")?.asInt
+                            val titleObj = stopElement.get("odpt:busstopPoleTitle")?.asJsonObject
+                            val stopTitle = titleObj?.let { obj ->
+                                LocalizedTitle(
+                                    ja = obj.get("ja")?.asString,
+                                    en = obj.get("en")?.asString
+                                )
+                            }
+                            val note = stopElement.get("odpt:note")?.asString
+                            val stopName = stopTitle?.ja ?: stopTitle?.en ?: busstopPole?.split(".")?.lastOrNull() ?: ""
+                            
+                            if (busstopPole != null) {
+                                TransportationStop(
+                                    kind = TransportationLineKind.BUS,
+                                    name = stopName,
+                                    code = busstopPole,
+                                    index = index,
+                                    lineCode = sameAs,
+                                    title = stopTitle,
+                                    note = note,
+                                    busstopPole = busstopPole
+                                )
+                            } else {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    }
+                    
+                    BusRoutePatternDTO(
+                        title = title,
+                        sameAs = sameAs,
+                        operatorCode = jsonObject.get("odpt:operator")?.asString,
+                        busRoute = jsonObject.get("odpt:busroute")?.asString,
+                        pattern = jsonObject.get("odpt:pattern")?.asString,
+                        direction = jsonObject.get("odpt:direction")?.asString,
+                        busstopPoleOrder = busstopPoleOrder,
+                        note = jsonObject.get("odpt:note")?.asString,
+                        date = jsonObject.get("dc:date")?.asString
+                    )
+                }
             } catch (e: Exception) {
+                android.util.Log.e("ODPTParser", "🚌 parseBusRoutes: Failed to parse DTO: ${e.message}", e)
                 null
             }
         }
         
         // MARK: - DTO to Model Mapping using closures
-        return dtos.map { dto: BusRoutePatternDTO ->
+        return dtos.mapNotNull { dto: BusRoutePatternDTO ->
+            // Ensure sameAs and title are not null (should be guaranteed by filter above)
+            val sameAs = dto.sameAs ?: return@mapNotNull null
+            var title = dto.title ?: return@mapNotNull null
+            
+            // Fix trailing "行行" to "行"
+            if (title.endsWith("行行")) {
+                title = title.dropLast(1)
+            }
+            
             // Extract English name from odpt:busroute value using LineExtensions
             val englishName = dto.busRoute?.busRouteEnglishName()
             
+            // Generate titles for bus stops using generateBusStopTitle
+            val busstopPoleOrderWithTitles = dto.busstopPoleOrder?.map { stop ->
+                val stopTitle = if (stop.title == null && stop.note != null && stop.busstopPole != null) {
+                    generateBusStopTitle(stop.note, stop.busstopPole)
+                } else {
+                    stop.title
+                }
+                stop.copy(title = stopTitle)
+            }
+            
             TransportationLine(
-                id = dto.sameAs,
+                id = sameAs,
                 kind = TransportationLineKind.BUS,
-                name = dto.title,
-                code = dto.sameAs,
+                name = title,
+                code = sameAs,
                 operatorCode = dto.operatorCode,
                 lineColor = null,
                 startStation = null,
                 endStation = null,
                 destinationStation = null,
-                railwayTitle = LocalizedTitle(ja = dto.title, en = englishName),
+                railwayTitle = LocalizedTitle(ja = title, en = englishName), // title is already fixed above
                 lineCode = null,
                 lineDirection = null,
                 ascendingRailDirection = null,
@@ -109,8 +192,8 @@ object ODPTParser {
                 busRoute = dto.busRoute,
                 pattern = dto.pattern,
                 busDirection = dto.direction,
-                busstopPoleOrder = dto.busstopPoleOrder,
-                title = dto.title
+                busstopPoleOrder = busstopPoleOrderWithTitles,
+                title = title
             )
         }
     }
@@ -121,7 +204,19 @@ object ODPTParser {
     fun parseRailwayRoutes(data: ByteArray): List<TransportationLine> {
         try {
             val jsonString = String(data)
-            val jsonArray = JsonParser.parseString(jsonString).asJsonArray
+            android.util.Log.d("ODPTParser", "parseRailwayRoutes: JSON string length=${jsonString.length}, first 200 chars: ${jsonString.take(200)}")
+            
+            // Check if it's a JSON array or object
+            val jsonElement = JsonParser.parseString(jsonString)
+            android.util.Log.d("ODPTParser", "parseRailwayRoutes: Parsed JSON element type=${jsonElement.javaClass.simpleName}")
+            
+            if (!jsonElement.isJsonArray) {
+                android.util.Log.e("ODPTParser", "parseRailwayRoutes: JSON is not an array, it's ${jsonElement.javaClass.simpleName}")
+                throw ODPTError.InvalidData()
+            }
+            
+            val jsonArray = jsonElement.asJsonArray
+            android.util.Log.d("ODPTParser", "parseRailwayRoutes: JSON array size=${jsonArray.size()}")
             
             // MARK: - Dictionary to DTO Mapping
             // Convert dictionary to DTO manually to support both odpt:color and odpt:lineColor
@@ -143,11 +238,50 @@ object ODPTParser {
                             else if (value.isBoolean) value.asBoolean
                             else null
                         }
-                        is JsonArray -> value.mapNotNull { it.asString }
+                        is JsonArray -> {
+                            // Track if we've logged a warning for this field to avoid spam
+                            var hasLoggedWarning = false
+                            value.mapNotNull { element ->
+                                when (element) {
+                                    is com.google.gson.JsonPrimitive -> {
+                                        if (element.isString) element.asString
+                                        else null
+                                    }
+                                    else -> {
+                                        // Skip non-primitive elements in array
+                                        // This is expected for some ODPT API fields that may contain objects
+                                        // The data will be skipped but the app will continue to work
+                                        // Only log once per field to avoid log spam
+                                        if (!hasLoggedWarning) {
+                                            android.util.Log.d("ODPTParser", "parseRailwayRoutes: Skipping ${element.javaClass.simpleName} in JsonArray for field '${entry.key}' (this is normal for some ODPT API fields)")
+                                            hasLoggedWarning = true
+                                        }
+                                        null
+                                    }
+                                }
+                            }
+                        }
                         is JsonObject -> {
                             // Convert JsonObject to Map<String, String> for railwayTitle
+                            // odpt:railwayTitle structure: {"ja": "山手線", "en": "Yamanote Line"}
+                            // Each value should be a JsonPrimitive (string)
                             value.entrySet().associate { e ->
-                                e.key to (e.value.asString ?: "")
+                                e.key to when (val nestedValue = e.value) {
+                                    is com.google.gson.JsonPrimitive -> {
+                                        if (nestedValue.isString) {
+                                            nestedValue.asString
+                                        } else {
+                                            // For non-string primitives, convert to string
+                                            nestedValue.toString()
+                                        }
+                                    }
+                                    else -> {
+                                        // If value is not JsonPrimitive, skip it or use empty string
+                                        // This handles unexpected nested structures
+                                        android.util.Log.w("ODPTParser", "parseRailwayRoutes: Unexpected nested value type in JsonObject: ${nestedValue.javaClass.simpleName}")
+                                        ""
+                                    }
+                                }
                             }
                         }
                         else -> null
@@ -157,13 +291,8 @@ object ODPTParser {
                     it as Map<String, Any>
                 }
                 
-                // Extract railwayTitle directly from JsonObject for proper type handling
-                val railwayTitle = jsonObject.get("odpt:railwayTitle")?.asJsonObject?.let { titleObj ->
-                    LocalizedTitle(
-                        ja = titleObj.get("ja")?.asString,
-                        en = titleObj.get("en")?.asString
-                    )
-                }
+                // Extract railwayTitle using odptRailwayTitle extension function
+                val railwayTitle = elementMap.odptRailwayTitle()
                 
                 // Use LineExtensions utilities for ODPT data extraction
                 val lineColor = elementMap.odptLineColor()
@@ -172,6 +301,41 @@ object ODPTParser {
                 // Extract rail direction information for timetable API calls
                 val ascendingRailDirection = jsonObject.get("odpt:ascendingRailDirection")?.asString
                 val descendingRailDirection = jsonObject.get("odpt:descendingRailDirection")?.asString
+                
+                // Parse odpt:stationOrder to create TransportationStop list
+                // SwiftUI: Uses odpt:stationOrder from Railway JSON to create station list
+                val stationOrderArray = jsonObject.get("odpt:stationOrder")?.asJsonArray
+                val stationOrder = stationOrderArray?.mapNotNull { stationElement ->
+                    if (stationElement is JsonObject) {
+                        val stationCode = stationElement.get("odpt:station")?.asString
+                        val stationIndex = stationElement.get("odpt:index")?.asInt
+                        val stationTitleObj = stationElement.get("odpt:stationTitle")?.asJsonObject
+                        val stationTitle = stationTitleObj?.let { titleObj ->
+                            LocalizedTitle(
+                                ja = titleObj.get("ja")?.asString,
+                                en = titleObj.get("en")?.asString
+                            )
+                        }
+                        val stationName = stationTitle?.ja ?: stationTitle?.en ?: stationCode?.split(".")?.lastOrNull() ?: ""
+                        
+                        if (stationCode != null) {
+                            TransportationStop(
+                                kind = TransportationLineKind.RAILWAY,
+                                name = stationName,
+                                code = stationCode,
+                                index = stationIndex,
+                                lineCode = sameAs,
+                                title = stationTitle,
+                                note = null,
+                                busstopPole = null
+                            )
+                        } else {
+                            null
+                        }
+                    } else {
+                        null
+                    }
+                }
                 
                 RailwayDTO(
                     title = title,
@@ -185,27 +349,45 @@ object ODPTParser {
                     lineCode = jsonObject.get("odpt:lineCode")?.asString,
                     ascendingRailDirection = ascendingRailDirection,
                     descendingRailDirection = descendingRailDirection,
+                    stationOrder = stationOrder,
                     date = jsonObject.get("dc:date")?.asString
                 )
             }
             
             // MARK: - DTO to Model Mapping
             return dtos.map { dto: RailwayDTO ->
+                // Fix trailing "行行" to "行"
+                val fixedTitle = if (dto.title.endsWith("行行")) {
+                    dto.title.dropLast(1)
+                } else {
+                    dto.title
+                }
+                
+                // Fix railwayTitle's ja field if it ends with "行行"
+                val fixedRailwayTitle = dto.railwayTitle?.let { title ->
+                    if (title.ja?.endsWith("行行") == true) {
+                        title.copy(ja = title.ja.dropLast(1))
+                    } else {
+                        title
+                    }
+                }
+                
                 TransportationLine(
                     id = dto.sameAs,
                     kind = TransportationLineKind.RAILWAY,
-                    name = dto.title,
+                    name = fixedTitle,
                     code = dto.sameAs,
                     operatorCode = dto.operatorCode,
                     lineColor = dto.lineColor,
                     startStation = dto.startStation,
                     endStation = dto.endStation,
                     destinationStation = dto.destinationStation,
-                    railwayTitle = dto.railwayTitle,
+                    railwayTitle = fixedRailwayTitle,
                     lineCode = dto.lineCode,
                     lineDirection = dto.ascendingRailDirection, // Keep for backward compatibility
                     ascendingRailDirection = dto.ascendingRailDirection,
                     descendingRailDirection = dto.descendingRailDirection,
+                    stationOrder = dto.stationOrder,
                     busRoute = null,
                     pattern = null,
                     busDirection = null,
@@ -214,7 +396,10 @@ object ODPTParser {
                 )
             }
         } catch (e: Exception) {
-            throw ODPTError.InvalidData
+            android.util.Log.e("ODPTParser", "parseRailwayRoutes: Failed to parse data: ${e.message}", e)
+            android.util.Log.e("ODPTParser", "parseRailwayRoutes: Exception type: ${e.javaClass.simpleName}")
+            e.printStackTrace()
+            throw ODPTError.InvalidData()
         }
     }
 }
@@ -226,6 +411,7 @@ class ODPTDataService(private val context: Context) {
     private val client: OkHttpClient
     private val cache: CacheStore
     private val sharedPreferences: SharedPreferences
+    private val challengeKey: String
     
     init {
         // MARK: - Session Configuration
@@ -241,17 +427,22 @@ class ODPTDataService(private val context: Context) {
         
         cache = CacheStore(context)
         sharedPreferences = context.getSharedPreferences("ODPTDataService", Context.MODE_PRIVATE)
+        
+        // Get ODPT Challenge Token from BuildConfig
+        challengeKey = BuildConfig.ODPT_CHALLENGE_TOKEN
     }
     
     // MARK: - Common Request Configuration
     // Common function to configure request headers
     // Sets authentication and conditional request headers for efficient caching
+    // Note: ODPT API uses URL query parameter acl:consumerKey for authentication, not Authorization header
     private fun configureRequest(
         requestBuilder: Request.Builder,
         consumerKey: String,
         conditionalHeaders: Pair<String?, String?>? = null
     ): Request.Builder {
-        requestBuilder.addHeader("Authorization", consumerKey)
+        // ODPT API uses URL query parameter acl:consumerKey for authentication
+        // Authorization header is not used for ODPT API
         requestBuilder.addHeader("Accept", "application/json")
         
         conditionalHeaders?.let { (etag, lastModified) ->
@@ -268,16 +459,22 @@ class ODPTDataService(private val context: Context) {
         transportOperator: LocalDataSource,
         consumerKey: String
     ): ByteArray = withContext(Dispatchers.IO) {
+        // Use challenge key for CHALLENGE API type, otherwise use access key
+        val accessKey = if (transportOperator.apiType() == ODPTAPIType.CHALLENGE) {
+            challengeKey
+        } else {
+            consumerKey
+        }
+        
         val urlString = transportOperator.apiLink(
             dataType = APIDataType.LINE,
-            transportationKind = transportOperator.transportationType(),
-            odptAccessKey = consumerKey
+            transportationKind = transportOperator.transportationType()
         )
         
         val url = urlString.toHttpUrl()
         
         val requestBuilder = Request.Builder().url(url)
-        configureRequest(requestBuilder, consumerKey)
+        configureRequest(requestBuilder, accessKey)
         
         println("🔗 Fetch URL: $urlString")
         
@@ -293,8 +490,8 @@ class ODPTDataService(private val context: Context) {
             response.header("Last-Modified")?.let { lastModified ->
                 saveLastModified(lastModified, transportOperator)
             }
-            
-            response.body?.bytes() ?: throw ODPTError.InvalidData
+
+            response.body.bytes()
         } else {
             throw ODPTError.NetworkError("HTTP ${response.code}")
         }
@@ -312,7 +509,9 @@ class ODPTDataService(private val context: Context) {
     /// Save ETag for a specific operator to SharedPreferences
     private fun saveETag(etag: String, transportOperator: LocalDataSource) {
         val etagKey = "${transportOperator.fileName()}_etag"
-        sharedPreferences.edit().putString(etagKey, etag).apply()
+        sharedPreferences.edit {
+            putString(etagKey, etag)
+        }
     }
     
     /// Get Last-Modified for a specific operator from SharedPreferences
@@ -324,7 +523,9 @@ class ODPTDataService(private val context: Context) {
     /// Save Last-Modified for a specific operator to SharedPreferences
     private fun saveLastModified(lastModified: String, transportOperator: LocalDataSource) {
         val lastModifiedKey = "${transportOperator.fileName()}_last_modified"
-        sharedPreferences.edit().putString(lastModifiedKey, lastModified).apply()
+        sharedPreferences.edit {
+            putString(lastModifiedKey, lastModified)
+        }
     }
     
     // MARK: - Conditional GET Request Check (ODPT API Optimized)
@@ -357,16 +558,22 @@ class ODPTDataService(private val context: Context) {
         // MARK: - Conditional GET Request Check
         // Use conditional GET request with ETag and Last-Modified headers
         try {
+            // Use challenge key for CHALLENGE API type, otherwise use access key
+            val accessKey = if (transportOperator.apiType() == ODPTAPIType.CHALLENGE) {
+                challengeKey
+            } else {
+                consumerKey
+            }
+            
             val urlString = transportOperator.apiLink(
                 dataType = APIDataType.LINE,
-                transportationKind = transportOperator.transportationType(),
-                odptAccessKey = consumerKey
+                transportationKind = transportOperator.transportationType()
             )
             
             val url = urlString.toHttpUrl()
             
             val requestBuilder = Request.Builder().url(url)
-            configureRequest(requestBuilder, consumerKey, Pair(etag, lastModified))
+            configureRequest(requestBuilder, accessKey, Pair(etag, lastModified))
             
             println("🔗 Fetch URL: $urlString")
             
@@ -396,8 +603,8 @@ class ODPTDataService(private val context: Context) {
                     
                     // MARK: - Data Content Comparison (Fallback)
                     // Compare actual data content to determine if update is needed
-                    val responseData = response.body?.bytes()
-                    val dataMatches = cachedData.contentEquals(responseData ?: ByteArray(0))
+                    val responseData = response.body.bytes()
+                    val dataMatches = cachedData.contentEquals(responseData)
                     return@withContext !dataMatches
                 }
                 else -> {
@@ -479,38 +686,77 @@ class ODPTDataService(private val context: Context) {
         configureRequest(requestBuilder, "")
         
         val response = client.newCall(requestBuilder.build()).execute()
-        val responseData = response.body?.bytes() ?: ByteArray(0)
+        val responseData = response.body.bytes()
         
         Pair(responseData, response)
     }
     
-    // MARK: - JSON Array Parsing
-    // Parse JSON array from byte array
-    fun parseJSONArray(data: ByteArray): List<Map<*, *>> {
-        val jsonString = String(data)
-        val jsonArray = JsonParser.parseString(jsonString).asJsonArray
+    // Fetch ODPT data with authentication key
+    suspend fun fetchODPTDataWithAuth(urlString: String, authKey: String): Pair<ByteArray, okhttp3.Response> = withContext(Dispatchers.IO) {
+        val url = urlString.toHttpUrl()
         
-        return jsonArray.mapNotNull { element ->
-            val jsonObject = element.asJsonObject
-            jsonObject.entrySet().associate { entry ->
-                entry.key to when (val value = entry.value) {
-                    is com.google.gson.JsonPrimitive -> {
+        val requestBuilder = Request.Builder().url(url)
+        configureRequest(requestBuilder, authKey)
+        
+        val response = client.newCall(requestBuilder.build()).execute()
+        val responseData = response.body.bytes()
+        
+        Pair(responseData, response)
+    }
+    
+    // MARK: - JSON Object to Map Conversion
+    // Recursively convert JsonObject to Map for nested structures
+    private fun parseJsonObjectToMap(jsonObject: JsonObject): Map<*, *> {
+        return jsonObject.entrySet().associate { entry ->
+            entry.key to when (val value = entry.value) {
+                is com.google.gson.JsonPrimitive -> {
+                    when {
+                        value.isString -> value.asString
+                        value.isNumber -> value.asNumber
+                        value.isBoolean -> value.asBoolean
+                        else -> null
+                    }
+                }
+                is JsonArray -> {
+                    // Recursively parse array elements
+                    value.mapNotNull { element ->
                         when {
-                            value.isString -> value.asString
-                            value.isNumber -> value.asNumber
-                            value.isBoolean -> value.asBoolean
+                            element.isJsonPrimitive -> element.asString
+                            element.isJsonObject -> parseJsonObjectToMap(element.asJsonObject)
                             else -> null
                         }
                     }
-                    is JsonArray -> value.mapNotNull { it.asString }
-                    is JsonObject -> {
-                        value.entrySet().associate { e ->
-                            e.key to (e.value.asString ?: "")
-                        }
-                    }
-                    else -> null
                 }
+                is JsonObject -> parseJsonObjectToMap(value)
+                else -> null
             }
+        }
+    }
+    
+    // MARK: - JSON Array Parsing
+    // Parse JSON array from byte array
+    // Handles both JSON array and single JSON object responses
+    fun parseJSONArray(data: ByteArray): List<Map<*, *>> {
+        val jsonString = String(data)
+        val jsonElement = JsonParser.parseString(jsonString)
+        
+        // Handle both JSON array and single JSON object
+        val jsonArray = if (jsonElement.isJsonArray) {
+            jsonElement.asJsonArray
+        } else if (jsonElement.isJsonObject) {
+            // If it's a single object, wrap it in an array
+            JsonArray().apply { add(jsonElement) }
+        } else {
+            android.util.Log.e("ODPTDataService", "parseJSONArray: Invalid JSON type: ${jsonElement.javaClass.simpleName}")
+            return emptyList()
+        }
+        
+        return jsonArray.mapNotNull { element ->
+            if (!element.isJsonObject) {
+                android.util.Log.w("ODPTDataService", "parseJSONArray: Element is not a JsonObject: ${element.javaClass.simpleName}")
+                return@mapNotNull null
+            }
+            parseJsonObjectToMap(element.asJsonObject)
         }
     }
 }

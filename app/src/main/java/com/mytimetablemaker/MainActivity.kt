@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -25,12 +24,16 @@ import com.mytimetablemaker.ui.settings.SettingsContentScreen
 import com.mytimetablemaker.ui.settings.SettingsLineSheetScreen
 import com.mytimetablemaker.ui.settings.SettingsTransferSheetScreen
 import com.mytimetablemaker.ui.theme.MyTransitMakers_JetpackComposeTheme
+import com.mytimetablemaker.ui.timetable.TimetableContentScreen
+import java.util.Locale
 
 // MARK: - Main Activity
 // Main entry point for the Android timetable maker application
 // Matches SwiftUI mytimetablemaker_swiftuiApp structure
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply saved language setting before super.onCreate
+        applySavedLanguageSetting()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
@@ -42,6 +45,24 @@ class MainActivity : ComponentActivity() {
                     AppNavigation()
                 }
             }
+        }
+    }
+    
+    // Apply saved language setting from SharedPreferences
+    private fun applySavedLanguageSetting() {
+        val sharedPreferences = getSharedPreferences("SettingsContentScreen", MODE_PRIVATE)
+        val savedLanguage = sharedPreferences.getString("app_language", null)
+        
+        if (savedLanguage != null) {
+            val locale = Locale.forLanguageTag(savedLanguage)
+            Locale.setDefault(locale)
+            
+            val configuration = resources.configuration
+            configuration.setLocale(locale)
+            // Use createConfigurationContext for API 17+ instead of deprecated updateConfiguration
+            // Note: This is called from onCreate, so we don't recreate to avoid infinite loop
+            // The language will be applied when the activity is recreated from SettingsContentScreen
+            createConfigurationContext(configuration)
         }
     }
 }
@@ -121,6 +142,7 @@ fun AppNavigation() {
         composable("settings") {
             SettingsContentScreen(
                 mainViewModel = mainViewModel,
+                loginViewModel = loginViewModel,
                 firestoreViewModel = firestoreViewModel,
                 onNavigateToMain = {
                     navController.popBackStack()
@@ -169,14 +191,15 @@ fun AppNavigation() {
         composable("timetable_settings/{goorback}/{lineIndex}") { backStackEntry ->
             val goorback = backStackEntry.arguments?.getString("goorback") ?: "back1"
             val lineIndex = backStackEntry.arguments?.getString("lineIndex")?.toIntOrNull() ?: 0
-            // TODO: Implement SettingsTimetableSheetScreen navigation
-            // SettingsTimetableSheetScreen(
-            //     goorback = goorback,
-            //     lineIndex = lineIndex,
-            //     onNavigateBack = {
-            //         navController.popBackStack()
-            //     }
-            // )
+            // Navigate to TimetableContentScreen (TimetableContentView in SwiftUI)
+            // Match SwiftUI: TimetableContentView(goorback, lineIndex) - lineIndex is passed directly
+            TimetableContentScreen(
+                goorback = goorback,
+                num = lineIndex, // lineIndex is 0-based, num is also 0-based (timetableKey uses lineNameKey(num) which adds +1 internally)
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }

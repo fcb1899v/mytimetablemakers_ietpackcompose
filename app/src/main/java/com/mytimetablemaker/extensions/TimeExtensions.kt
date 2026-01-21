@@ -3,6 +3,7 @@ package com.mytimetablemaker.extensions
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
+import com.mytimetablemaker.models.ODPTCalendarType
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -29,21 +30,6 @@ val Int.SStoMMSS: Int
 val Int.SStoHHMMSS: Int
     get() = (this / 3600) * 10000 + ((this % 3600) / 60) * 100 + (this % 60)
 
-// Add HHMMSS time
-fun Int.plusHHMMSS(time: Int): Int {
-    return (this.HHMMSStoSS + time.HHMMSStoSS).SStoHHMMSS
-}
-
-// Add MMSS time
-fun Int.plusMMSS(time: Int): Int {
-    return (this.MMSStoSS + time.MMSStoSS).SStoMMSS
-}
-
-// Subtract MMSS time
-fun Int.minusMMSS(time: Int): Int {
-    return (this.MMSStoSS - time.MMSStoSS).SStoMMSS
-}
-
 // Get hour component from HHMM format
 val Int.timeHH: String
     get() = (this / 100 + (this % 100) / 60).addZeroTime()
@@ -57,12 +43,12 @@ val Int.timetableHour: Int
     get() = if (this > 3) this else this + 24
 
 // Remove leading space from time string
-fun String.timeString(): String {
-    return if (this.startsWith(" ")) this.substring(1) else this
-}
+val String.timeString: String
+    get() = if (this.startsWith(" ")) this.substring(1) else this
+
 
 // Convert HH:MM format to total minutes for sorting
-fun String.timeToMinutes(): Int {
+val String.timeToMinutes: Int get() {
     val components = this.split(":")
     if (components.size == 2) {
         val hour = components[0].toIntOrNull()
@@ -78,31 +64,30 @@ fun String.timeToMinutes(): Int {
 
 // MARK: - Date Extensions
 // Format date for display
-fun Date.setDate(context: Context): String {
+val Date.setDate: String get() {
     val formatter = SimpleDateFormat("E, MMM d, yyyy", Locale.getDefault())
     return formatter.format(this)
 }
 
 // Format time for display
-fun Date.setTime(): String {
+val Date.setTime: String get() {
     val formatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     return formatter.format(this)
 }
 
 // Convert current date to HHMMSS format integer
-val Date.currentTime: Int
-    get() {
-        val calendar = Calendar.getInstance()
-        calendar.time = this
-        val hour = calendar.get(Calendar.HOUR_OF_DAY)
-        val minute = calendar.get(Calendar.MINUTE)
-        val second = calendar.get(Calendar.SECOND)
-        return hour * 10000 + minute * 100 + second
-    }
+val Date.currentTime: Int get() {
+    val calendar = Calendar.getInstance()
+    calendar.time = this
+    val hour = calendar.get(Calendar.HOUR_OF_DAY)
+    val minute = calendar.get(Calendar.MINUTE)
+    val second = calendar.get(Calendar.SECOND)
+    return hour * 10000 + minute * 100 + second
+}
 
 // MARK: - Int Extensions
 // Convert HHMM format to HH:MM string format
-fun Int.stringTime(): String {
+val Int.stringTime: String get() {
     val timeHH = (this / 100 + (this % 100) / 60).addZeroTime()
     val timeMM = (this % 100 % 60).addZeroTime()
     val timeString = "$timeHH:$timeMM"
@@ -171,6 +156,76 @@ fun Int.overTime(beforeTime: Int): Int {
 
 // MARK: - Date Extensions (continued)
 // Determine calendar type based on date with fallback to available types
+// SwiftUI version: Returns ODPTCalendarType directly
+fun Date.odptCalendarType(fallbackTo: List<ODPTCalendarType>): ODPTCalendarType {
+    // Helper function to check if a type or its displayCalendarType is available
+    fun isAvailable(type: ODPTCalendarType): Boolean {
+        return fallbackTo.contains(type) || fallbackTo.any { it.displayCalendarType() == type }
+    }
+    
+    // Helper function to find matching .specific type for a display type
+    fun findSpecificType(displayType: ODPTCalendarType): ODPTCalendarType? {
+        return fallbackTo.firstOrNull { it.displayCalendarType() == displayType }
+    }
+    
+    // TODO: Implement Japanese holiday detection
+    val isHoliday = false // Placeholder
+    val calendar = Calendar.getInstance()
+    calendar.time = this
+    val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
+    
+    // Check if it's a weekday (Monday-Friday, not a holiday)
+    val isWeekdayDate = !isHoliday && dayOfWeek != Calendar.SUNDAY && dayOfWeek != Calendar.SATURDAY
+    
+    // If it's a weekday date, prioritize weekday calendar types
+    if (isWeekdayDate) {
+        // Check for specific weekday types first
+        if (dayOfWeek == Calendar.MONDAY && isAvailable(ODPTCalendarType.Monday)) {
+            return findSpecificType(ODPTCalendarType.Monday) ?: ODPTCalendarType.Monday
+        }
+        if (dayOfWeek == Calendar.TUESDAY && isAvailable(ODPTCalendarType.Tuesday)) {
+            return findSpecificType(ODPTCalendarType.Tuesday) ?: ODPTCalendarType.Tuesday
+        }
+        if (dayOfWeek == Calendar.WEDNESDAY && isAvailable(ODPTCalendarType.Wednesday)) {
+            return findSpecificType(ODPTCalendarType.Wednesday) ?: ODPTCalendarType.Wednesday
+        }
+        if (dayOfWeek == Calendar.THURSDAY && isAvailable(ODPTCalendarType.Thursday)) {
+            return findSpecificType(ODPTCalendarType.Thursday) ?: ODPTCalendarType.Thursday
+        }
+        if (dayOfWeek == Calendar.FRIDAY && isAvailable(ODPTCalendarType.Friday)) {
+            return findSpecificType(ODPTCalendarType.Friday) ?: ODPTCalendarType.Friday
+        }
+        // Fallback to weekday if available
+        if (isAvailable(ODPTCalendarType.Weekday)) {
+            return findSpecificType(ODPTCalendarType.Weekday) ?: ODPTCalendarType.Weekday
+        }
+    }
+    
+    // Check for holiday/weekend calendar types
+    if (isHoliday && isAvailable(ODPTCalendarType.Holiday)) {
+        return findSpecificType(ODPTCalendarType.Holiday) ?: ODPTCalendarType.Holiday
+    }
+    if (dayOfWeek == Calendar.SUNDAY && isAvailable(ODPTCalendarType.Sunday)) {
+        return findSpecificType(ODPTCalendarType.Sunday) ?: ODPTCalendarType.Sunday
+    }
+    if (dayOfWeek == Calendar.SATURDAY && isAvailable(ODPTCalendarType.Saturday)) {
+        return findSpecificType(ODPTCalendarType.Saturday) ?: ODPTCalendarType.Saturday
+    }
+    if ((isHoliday || dayOfWeek == Calendar.SUNDAY || dayOfWeek == Calendar.SATURDAY) && 
+        isAvailable(ODPTCalendarType.SaturdayHoliday)) {
+        return findSpecificType(ODPTCalendarType.SaturdayHoliday) ?: ODPTCalendarType.SaturdayHoliday
+    }
+    
+    // Final fallback: Use weekday if available, otherwise use first available type
+    if (isAvailable(ODPTCalendarType.Weekday)) {
+        return findSpecificType(ODPTCalendarType.Weekday) ?: ODPTCalendarType.Weekday
+    }
+    
+    // If weekday is not available, use the first available type
+    return fallbackTo.firstOrNull() ?: ODPTCalendarType.Weekday
+}
+
+// Legacy version: Returns String (for backward compatibility)
 fun Date.odptCalendarType(availableTypes: List<String>): String {
     val calendar = Calendar.getInstance()
     calendar.time = this
@@ -220,17 +275,80 @@ val String.currentTime: Int
     }
 
 // Load available calendar types for a route and line
+// Detect available calendar types by checking actual timetable data
+fun String.detectAvailableCalendarTypesFromData(
+    num: Int,
+    sharedPreferences: SharedPreferences
+): List<ODPTCalendarType> {
+    val detectedTypes = mutableSetOf<ODPTCalendarType>()
+    
+    // Check all possible calendar types
+    val allCalendarTypes = ODPTCalendarType.allCases
+    
+    for (calendarType in allCalendarTypes) {
+        if (this.hasTimetableDataForType(calendarType, num, sharedPreferences)) {
+            detectedTypes.add(calendarType)
+        }
+    }
+    
+    // Also check cached calendar types which may include .specific cases
+    val lineCacheKey = "${this}line${num + 1}_calendarTypes"
+    val cachedTypes = sharedPreferences.getStringSet(lineCacheKey, null)
+    if (cachedTypes != null) {
+        for (cachedTypeString in cachedTypes) {
+            val cachedCalendarType = ODPTCalendarType.fromRawValue(cachedTypeString)
+            if (cachedCalendarType != null) {
+                // If it's a .specific type, check if data exists for THIS specific line
+                if (cachedCalendarType is ODPTCalendarType.Specific) {
+                    if (this.hasTimetableDataForType(cachedCalendarType, num, sharedPreferences)) {
+                        detectedTypes.add(cachedCalendarType)
+                        // Also add the displayCalendarType so it appears in the dropdown
+                        val displayType = cachedCalendarType.displayCalendarType()
+                        if (displayType != cachedCalendarType && !detectedTypes.contains(displayType)) {
+                            // Check if data exists for the display type as well
+                            if (this.hasTimetableDataForType(displayType, num, sharedPreferences)) {
+                                detectedTypes.add(displayType)
+                            }
+                        }
+                    }
+                } else {
+                    // For non-specific types, just add if data exists
+                    if (this.hasTimetableDataForType(cachedCalendarType, num, sharedPreferences)) {
+                        detectedTypes.add(cachedCalendarType)
+                    }
+                }
+            }
+        }
+    }
+    
+    return detectedTypes.sortedBy { it.rawValue }
+}
+
 fun String.loadAvailableCalendarTypes(sharedPreferences: SharedPreferences, num: Int): List<String> {
     // Check line-level cache first
     val lineCacheKey = "${this}line${num + 1}_calendarTypes"
     val cachedTypes = sharedPreferences.getStringSet(lineCacheKey, null)
     if (cachedTypes != null && cachedTypes.isNotEmpty()) {
-        return cachedTypes.toList()
+        val cachedCalendarTypes = cachedTypes.mapNotNull { ODPTCalendarType.fromRawValue(it) }
+        if (cachedCalendarTypes.isNotEmpty()) {
+            // Verify that cached types have actual data for THIS specific line
+            val verifiedTypes = cachedCalendarTypes.filter { 
+                this.hasTimetableDataForType(it, num, sharedPreferences) 
+            }
+            if (verifiedTypes.isNotEmpty()) {
+                return verifiedTypes.map { it.rawValue }
+            }
+        }
     }
     
-    // TODO: Implement detection from actual data
-    // For now, return default types
-    return listOf("weekday", "saturdayHoliday")
+    // Try to detect from actual data
+    val detectedTypes = this.detectAvailableCalendarTypesFromData(num, sharedPreferences)
+    if (detectedTypes.isNotEmpty()) {
+        return detectedTypes.map { it.rawValue }
+    }
+    
+    // Final fallback to default calendar types
+    return listOf("odpt.Calendar:Weekday", "odpt.Calendar:SaturdayHoliday")
 }
 
 // Generate time array for route based on date and current time
@@ -242,10 +360,46 @@ fun String.timeArray(
     val changeLineInt = this.changeLineInt(sharedPreferences)
     val transferTimeArray = this.transferTimeArray(sharedPreferences)
     val timetableArray = this.timetableArray(sharedPreferences, date)
+    val rideTimeArray = this.rideTimeArray(sharedPreferences)
     
-    // TODO: Implement full timeArray logic
-    // For now, return empty list
-    return emptyList()
+    // Depart time of line 1
+    val currentTimeHHMM = currentTime / 100
+    val firstDepartTime = timetableArray[0].firstOrNull { 
+        it > currentTimeHHMM.plusHHMM(transferTimeArray[1]) 
+    } ?: 2700
+    
+    val timeArray = mutableListOf(firstDepartTime)
+    
+    // Arrive time of line 1
+    val rideTime1 = this.getRideTime(sharedPreferences, date, firstDepartTime, 0)
+    val arriveTime1 = firstDepartTime.plusHHMM(rideTime1).overTime(firstDepartTime)
+    timeArray.add(arriveTime1)
+    
+    // Depart time from depart point
+    val departPointTime = firstDepartTime.minusHHMM(transferTimeArray[1]).overTime(firstDepartTime)
+    timeArray.add(0, departPointTime)
+    
+    if (changeLineInt > 0) {
+        for (i in 1..changeLineInt) {
+            // Depart time of line i
+            val lineDepartTime = timetableArray[i].firstOrNull { 
+                it >= timeArray[2 * i].plusHHMM(transferTimeArray[i + 1]) 
+            } ?: 2700
+            timeArray.add(lineDepartTime)
+            
+            // Arrive time of line i
+            val rideTimeI = this.getRideTime(sharedPreferences, date, lineDepartTime, i)
+            val arriveTimeI = lineDepartTime.plusHHMM(rideTimeI).overTime(lineDepartTime)
+            timeArray.add(arriveTimeI)
+        }
+    }
+    
+    // Arrive time to destination (insert at index 0)
+    val lastArrivalTime = timeArray.last()
+    val destinationTime = lastArrivalTime.plusHHMM(transferTimeArray[0]).overTime(lastArrivalTime)
+    timeArray.add(0, destinationTime)
+    
+    return timeArray
 }
 
 // MARK: - String Time Extensions
@@ -326,7 +480,7 @@ fun String.containsTimeInAnyFormat(departureTime: Int): Boolean {
 // MARK: - Int Choice Copy Time List Extension
 // Generate list of copy time options for hour selection
 @Composable
-fun Int.choiceCopyTimeList(context: android.content.Context): List<String> {
+fun Int.choiceCopyTimeList(context: Context): List<String> {
     // Note: hour string resource is ":00-" which matches SwiftUI's "Hour" localized string
     val hourString = context.getString(com.mytimetablemaker.R.string.hour)
     return listOf(
@@ -340,12 +494,7 @@ fun Int.choiceCopyTimeList(context: android.content.Context): List<String> {
 
 // MARK: - String Other Route Extension
 // Get the other route identifier (back1 <-> back2, go1 <-> go2)
-val String.otherroute: String
-    get() {
-        val lastChar = this.lastOrNull() ?: return this
-        return if (lastChar == '1') {
-            this.dropLast(1) + "2"
-        } else {
-            this.dropLast(1) + "1"
-        }
-    }
+val String.otherRoute: String get() {
+    val lastChar = this.lastOrNull() ?: return this
+    return this.dropLast(1) + (if (lastChar == '1') "2" else "1")
+}

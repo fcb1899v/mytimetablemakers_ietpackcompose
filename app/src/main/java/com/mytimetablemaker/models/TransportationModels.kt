@@ -1,6 +1,8 @@
 package com.mytimetablemaker.models
 
 import android.content.Context
+import com.mytimetablemaker.extensions.busStopEnglishName
+import com.mytimetablemaker.extensions.selectLocalizedName
 import java.util.Locale
 
 // MARK: - Localized Title Model
@@ -12,17 +14,13 @@ data class LocalizedTitle(
     // Get localized name based on current language
     fun getLocalizedName(context: Context): String {
         val currentLanguage = Locale.getDefault().language
-        return if (currentLanguage == "ja") {
-            ja ?: en ?: ""
-        } else {
-            en ?: ja ?: ""
-        }
+        return currentLanguage.selectLocalizedName(ja, en)
     }
     
     // Get localized name with fallback to a base name
     fun getLocalizedName(context: Context, fallbackTo: String): String {
         val localizedName = getLocalizedName(context)
-        return if (localizedName.isEmpty()) fallbackTo else localizedName
+        return localizedName.ifEmpty { fallbackTo }
     }
 }
 
@@ -129,6 +127,8 @@ data class TransportationLine(
     val lineDirection: String? = null,
     val ascendingRailDirection: String? = null,
     val descendingRailDirection: String? = null,
+    // Railway-specific properties
+    val stationOrder: List<TransportationStop>? = null,
     // Bus-specific properties
     val busRoute: String? = null,
     val pattern: String? = null,
@@ -152,36 +152,28 @@ data class TransportationStop(
 ) {
     // Display name with localization support
     fun displayName(context: Context): String {
-        val currentLanguage = java.util.Locale.getDefault().language
-        var baseName: String
-        
-        if (title != null) {
-            val localizedName = title.getLocalizedName(context)
-            baseName = if (localizedName.isNotEmpty()) {
-                localizedName
-            } else {
-                name
+        val baseName = when {
+            title != null -> {
+                val localizedName = title.getLocalizedName(context)
+                localizedName.takeIf { it.isNotEmpty() } ?: name
             }
-        } else {
-            // For bus stops, try to extract English from busstopPole for English locale
-            if (kind == TransportationLineKind.BUS && currentLanguage != "ja") {
-                if (busstopPole != null && busstopPole.isNotEmpty()) {
-                    val components = busstopPole.split(".")
-                    if (components.size > 2) {
-                        baseName = components[2].trim()
-                    } else {
-                        baseName = name
-                    }
-                } else {
-                    baseName = name
-                }
-            } else {
-                baseName = name
+            kind == TransportationLineKind.BUS && 
+            Locale.getDefault().language != "ja" -> {
+                busstopPole?.takeIf { it.isNotEmpty() }
+                    ?.split(".")
+                    ?.takeIf { it.size > 2 }
+                    ?.get(2)
+                    ?.trim()
+                    ?: name
             }
+            else -> name
         }
         
         // Split by ":" and return first component for ODPT format
-        val components = baseName.split(":")
-        return components.firstOrNull()?.trim() ?: baseName
+        return baseName.split(":").firstOrNull()?.trim() ?: baseName
     }
+    
+    // Get bus stop English name from busstopPole identifier
+    val busStopEnglishName: String?
+        get() = busstopPole?.busStopEnglishName()
 }

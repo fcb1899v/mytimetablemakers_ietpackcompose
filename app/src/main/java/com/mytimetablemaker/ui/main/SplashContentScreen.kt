@@ -23,8 +23,7 @@ import androidx.compose.ui.zIndex
 import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.ScreenSize
 import com.mytimetablemaker.ui.settings.FirestoreViewModel
-import com.mytimetablemaker.ui.theme.Accent
-import com.mytimetablemaker.ui.theme.Primary
+import com.mytimetablemaker.ui.theme.*
 import kotlinx.coroutines.delay
 
 // MARK: - Splash Content Screen
@@ -108,8 +107,7 @@ fun SplashContentScreen(
                 painter = painterResource(id = R.drawable.icon),
                 contentDescription = "App Icon",
                 modifier = Modifier
-                    .size(ScreenSize.splashIconSize())
-                    .padding(16.dp),
+                    .size(ScreenSize.splashIconSize()),
                 contentScale = ContentScale.Fit
             )
             
@@ -130,7 +128,7 @@ fun SplashContentScreen(
                 contentDescription = "Splash Image",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height((ScreenSize.screenHeight() * 0.7f).dp),
+                    .height((ScreenSize.screenHeight().value * 0.7f).dp),
                 contentScale = ContentScale.FillWidth
             )
             
@@ -151,7 +149,7 @@ fun SplashContentScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f))
+                    .background(Black.copy(alpha = 0.7f))
                     .zIndex(1f)
             ) {
                 Column(
@@ -160,14 +158,14 @@ fun SplashContentScreen(
                     verticalArrangement = Arrangement.spacedBy(ScreenSize.splashLoadingSpacing())
                 ) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(48.dp),
-                        color = Color.White
+                        modifier = Modifier.size(ScreenSize.progressIndicatorSize()),
+                        color = White
                     )
                     
                     Text(
                         text = stringResource(R.string.loadingData),
                         fontSize = ScreenSize.splashLoadingFontSize().value.sp,
-                        color = Color.White
+                        color = White
                     )
                 }
             }

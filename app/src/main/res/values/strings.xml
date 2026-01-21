@@ -360,4 +360,9 @@
     <string name="thursday">Thursday</string>
     <string name="friday">Friday</string>
     <string name="saturday">Saturday</string>
+    
+    <!-- MARK: - Language Settings -->
+    <string name="language">Language</string>
+    <string name="japanese">Japanese</string>
+    <string name="english">English</string>
 </resources>

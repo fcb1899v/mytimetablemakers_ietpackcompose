@@ -4,29 +4,32 @@ import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
-import com.google.android.gms.ads.admanager.AdManagerAdRequest
-import com.google.android.gms.ads.admanager.AdManagerAdView
 import com.mytimetablemaker.extensions.ScreenSize
+import com.mytimetablemaker.R
 import java.util.Properties
 import java.io.File
 
 // MARK: - AdMob Banner View
 // Jetpack Compose wrapper for Google Mobile Ads banner view
 @Composable
-fun AdMobBannerView() {
+fun AdMobBannerView(
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
-    var viewWidth by remember { mutableStateOf(0f) }
-    var lastLoadTime by remember { mutableStateOf(0L) }
+    var lastLoadTime by remember { mutableLongStateOf(0L) }
     val minimumLoadInterval = 60_000L // 60 seconds in milliseconds
     
     // Get AdMob Banner Unit ID from resources or local.properties
@@ -43,9 +46,8 @@ fun AdMobBannerView() {
     }
     
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(bannerHeight)
+        modifier = modifier
+            .then(Modifier.height(bannerHeight))
     ) {
         AndroidView(
             factory = { ctx ->
@@ -65,6 +67,7 @@ fun AdMobBannerView() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(bannerHeight)
+                .then(modifier)
         )
     }
 }
@@ -73,16 +76,13 @@ fun AdMobBannerView() {
 // Get AdMob unit ID from resources or local.properties
 private fun getAdUnitID(context: Context): String {
     // Method 1: Try to get from string resources (set by build.gradle.kts)
-    val resourceId = context.resources.getIdentifier(
-        "admob_banner_unit_id",
-        "string",
-        context.packageName
-    )
-    if (resourceId != 0) {
-        val unitID = context.getString(resourceId)
-        if (unitID.isNotEmpty() && unitID != "\$(ADMOB_BANNER_UNIT_ID)") {
+    try {
+        val unitID = context.getString(R.string.admob_banner_unit_id)
+        if (unitID.isNotEmpty() && unitID != "$(ADMOB_BANNER_UNIT_ID)") {
             return unitID
         }
+    } catch (e: Exception) {
+        // Resource not found, continue to next method
     }
     
     // Method 2: Try to get from local.properties

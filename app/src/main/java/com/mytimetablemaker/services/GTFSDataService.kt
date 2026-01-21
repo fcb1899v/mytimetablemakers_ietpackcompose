@@ -15,6 +15,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import androidx.core.content.edit
 
 // MARK: - GTFS Data Service
 // Handles GTFS data processing, parsing, and timetable generation
@@ -218,7 +219,7 @@ class GTFSDataService(private val context: Context) {
         // Parse header
         val header = parseCSVLine(lines[0])
         if (header.isEmpty()) {
-            throw ODPTError.InvalidData
+            throw ODPTError.InvalidData()
         }
         
         // Parse data rows
@@ -239,6 +240,43 @@ class GTFSDataService(private val context: Context) {
         return results
     }
     
+    // MARK: - Parse GTFS CSV File (Streaming)
+    // Parse a large GTFS CSV file using streaming to avoid OutOfMemoryError.
+    // This function processes the file line by line without loading the entire file into memory.
+    private fun parseGTFSCSVStreaming(file: File, onRow: (Map<String, String>) -> Unit) {
+        if (!file.exists() || !file.isFile) {
+            return
+        }
+        
+        file.bufferedReader(Charsets.UTF_8).use { reader ->
+            // Read header
+            val headerLine = reader.readLine() ?: return
+            val header = parseCSVLine(headerLine.trim())
+            if (header.isEmpty()) {
+                throw ODPTError.InvalidData()
+            }
+            
+            // Process data rows line by line
+            reader.lineSequence().forEach { line ->
+                val trimmedLine = line.trim()
+                if (trimmedLine.isEmpty()) {
+                    return@forEach
+                }
+                
+                val values = parseCSVLine(trimmedLine)
+                if (values.size != header.size) {
+                    return@forEach // Skip malformed rows
+                }
+                
+                val row = mutableMapOf<String, String>()
+                for (j in header.indices) {
+                    row[header[j]] = if (j < values.size) values[j] else ""
+                }
+                onRow(row)
+            }
+        }
+    }
+    
     // MARK: - Parse CSV Line
     // Parse a single CSV line, handling quoted fields.
     private fun parseCSVLine(line: String): List<String> {
@@ -247,9 +285,9 @@ class GTFSDataService(private val context: Context) {
         var inQuotes = false
         
         for (char in line) {
-            when {
-                char == '"' -> inQuotes = !inQuotes
-                char == ',' && !inQuotes -> {
+            when (char) {
+                '"' -> inQuotes = !inQuotes
+                ',' if !inQuotes -> {
                     result.add(current.toString().trim())
                     current = StringBuilder()
                 }
@@ -275,7 +313,7 @@ class GTFSDataService(private val context: Context) {
     // For Toei Bus (no date), uses ETag/Last-Modified for conditional GET to detect updates.
     private suspend fun downloadGTFSZip(url: String, consumerKey: String, transportOperator: LocalDataSource? = null): ByteArray = withContext(Dispatchers.IO) {
         // transportOperator must be provided for GTFS
-        val transportOp = transportOperator ?: throw ODPTError.InvalidData
+        val transportOp = transportOperator ?: throw ODPTError.InvalidData()
         
         // Generate cache key from transport operator
         // cacheKey includes date, so if cached file exists, it's already for the correct date
@@ -346,7 +384,7 @@ class GTFSDataService(private val context: Context) {
         etag?.let { requestBuilder.addHeader("If-None-Match", it) }
         lastModified?.let { requestBuilder.addHeader("If-Modified-Since", it) }
         
-        println("🔍 Checking for GTFS update using conditional GET: ${url.toString()}")
+        println("🔍 Checking for GTFS update using conditional GET: $url")
         
         val client = OkHttpClient()
         val response = client.newCall(requestBuilder.build()).execute()
@@ -364,14 +402,14 @@ class GTFSDataService(private val context: Context) {
         
         println("🔄 GTFS ZIP updated on server, downloading new file")
         
-        val data = response.body?.bytes() ?: throw ODPTError.InvalidData
+        val data = response.body.bytes()
         
         // Save ETag and Last-Modified for future conditional GET
         response.header("ETag")?.let { newEtag ->
-            sharedPreferences.edit().putString(etagKey, newEtag).apply()
+            sharedPreferences.edit { putString(etagKey, newEtag) }
         }
         response.header("Last-Modified")?.let { newLastModified ->
-            sharedPreferences.edit().putString(lastModifiedKey, newLastModified).apply()
+            sharedPreferences.edit { putString(lastModifiedKey, newLastModified) }
         }
         
         // Save new data to cache
@@ -396,7 +434,7 @@ class GTFSDataService(private val context: Context) {
         }
         requestBuilder.addHeader("Accept", "application/zip")
         
-        println("🔗 Downloading GTFS ZIP from: ${httpUrl.toString()}")
+        println("🔗 Downloading GTFS ZIP from: $httpUrl")
         
         val client = OkHttpClient()
         val response = client.newCall(requestBuilder.build()).execute()
@@ -414,16 +452,16 @@ class GTFSDataService(private val context: Context) {
                     throw ODPTError.NetworkError("Failed to download from redirect URL")
                 }
                 
-                val redirectData = redirectResponse.body?.bytes() ?: throw ODPTError.InvalidData
+                val redirectData = redirectResponse.body.bytes()
                 
                 // Save ETag and Last-Modified for future conditional GET
                 val etagKey = "${cacheKey}_etag"
                 val lastModifiedKey = "${cacheKey}_last_modified"
                 redirectResponse.header("ETag")?.let { etag ->
-                    sharedPreferences.edit().putString(etagKey, etag).apply()
+                    sharedPreferences.edit { putString(etagKey, etag) }
                 }
                 redirectResponse.header("Last-Modified")?.let { lastModified ->
-                    sharedPreferences.edit().putString(lastModifiedKey, lastModified).apply()
+                    sharedPreferences.edit { putString(lastModifiedKey, lastModified) }
                 }
                 
                 // Save to cache
@@ -441,16 +479,16 @@ class GTFSDataService(private val context: Context) {
             throw ODPTError.NetworkError("HTTP ${response.code}")
         }
         
-        val data = response.body?.bytes() ?: throw ODPTError.InvalidData
+        val data = response.body.bytes()
         
         // Save ETag and Last-Modified for future conditional GET
         val etagKey = "${cacheKey}_etag"
         val lastModifiedKey = "${cacheKey}_last_modified"
         response.header("ETag")?.let { etag ->
-            sharedPreferences.edit().putString(etagKey, etag).apply()
+            sharedPreferences.edit { putString(etagKey, etag) }
         }
         response.header("Last-Modified")?.let { lastModified ->
-            sharedPreferences.edit().putString(lastModifiedKey, lastModified).apply()
+            sharedPreferences.edit { putString(lastModifiedKey, lastModified) }
         }
         
         // Save to cache
@@ -571,25 +609,54 @@ class GTFSDataService(private val context: Context) {
     // Returns TransportationLine models directly (no intermediate GTFS models).
     // For routes with multiple trip_headsigns (round trips), creates separate lines for each direction.
     suspend fun fetchGTFSData(transportOperator: LocalDataSource, consumerKey: String): List<TransportationLine> = withContext(Dispatchers.IO) {
-        // Get GTFS URL using apiLink
-        val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
-        if (gtfsURL.isEmpty()) {
-            throw ODPTError.InvalidData
-        }
-        
-        // Get extracted directory (uses cache if available)
-        val extractedDir = getExtractedGTFSDirectory(transportOperator, consumerKey, gtfsURL)
-        
-        // Load translations.txt for localization
-        val translations = loadTranslations(extractedDir)
-        
-        // Parse routes.txt to get basic route information
-        val routesData = loadGTFSFile(extractedDir, "routes.txt")
-        val routes = parseGTFSCSV(routesData)
-        
-        // Parse trips.txt to get trip_headsign and direction_id information for each route
-        val tripsData = loadGTFSFile(extractedDir, "trips.txt")
-        val trips = parseGTFSCSV(tripsData)
+        try {
+            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Starting for ${transportOperator.name}")
+            
+            // Get GTFS URL using apiLink
+            val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
+            if (gtfsURL.isEmpty()) {
+                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Empty GTFS URL for ${transportOperator.name}")
+                throw ODPTError.InvalidData()
+            }
+            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: GTFS URL=$gtfsURL")
+            
+            // Get extracted directory (uses cache if available)
+            val extractedDir = getExtractedGTFSDirectory(transportOperator, consumerKey, gtfsURL)
+            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Extracted directory=${extractedDir.absolutePath}, exists=${extractedDir.exists()}")
+            
+            // Load translations.txt for localization
+            val translations = loadTranslations(extractedDir)
+            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Loaded ${translations.size} translations")
+            
+            // Parse routes.txt to get basic route information
+            val routesData = try {
+                loadGTFSFile(extractedDir, "routes.txt")
+            } catch (e: Exception) {
+                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to load routes.txt: ${e.message}", e)
+                throw e
+            }
+            val routes = try {
+                parseGTFSCSV(routesData)
+            } catch (e: Exception) {
+                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to parse routes.txt: ${e.message}", e)
+                throw e
+            }
+            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Parsed ${routes.size} routes")
+            
+            // Parse trips.txt to get trip_headsign and direction_id information for each route
+            val tripsData = try {
+                loadGTFSFile(extractedDir, "trips.txt")
+            } catch (e: Exception) {
+                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to load trips.txt: ${e.message}", e)
+                throw e
+            }
+            val trips = try {
+                parseGTFSCSV(tripsData)
+            } catch (e: Exception) {
+                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to parse trips.txt: ${e.message}", e)
+                throw e
+            }
+            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Parsed ${trips.size} trips")
         
         // Group trips by route_id and get unique (trip_headsign, direction_id) combinations for each route
         // Use a data class to represent direction information
@@ -631,20 +698,17 @@ class GTFSDataService(private val context: Context) {
             }
         }
         
-        val stopTimesData = try {
-            loadGTFSFile(extractedDir, "stop_times.txt")
-        } catch (e: Exception) {
-            null
-        }
-        if (stopTimesData != null) {
-            val stopTimesRows = parseGTFSCSV(stopTimesData)
+        // Process stop_times.txt using streaming to avoid OutOfMemoryError
+        val stopTimesFile = File(extractedDir, "stop_times.txt")
+        if (stopTimesFile.exists() && stopTimesFile.isFile) {
             val tripStopSequences = mutableMapOf<String, MutableList<Pair<String, Int>>>()
             
-            for (row in stopTimesRows) {
-                val tripId = row["trip_id"] ?: continue
-                val stopId = row["stop_id"] ?: continue
-                val sequenceStr = row["stop_sequence"] ?: continue
-                val sequence = sequenceStr.toIntOrNull() ?: continue
+            // Process stop_times.txt line by line using streaming
+            parseGTFSCSVStreaming(stopTimesFile) { row ->
+                val tripId = row["trip_id"] ?: return@parseGTFSCSVStreaming
+                val stopId = row["stop_id"] ?: return@parseGTFSCSVStreaming
+                val sequenceStr = row["stop_sequence"] ?: return@parseGTFSCSVStreaming
+                val sequence = sequenceStr.toIntOrNull() ?: return@parseGTFSCSVStreaming
                 
                 if (!tripStopSequences.containsKey(tripId)) {
                     tripStopSequences[tripId] = mutableListOf()
@@ -697,8 +761,12 @@ class GTFSDataService(private val context: Context) {
         
         // Create TransportationLine for each route and (trip_headsign, direction_id) combination
         val transportationLines = mutableListOf<TransportationLine>()
+        var skippedRoutes = 0
         for (route in routes) {
-            val routeId = route["route_id"] ?: continue
+            val routeId = route["route_id"] ?: run {
+                skippedRoutes++
+                continue
+            }
             
             // Get direction info for this route (if any)
             val directions = routeDirections[routeId] ?: emptySet()
@@ -716,6 +784,8 @@ class GTFSDataService(private val context: Context) {
                 )
                 if (line != null) {
                     transportationLines.add(line)
+                } else {
+                    android.util.Log.w("GTFSDataService", "🚌 fetchGTFSData: createTransportationLine returned null for route_id=$routeId (no directions)")
                 }
             } else if (directions.size == 1) {
                 // Only one direction - create single line
@@ -744,6 +814,8 @@ class GTFSDataService(private val context: Context) {
                 )
                 if (line != null) {
                     transportationLines.add(line)
+                } else {
+                    android.util.Log.w("GTFSDataService", "🚌 fetchGTFSData: createTransportationLine returned null for route_id=$routeId (single direction)")
                 }
             } else {
                 // Multiple directions - create separate line for each direction
@@ -775,18 +847,27 @@ class GTFSDataService(private val context: Context) {
                         routeId = routeId,
                         tripHeadsign = displayHeadsign,
                         directionId = direction.directionId,
-                        directionCode = if (directionCode.isEmpty()) null else directionCode,
+                        directionCode = directionCode.ifEmpty { null },
                         operatorCode = transportOperator.operatorCode(),
                         translations = translations
                     )
                     if (line != null) {
                         transportationLines.add(line)
+                    } else {
+                        android.util.Log.w("GTFSDataService", "🚌 fetchGTFSData: createTransportationLine returned null for route_id=$routeId, directionCode=$directionCode")
                     }
                 }
             }
         }
         
+        android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Created ${transportationLines.size} transportation lines for ${transportOperator.name} (skipped ${skippedRoutes} routes without route_id)")
         transportationLines
+        } catch (e: Exception) {
+            android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to process GTFS data for ${transportOperator.name}: ${e.message}", e)
+            android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Exception type: ${e.javaClass.simpleName}")
+            e.printStackTrace()
+            throw e
+        }
     }
     
     // MARK: - Create Transportation Line from Route
@@ -876,11 +957,11 @@ class GTFSDataService(private val context: Context) {
         val routeName: String = when {
             !tripHeadsign.isNullOrEmpty() -> {
                 // Use trip_headsign as destination
-                val destination = "${tripHeadsign}$destinationSuffix".replace("行 行", "行")
+                val destination = "${tripHeadsign}$destinationSuffix".replace("行 行", "行").replace("行行", "行")
                 "$shortName$destinationPrefix$destination"
             }
             routeShortName?.isNotEmpty() == true && destinationStop?.isNotEmpty() == true -> {
-                val destination = "${destinationStop}$destinationSuffix".replace("行 行", "行")
+                val destination = "${destinationStop}$destinationSuffix".replace("行 行", "行").replace("行行", "行")
                 "$shortName$destinationPrefix$destination"
             }
             else -> shortName
@@ -888,6 +969,13 @@ class GTFSDataService(private val context: Context) {
         
         // Convert fullwidth numbers and alphabets to halfwidth
         val cleanedRouteName = convertFullwidthToHalfwidth(routeName)
+        
+        // Fix trailing "行行" to "行"
+        val finalRouteName = if (cleanedRouteName.endsWith("行行")) {
+            cleanedRouteName.dropLast(1)
+        } else {
+            cleanedRouteName
+        }
         
         // Create unique code: route_id + direction_id or directionCode (trip_headsign is only for display)
         // Format: "route_id_directionId" or "route_id_directionCode" or "route_id"
@@ -900,7 +988,7 @@ class GTFSDataService(private val context: Context) {
         return TransportationLine(
             id = code,
             kind = TransportationLineKind.BUS,
-            name = cleanedRouteName,
+            name = finalRouteName,
             code = code,
             operatorCode = operatorCode,
             lineColor = route["route_color"],
@@ -958,7 +1046,7 @@ class GTFSDataService(private val context: Context) {
         // Get GTFS URL using apiLink
         val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
         if (gtfsURL.isEmpty()) {
-            throw ODPTError.InvalidData
+            throw ODPTError.InvalidData()
         }
         
         // Extract route_id and direction info from code
@@ -978,7 +1066,7 @@ class GTFSDataService(private val context: Context) {
             // Find the first "_" to separate route_id and directionCode
             val firstUnderscoreIndex = routeId.indexOf("_")
             if (firstUnderscoreIndex >= 0) {
-                originalRouteId = routeId.substring(0, firstUnderscoreIndex)
+                originalRouteId = routeId.take(firstUnderscoreIndex)
                 val directionCode = routeId.substring(firstUnderscoreIndex + 1)
                 // Parse directionCode: "firstStopId|lastStopId"
                 val directionCodeParts = directionCode.split("|")
@@ -1015,9 +1103,8 @@ class GTFSDataService(private val context: Context) {
         val tripsData = loadGTFSFile(extractedDir, "trips.txt")
         val allTrips = parseGTFSTripsForRoute(tripsData, originalRouteId)
         
-        // Load stop_times.txt once (needed for both filtering and getting stop list)
-        val stopTimesData = loadGTFSFile(extractedDir, "stop_times.txt")
-        val stopTimesRows = parseGTFSCSV(stopTimesData)
+        // Process stop_times.txt using streaming to avoid OutOfMemoryError
+        val stopTimesFile = File(extractedDir, "stop_times.txt")
         
         // If direction_id is specified, filter by direction_id
         // Otherwise, if firstStopId/lastStopId is specified, filter by matching trip endpoints
@@ -1029,29 +1116,31 @@ class GTFSDataService(private val context: Context) {
             }
         } else if (targetFirstStopId != null && targetLastStopId != null) {
             // Filter by firstStopId/lastStopId: need to check stop_times.txt for each trip
-            // Get first and last stop_id for each trip
+            // Get first and last stop_id for each trip using streaming
             val tripEndpoints = mutableMapOf<String, Pair<String, String>>()
             val tripStopSequences = mutableMapOf<String, MutableList<Pair<String, Int>>>()
             
-            for (row in stopTimesRows) {
-                val tripId = row["trip_id"] ?: continue
-                val stopId = row["stop_id"] ?: continue
-                val sequenceStr = row["stop_sequence"] ?: continue
-                val sequence = sequenceStr.toIntOrNull() ?: continue
-                
-                if (!tripStopSequences.containsKey(tripId)) {
-                    tripStopSequences[tripId] = mutableListOf()
+            if (stopTimesFile.exists() && stopTimesFile.isFile) {
+                parseGTFSCSVStreaming(stopTimesFile) { row ->
+                    val tripId = row["trip_id"] ?: return@parseGTFSCSVStreaming
+                    val stopId = row["stop_id"] ?: return@parseGTFSCSVStreaming
+                    val sequenceStr = row["stop_sequence"] ?: return@parseGTFSCSVStreaming
+                    val sequence = sequenceStr.toIntOrNull() ?: return@parseGTFSCSVStreaming
+                    
+                    if (!tripStopSequences.containsKey(tripId)) {
+                        tripStopSequences[tripId] = mutableListOf()
+                    }
+                    tripStopSequences[tripId]!!.add(Pair(stopId, sequence))
                 }
-                tripStopSequences[tripId]!!.add(Pair(stopId, sequence))
-            }
-            
-            // Get first and last stop_id for each trip
-            for ((tripId, stops) in tripStopSequences) {
-                val sortedStops = stops.sortedBy { it.second }
-                if (sortedStops.isNotEmpty()) {
-                    val first = sortedStops.first()
-                    val last = sortedStops.last()
-                    tripEndpoints[tripId] = Pair(first.first, last.first)
+                
+                // Get first and last stop_id for each trip
+                for ((tripId, stops) in tripStopSequences) {
+                    val sortedStops = stops.sortedBy { it.second }
+                    if (sortedStops.isNotEmpty()) {
+                        val first = sortedStops.first()
+                        val last = sortedStops.last()
+                        tripEndpoints[tripId] = Pair(first.first, last.first)
+                    }
                 }
             }
             
@@ -1071,17 +1160,25 @@ class GTFSDataService(private val context: Context) {
         // Use 1st trip_id if available, otherwise use 0th (to skip depot-only trips)
         val selectedTrip = filteredTrips[if (filteredTrips.size > 1) 1 else 0]
         
-        // stopTimesRows is already loaded above
-        // Filter stop_times for the selected trip and sort by stop_sequence
-        val tripStopTimes = stopTimesRows
-            .filter { it["trip_id"] == selectedTrip.tripId }  // Extract only matching 1st trip_id (or 0th)
-            .mapNotNull { row ->
-                val stopId = row["stop_id"] ?: return@mapNotNull null
-                val sequenceStr = row["stop_sequence"] ?: return@mapNotNull null
-                val sequence = sequenceStr.toIntOrNull() ?: return@mapNotNull null
-                Pair(stopId, sequence)
+        // Process stop_times.txt again using streaming to get stop list for selected trip
+        val tripStopTimes = mutableListOf<Pair<String, Int>>()
+        if (stopTimesFile.exists() && stopTimesFile.isFile) {
+            parseGTFSCSVStreaming(stopTimesFile) { row ->
+                val tripId = row["trip_id"] ?: return@parseGTFSCSVStreaming
+                if (tripId != selectedTrip.tripId) {
+                    return@parseGTFSCSVStreaming
+                }
+                
+                val stopId = row["stop_id"] ?: return@parseGTFSCSVStreaming
+                val sequenceStr = row["stop_sequence"] ?: return@parseGTFSCSVStreaming
+                val sequence = sequenceStr.toIntOrNull() ?: return@parseGTFSCSVStreaming
+                
+                tripStopTimes.add(Pair(stopId, sequence))
             }
-            .sortedBy { it.second }
+        }
+        
+        // Sort by stop_sequence
+        tripStopTimes.sortBy { it.second }
         
         // Step 3: Get stops information from stops.txt
         // Create a dictionary of stop_id -> stop_name

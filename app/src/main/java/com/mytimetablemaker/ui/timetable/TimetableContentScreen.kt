@@ -4,9 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -19,7 +17,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -73,6 +70,7 @@ fun TimetableContentScreen(
     var scrollViewHeight by remember { mutableStateOf(0.dp) }
     
     // MARK: - Helper Functions
+    
     // Get display name (split by ":" and return first component for ODPT format)
     fun getDisplayName(name: String): String {
         val components = name.split(":")
@@ -80,11 +78,13 @@ fun TimetableContentScreen(
     }
     
     // Update valid hours for current calendar type
+    // This is called when calendar type changes or timetable data is updated
     fun updateValidHours() {
         validHours = goorback.validHourRange(selectedCalendarType, num, sharedPreferences)
     }
     
     // Sort calendar types according to enum definition order
+    // Order: weekday, holiday, saturdayHoliday, sunday, monday, tuesday, wednesday, thursday, friday, saturday, specific(String)
     fun sortCalendarTypesByEnumOrder(types: List<ODPTCalendarType>): List<ODPTCalendarType> {
         val enumOrder = listOf(
             ODPTCalendarType.Weekday,
@@ -116,7 +116,9 @@ fun TimetableContentScreen(
     }
     
     // Rebuild train type list from existing timetable data if not exists
+    // This ensures the train type list is always up to date
     fun rebuildTrainTypeListIfNeeded() {
+        // Check if train type list already exists
         val existingTrainTypes = goorback.loadTrainTypeList(selectedCalendarType, num, sharedPreferences)
         if (existingTrainTypes.isNotEmpty()) {
             return
@@ -140,21 +142,26 @@ fun TimetableContentScreen(
     // MARK: - Initialization
     LaunchedEffect(Unit) {
         // Load available calendar types from cache or use default
+        // Match SwiftUI: let loadedTypes = goorback.loadAvailableCalendarTypes(num: num)
         val loadedTypesString = goorback.loadAvailableCalendarTypes(sharedPreferences, num)
+        
+        // loadedTypesString already contains full rawValue (e.g., "odpt.Calendar:Weekday")
+        // Convert to ODPTCalendarType objects
         val loadedTypes = loadedTypesString.mapNotNull { typeString ->
-            ODPTCalendarType.fromRawValue("odpt.Calendar:$typeString")
+            ODPTCalendarType.fromRawValue(typeString)
         }
         
         // Sort calendar types according to enum definition order
+        // Match SwiftUI: availableCalendarTypes = sortCalendarTypesByEnumOrder(loadedTypes)
         availableCalendarTypes = sortCalendarTypesByEnumOrder(loadedTypes)
         
         // Set selectedCalendarType based on current date with fallback to available types
+        // Match SwiftUI: selectedCalendarType = Date().odpTCalendarType(fallbackTo: availableCalendarTypes)
         val currentDate = Date()
-        val currentCalendarTypeString = currentDate.odptCalendarType(availableCalendarTypes.map { it.rawValue })
-        val currentCalendarType = ODPTCalendarType.fromRawValue("odpt.Calendar:$currentCalendarTypeString")
-        selectedCalendarType = currentCalendarType ?: availableCalendarTypes.firstOrNull() ?: ODPTCalendarType.Weekday
+        selectedCalendarType = currentDate.odptCalendarType(fallbackTo = availableCalendarTypes)
         
         // Check if data exists for the selected calendar type, if not, try other available types
+        // Match SwiftUI: if !goorback.hasTimetableDataForType(selectedCalendarType, num: num) { ... }
         if (!goorback.hasTimetableDataForType(selectedCalendarType, num, sharedPreferences)) {
             for (calendarType in availableCalendarTypes) {
                 if (goorback.hasTimetableDataForType(calendarType, num, sharedPreferences)) {
@@ -165,9 +172,11 @@ fun TimetableContentScreen(
         }
         
         // Initialize valid hours
+        // Match SwiftUI: updateValidHours()
         updateValidHours()
         
         // Rebuild train type list from existing data if not exists
+        // Match SwiftUI: rebuildTrainTypeListIfNeeded()
         rebuildTrainTypeListIfNeeded()
     }
     
@@ -186,13 +195,13 @@ fun TimetableContentScreen(
                         text = stringResource(R.string.timetableRidingTime),
                         fontSize = ScreenSize.settingsTitleFontSize().value.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = White
                     )
                 },
                 navigationIcon = {
                     CommonComponents.CustomBackButton(
                         onClick = onNavigateBack,
-                        foregroundColor = Color.White
+                        foregroundColor = White
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -209,8 +218,7 @@ fun TimetableContentScreen(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(ScreenSize.timetableVerticalSpacing())
             ) {
                 // MARK: - Header Section
@@ -219,7 +227,7 @@ fun TimetableContentScreen(
                     text = "${goorback.operatorNameArray(sharedPreferences)[num]} : ${goorback.lineNameArray(sharedPreferences)[num]}",
                     fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = White,
                     modifier = Modifier.padding(start = ScreenSize.timetableHorizontalSpacing())
                 )
                 
@@ -228,7 +236,7 @@ fun TimetableContentScreen(
                     text = "${getDisplayName(stationArray[2 * num])}${stringResource(R.string.toSpace)}${getDisplayName(stationArray[2 * num + 1])}",
                     fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = White,
                     modifier = Modifier.padding(start = ScreenSize.timetableHorizontalSpacing())
                 )
                 
@@ -239,25 +247,25 @@ fun TimetableContentScreen(
                     // Top border
                     Box(
                         modifier = Modifier
-                            .width(ScreenSize.customWidth().dp)
-                            .height(1.dp)
-                            .background(Color.White)
+                            .width(ScreenSize.customWidth())
+                            .height(ScreenSize.borderWidth())
+                            .background(White)
                     )
                     
                     // Calendar type selector
                     Row(
                         modifier = Modifier
-                            .width(ScreenSize.customWidth().dp)
+                            .width(ScreenSize.customWidth())
                             .height(ScreenSize.timetableGridHeight())
-                            .background(Color.Black.copy(alpha = 0.5f)),
+                            .background(Black.copy(alpha = 0.5f)),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .width(1.dp)
+                                .width(ScreenSize.borderWidth())
                                 .fillMaxHeight()
-                                .background(Color.White)
+                                .background(White)
                         )
                         
                         Spacer(modifier = Modifier.weight(1f))
@@ -280,7 +288,7 @@ fun TimetableContentScreen(
                                         color = Gray.copy(alpha = 0.1f),
                                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                                     ),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
@@ -306,35 +314,40 @@ fun TimetableContentScreen(
                         
                         Box(
                             modifier = Modifier
-                                .width(1.dp)
+                                .width(ScreenSize.borderWidth())
                                 .fillMaxHeight()
-                                .background(Color.White)
+                                .background(White)
                         )
                     }
                     
                     // Bottom border
                     Box(
                         modifier = Modifier
-                            .width(ScreenSize.customWidth().dp)
-                            .height(1.dp)
-                            .background(Color.White)
+                            .width(ScreenSize.customWidth())
+                            .height(ScreenSize.borderWidth())
+                            .background(White)
                     )
                     
                     // Timetable grid scroll view
-                    LazyColumn(
+                    // Match SwiftUI ScrollView implementation
+                    Column(
                         modifier = Modifier
-                            .width(ScreenSize.customWidth().dp)
+                            .width(ScreenSize.customWidth())
                             .height(
                                 if (scrollViewHeight > 0.dp) {
                                     minOf(scrollViewHeight, ScreenSize.timetableMaxHeight())
                                 } else {
                                     ScreenSize.timetableMaxHeight()
                                 }
-                            ),
+                            )
+                            .verticalScroll(rememberScrollState())
+                            .background(Black.copy(alpha = 0.25f))
+                            .onGloballyPositioned { coordinates ->
+                                scrollViewHeight = with(density) { coordinates.size.height.toDp() }
+                            },
                         verticalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
-                        items(validHours.size) { index ->
-                            val hour = validHours[index]
+                        validHours.forEach { hour ->
                             TimetableGridView(
                                 goorback = goorback,
                                 num = num,
@@ -347,14 +360,12 @@ fun TimetableContentScreen(
                             )
                             
                             // Divider
-                            if (index < validHours.size - 1) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(ScreenSize.customWidth().dp)
-                                        .height(1.dp)
-                                        .background(Color.White)
-                                )
-                            }
+                            Box(
+                                modifier = Modifier
+                                    .width(ScreenSize.customWidth())
+                                    .height(ScreenSize.borderWidth())
+                                    .background(White)
+                            )
                         }
                     }
                     
@@ -421,7 +432,7 @@ fun TimetableContentScreen(
 }
 
 // MARK: - Timetable Grid View
-// Individual grid cell for editing timetable times
+// Individual grid cell for editing timetable times with add/delete/copy functionality
 @Composable
 private fun TimetableGridView(
     goorback: String,
@@ -431,8 +442,6 @@ private fun TimetableGridView(
     sharedPreferences: SharedPreferences,
     onShowSheet: (Int) -> Unit
 ) {
-    val context = LocalContext.current
-    
     // Load transportation times for this hour
     val transportationTimes = goorback.loadTransportationTimes(
         selectedCalendarType,
@@ -441,6 +450,7 @@ private fun TimetableGridView(
         sharedPreferences
     )
     
+    // MARK: - Time Edit Button
     Row(
         horizontalArrangement = Arrangement.spacedBy(0.dp)
     ) {
@@ -449,7 +459,7 @@ private fun TimetableGridView(
             modifier = Modifier
                 .width(ScreenSize.timetableHourFrameWidth())
                 .height(ScreenSize.calculateContentHeight(transportationTimes.size))
-                .background(Color.Black.copy(alpha = 0.25f))
+                .background(Black.copy(alpha = 0.25f))
         ) {
             Row(
                 modifier = Modifier.fillMaxSize(),
@@ -460,7 +470,7 @@ private fun TimetableGridView(
                     modifier = Modifier
                         .width(1.dp)
                         .fillMaxHeight()
-                        .background(Color.White)
+                        .background(White)
                 )
                 
                 Spacer(modifier = Modifier.weight(1f))
@@ -482,7 +492,7 @@ private fun TimetableGridView(
                     modifier = Modifier
                         .width(1.dp)
                         .fillMaxHeight()
-                        .background(Color.White)
+                        .background(White)
                 )
             }
         }
@@ -508,7 +518,7 @@ private fun TimetableGridView(
             modifier = Modifier
                 .width(1.dp)
                 .height(ScreenSize.calculateContentHeight(transportationTimes.size))
-                .background(Color.White)
+                .background(White)
         )
     }
 }
@@ -554,7 +564,7 @@ private fun TimetableGridContent(
                     text = "(${transportationTime.rideTime})",
                     fontSize = ScreenSize.timetableRideTimeFontSize().value.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color.White,
+                    color = White,
                     maxLines = 1
                 )
             }
@@ -563,7 +573,7 @@ private fun TimetableGridContent(
 }
 
 // MARK: - Calendar Type Dropdown View
-// Dropdown menu for selecting calendar type
+// Dropdown menu for selecting calendar type (weekday/holiday/etc.)
 @Composable
 private fun CalendarTypeDropdownView(
     availableCalendarTypes: List<ODPTCalendarType>,
@@ -577,10 +587,9 @@ private fun CalendarTypeDropdownView(
         modifier = modifier
             .width(ScreenSize.timetableTypeMenuWidth())
             .background(
-                color = Color.White,
-                shape = RoundedCornerShape(4.dp)
+                color = White,
             )
-            .border(1.dp, Gray, RoundedCornerShape(4.dp)),
+            .border(ScreenSize.borderWidth(), Gray),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         availableCalendarTypes.forEachIndexed { index, calendarType ->
@@ -616,7 +625,7 @@ private fun CalendarTypeDropdownView(
             
             if (index < availableCalendarTypes.size - 1) {
                 HorizontalDivider(
-                    modifier = Modifier.height(1.dp),
+                    modifier = Modifier.height(ScreenSize.borderWidth()),
                     color = Gray
                 )
             }
@@ -624,15 +633,13 @@ private fun CalendarTypeDropdownView(
     }
 }
 
-// MARK: - Color Legend View
-// Displays color legend for train types
+// MARK: - Color Legend View Function
+// Displays color legend for train types based on saved train type list
 @Composable
 private fun ColorLegendView(
     trainTypes: List<String>,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    
     // Filter out empty train types
     val validTrainTypes = trainTypes.filter { it.isNotEmpty() }
     
@@ -648,7 +655,7 @@ private fun ColorLegendView(
         color.priorityValue
     }
     
-    // TODO: Implement row-based layout for color legend
+    // TODO: Implement row-based layout for color legend (matching SwiftUI createRows function)
     // For now, display in a simple column
     Column(
         modifier = modifier
@@ -669,12 +676,13 @@ private fun ColorLegendView(
                     tint = color
                 )
                 
+                // Create combined display text
                 val displayTexts = types.map { trainType ->
                     val components = trainType.split(".")
                     components.lastOrNull() ?: trainType
                 }
                 
-                val separator = if (java.util.Locale.getDefault().language == "ja") "・" else ", "
+                val separator = if (Locale.getDefault().language == "ja") "・" else ", "
                 val combinedText = displayTexts.joinToString(separator)
                 
                 Text(
@@ -709,9 +717,8 @@ private fun RegisterTimetableButton(
             title = stringResource(R.string.registerTimetable),
             icon = Icons.Default.Add,
             backgroundColor = Accent,
-            textColor = Color.White,
+            textColor = White,
             onClick = { onShowSheet(hour) }
         )
     }
 }
-

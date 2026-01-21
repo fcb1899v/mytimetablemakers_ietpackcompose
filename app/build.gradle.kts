@@ -2,7 +2,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.services)
 }
@@ -12,6 +11,25 @@ val localPropertiesFile = rootProject.file("local.properties")
 val localProperties = Properties()
 if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+
+// Load .env file for environment variables (if exists)
+val envFile = rootProject.file(".env")
+if (envFile.exists()) {
+    envFile.readLines().forEach { line ->
+        val trimmedLine = line.trim()
+        if (trimmedLine.isNotEmpty() && !trimmedLine.startsWith("#")) {
+            val keyValue = trimmedLine.split("=", limit = 2)
+            if (keyValue.size == 2) {
+                val key = keyValue[0].trim()
+                val value = keyValue[1].trim()
+                // Only set if not already in localProperties
+                if (!localProperties.containsKey(key)) {
+                    localProperties.setProperty(key, value)
+                }
+            }
+        }
+    }
 }
 
 android {
@@ -34,6 +52,14 @@ android {
             ?: "ca-app-pub-3940256099942544~3347511713"
         
         manifestPlaceholders["admob_app_id"] = admobAppId
+        
+        // Get ODPT Access Token from local.properties and set in BuildConfig
+        val odptAccessToken = localProperties.getProperty("ODPT_ACCESS_TOKEN") ?: ""
+        buildConfigField("String", "ODPT_ACCESS_TOKEN", "\"$odptAccessToken\"")
+        
+        // Get ODPT Challenge Token from local.properties and set in BuildConfig
+        val odptChallengeToken = localProperties.getProperty("ODPT_CHALLENGE_TOKEN") ?: ""
+        buildConfigField("String", "ODPT_CHALLENGE_TOKEN", "\"$odptChallengeToken\"")
     }
 
     buildTypes {
@@ -63,6 +89,8 @@ android {
     }
     buildFeatures {
         compose = true
+        resValues = true
+        buildConfig = true
     }
 }
 
@@ -96,7 +124,9 @@ dependencies {
     
     // OkHttp for HTTP requests
     implementation(libs.okhttp)
-        
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.ui)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

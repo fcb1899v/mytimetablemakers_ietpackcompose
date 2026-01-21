@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -19,7 +18,6 @@ import androidx.compose.ui.zIndex
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -34,7 +32,50 @@ import com.mytimetablemaker.extensions.*
 import com.mytimetablemaker.models.*
 import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.theme.*
-import kotlinx.coroutines.launch
+import androidx.core.content.edit
+
+// Helper function to get train type display name from resource
+private fun getTrainTypeDisplayName(trainType: String, context: Context): String {
+    // Extract resource name from train type string (e.g., "odpt.TrainType:JR-East.ChuoSpecialRapid" -> "chuoSpecialRapid")
+    val parts = trainType.split(".")
+    if (parts.size >= 3) {
+        val resourceName = parts[2].replaceFirstChar { it.lowercaseChar() }
+        return when (resourceName) {
+            "accessExpress" -> context.getString(R.string.accessExpress)
+            "airportRapidLimitedExpress" -> context.getString(R.string.airportRapidLimitedExpress)
+            "chuoSpecialRapid" -> context.getString(R.string.chuoSpecialRapid)
+            "commuterExpress" -> context.getString(R.string.commuterExpress)
+            "commuterLimitedExpress" -> context.getString(R.string.commuterLimitedExpress)
+            "commuterRapid" -> context.getString(R.string.commuterRapid)
+            "commuterSemiExpress" -> context.getString(R.string.commuterSemiExpress)
+            "commuterSpecialRapid" -> context.getString(R.string.commuterSpecialRapid)
+            "eveningWing" -> context.getString(R.string.eveningWing)
+            "express" -> context.getString(R.string.express)
+            "haijimaLiner" -> context.getString(R.string.haijimaLiner)
+            "kawagoeLimitedExpress" -> context.getString(R.string.kawagoeLimitedExpress)
+            "limitedExpress" -> context.getString(R.string.limitedExpress)
+            "liner" -> context.getString(R.string.liner)
+            "local" -> context.getString(R.string.local)
+            "morningWing" -> context.getString(R.string.morningWing)
+            "omeSpecialRapid" -> context.getString(R.string.omeSpecialRapid)
+            "rapid" -> context.getString(R.string.rapid)
+            "rapidExpress" -> context.getString(R.string.rapidExpress)
+            "rapidLimitedExpress" -> context.getString(R.string.rapidLimitedExpress)
+            "semiExpress" -> context.getString(R.string.semiExpress)
+            "semiRapid" -> context.getString(R.string.semiRapid)
+            "sectionExpress" -> context.getString(R.string.sectionExpress)
+            "sectionSemiExpress" -> context.getString(R.string.sectionSemiExpress)
+            "specialRapid" -> context.getString(R.string.specialRapid)
+            "fLiner" -> context.getString(R.string.fLiner)
+            "sTrain" -> context.getString(R.string.sTrain)
+            "slTaiju" -> context.getString(R.string.slTaiju)
+            "thLiner" -> context.getString(R.string.thLiner)
+            "tjLiner" -> context.getString(R.string.tjLiner)
+            else -> trainType
+        }
+    }
+    return trainType
+}
 
 // MARK: - Settings Timetable Sheet Screen
 // Sheet for editing timetable times with add/delete/copy functionality
@@ -59,7 +100,7 @@ fun SettingsTimetableSheetScreen(
     var isTrainTypeDropdownOpen by remember { mutableStateOf(false) }
     var isCalendarTypeDropdownOpen by remember { mutableStateOf(false) }
     var isCopyTimeDropdownOpen by remember { mutableStateOf(false) }
-    var currentHour by remember { mutableStateOf(hour) }
+    var currentHour by remember { mutableIntStateOf(hour) }
     var currentCalendarType by remember { mutableStateOf(selectedCalendarType) }
     var transportationTimes by remember { mutableStateOf<List<TransportationTime>>(emptyList()) }
     var availableOdptCalendar by remember { mutableStateOf<List<ODPTCalendarType>>(emptyList()) }
@@ -190,9 +231,9 @@ fun SettingsTimetableSheetScreen(
         // Add new train type if not already in the list
         if (!existingList.contains(trainType)) {
             existingList.add(trainType)
-            sharedPreferences.edit()
-                .putString(trainTypeListKey, existingList.joinToString(" "))
-                .apply()
+            sharedPreferences.edit {
+                putString(trainTypeListKey, existingList.joinToString(" "))
+            }
         }
     }
     
@@ -281,10 +322,11 @@ fun SettingsTimetableSheetScreen(
             timeTypeRidePairs.add(Triple(departureTimes[i], type, rideTimeStr))
         }
         
-        // Sort triplets by time
-        timeTypeRidePairs.sortWith(compareBy { (time1, _, _) ->
-            time1.toIntOrNull() ?: 0
-        })
+        // Sort triplets by time (convert to Int for proper sorting)
+        // Matches SwiftUI: timeTypeRidePairs.sort { pair1.time.isTimeLessThan(pair2.time) }
+        timeTypeRidePairs.sortWith { (time1, _, _), (time2, _, _) ->
+            if (time1.isTimeLessThan(time2)) -1 else 1
+        }
         
         // Extract sorted arrays
         val sortedTimes = timeTypeRidePairs.map { it.first }
@@ -292,11 +334,11 @@ fun SettingsTimetableSheetScreen(
         val sortedRideTimes = timeTypeRidePairs.map { it.third }
         
         // Save to SharedPreferences
-        sharedPreferences.edit()
-            .putString(timetableKey, sortedTimes.joinToString(" "))
-            .putString(timetableTrainTypeKey, sortedTypes.joinToString(" "))
-            .putString(timetableRideTimeKey, sortedRideTimes.joinToString(" "))
-            .apply()
+        sharedPreferences.edit {
+            putString(timetableKey, sortedTimes.joinToString(" "))
+                .putString(timetableTrainTypeKey, sortedTypes.joinToString(" "))
+                .putString(timetableRideTimeKey, sortedRideTimes.joinToString(" "))
+        }
         
         // Update train type list if new type was added
         if (trainType != null) {
@@ -355,10 +397,11 @@ fun SettingsTimetableSheetScreen(
             timeTypeRidePairs.add(Triple(departureTimes[i], type, rideTimeStr))
         }
         
-        // Sort triplets by time
-        timeTypeRidePairs.sortWith(compareBy { (time1, _, _) ->
-            time1.toIntOrNull() ?: 0
-        })
+        // Sort triplets by time (convert to Int for proper sorting)
+        // Matches SwiftUI: timeTypeRidePairs.sort { pair1.time.isTimeLessThan(pair2.time) }
+        timeTypeRidePairs.sortWith { (time1, _, _), (time2, _, _) ->
+            if (time1.isTimeLessThan(time2)) -1 else 1
+        }
         
         // Extract sorted arrays
         val sortedTimes = timeTypeRidePairs.map { it.first }
@@ -366,11 +409,11 @@ fun SettingsTimetableSheetScreen(
         val sortedRideTimes = timeTypeRidePairs.map { it.third }
         
         // Save to SharedPreferences
-        sharedPreferences.edit()
-            .putString(timetableKey, sortedTimes.joinToString(" "))
-            .putString(timetableTrainTypeKey, sortedTypes.joinToString(" "))
-            .putString(timetableRideTimeKey, sortedRideTimes.joinToString(" "))
-            .apply()
+        sharedPreferences.edit {
+            putString(timetableKey, sortedTimes.joinToString(" "))
+                .putString(timetableTrainTypeKey, sortedTypes.joinToString(" "))
+                .putString(timetableRideTimeKey, sortedRideTimes.joinToString(" "))
+        }
     }
     
     // Add or update time entry in timetable
@@ -433,9 +476,9 @@ fun SettingsTimetableSheetScreen(
             sharedPreferences
         )
         
-        sharedPreferences.edit()
-            .putString(timetableKey, copiedTime)
-            .apply()
+        sharedPreferences.edit {
+            putString(timetableKey, copiedTime)
+        }
         
         // Update transportationTimes when time is copied
         transportationTimes = goorback.loadTransportationTimes(
@@ -450,6 +493,7 @@ fun SettingsTimetableSheetScreen(
     }
     
     // MARK: - Main Content
+    // Matches SwiftUI: .presentationDetents([.height(screen.settingsTimetableSheetHeight)])
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -457,7 +501,9 @@ fun SettingsTimetableSheetScreen(
             decorFitsSystemWindows = false
         )
     ) {
+        // Set dialog height to match SwiftUI presentationDetents
         Scaffold(
+            modifier = Modifier.height(ScreenSize.settingsTimetableSheetHeight()),
             topBar = {
                 TopAppBar(
                     title = {
@@ -465,17 +511,17 @@ fun SettingsTimetableSheetScreen(
                             text = stringResource(R.string.editTimetable),
                             fontSize = ScreenSize.settingsTitleFontSize().value.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Black
+                            color = Black
                         )
                     },
                     navigationIcon = {
                         CommonComponents.CustomBackButton(
-                            foregroundColor = Color.Black,
+                            foregroundColor = Black,
                             onClick = onDismiss
                         )
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White
+                        containerColor = White
                     )
                 )
             }
@@ -483,7 +529,7 @@ fun SettingsTimetableSheetScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(White)
                     .padding(paddingValues)
             ) {
                 Column(
@@ -719,7 +765,7 @@ private fun CalendarDropDownSection(
                         color = Gray.copy(alpha = 0.1f),
                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     ),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -772,7 +818,7 @@ private fun HourControlSection(
         }
         
         Text(
-            text = "$hour${context.getString(R.string.hour)}",
+            text = "$hour${stringResource(R.string.hour)}",
             fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
             fontWeight = FontWeight.Bold,
             color = Primary,
@@ -833,7 +879,7 @@ private fun TimetableDisplaySection(
                         text = "(${transportationTime.rideTime})",
                         fontSize = ScreenSize.timetableRideTimeFontSize().value.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = White,
                         maxLines = 1
                     )
                 }
@@ -865,12 +911,19 @@ private fun DepartureTimeSelectSection(
     val context = LocalContext.current
     val isRailway = goorback.lineKind(sharedPreferences, num) == TransportationLineKind.RAILWAY
     
+    // Matches SwiftUI: .padding(.top, screen.timetablePickerTopPadding)
+    //                  .padding(.bottom, screen.timetablePickerBottomPadding)
     Column(
-        modifier = Modifier.width(ScreenSize.timetablePickerWidth()),
+        modifier = Modifier
+            .width(ScreenSize.timetablePickerWidth())
+            .padding(
+                top = ScreenSize.timetablePickerTopPadding(),
+                bottom = ScreenSize.timetablePickerBottomPadding()
+            ),
         verticalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetVerticalSpacing())
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -906,11 +959,11 @@ private fun DepartureTimeSelectSection(
                         horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
                     )
                     .background(
-                        color = Color.White,
+                        color = White,
                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     )
                     .border(
-                        width = 1.dp,
+                        width = ScreenSize.borderWidth(),
                         color = Gray,
                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     ),
@@ -920,10 +973,10 @@ private fun DepartureTimeSelectSection(
                     text = if ((departureTime ?: displayDepartureTime) == null) {
                         "-"
                     } else {
-                        "${departureTime ?: displayDepartureTime}${context.getString(R.string.min)}"
+                        "${departureTime ?: displayDepartureTime}${stringResource(R.string.min)}"
                     },
                     fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
-                    color = Color.Black
+                    color = Black
                 )
             }
             
@@ -951,12 +1004,19 @@ private fun RideTimeSelectSection(
 ) {
     val context = LocalContext.current
     
+    // Matches SwiftUI: .padding(.top, screen.timetablePickerTopPadding)
+    //                  .padding(.bottom, screen.timetablePickerBottomPadding)
     Column(
-        modifier = Modifier.width(ScreenSize.timetablePickerWidth()),
+        modifier = Modifier
+            .width(ScreenSize.timetablePickerWidth())
+            .padding(
+                top = ScreenSize.timetablePickerTopPadding(),
+                bottom = ScreenSize.timetablePickerBottomPadding()
+            ),
         verticalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetVerticalSpacing())
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -988,11 +1048,11 @@ private fun RideTimeSelectSection(
                         horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
                     )
                     .background(
-                        color = Color.White,
+                        color = White,
                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     )
                     .border(
-                        width = 1.dp,
+                        width = ScreenSize.borderWidth(),
                         color = Gray,
                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     ),
@@ -1002,10 +1062,10 @@ private fun RideTimeSelectSection(
                     text = if (rideTime == null) {
                         "-"
                     } else {
-                        "$rideTime${context.getString(R.string.min)}"
+                        "$rideTime${stringResource(R.string.min)}"
                     },
                     fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
-                    color = Color.Black
+                    color = Black
                 )
             }
             
@@ -1069,7 +1129,7 @@ private fun TrainTypeSelectSection(
                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     )
                     .border(
-                        width = 1.dp,
+                        width = ScreenSize.borderWidth(),
                         color = Gray,
                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     ),
@@ -1077,7 +1137,7 @@ private fun TrainTypeSelectSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (selectedTrainType != null) {
@@ -1089,10 +1149,12 @@ private fun TrainTypeSelectSection(
                         )
                     }
                     Text(
-                        text = selectedTrainType?.localized(context) ?: stringResource(R.string.dash),
+                        text = selectedTrainType?.let { trainType ->
+                            getTrainTypeDisplayName(trainType, context)
+                        } ?: stringResource(R.string.dash),
                         fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = White,
                         maxLines = 1
                     )
                 }
@@ -1105,7 +1167,7 @@ private fun TrainTypeSelectSection(
                         .graphicsLayer {
                             rotationZ = if (isTrainTypeDropdownOpen) 180f else 0f
                         },
-                    tint = Color.White
+                    tint = White
                 )
             }
         }
@@ -1159,7 +1221,7 @@ private fun AddDeleteButtonSection(
             title = if (isTimeExistsForDeletion) stringResource(R.string.update) else stringResource(R.string.add),
             icon = if (isTimeExistsForDeletion) Icons.Default.Refresh else Icons.Default.Add,
             backgroundColor = addButtonColor,
-            textColor = Color.White,
+            textColor = White,
             isEnabled = isEnabled,
             modifier = Modifier.width(ScreenSize.timetableEditButtonWidth()),
             onClick = onAddTime
@@ -1171,7 +1233,7 @@ private fun AddDeleteButtonSection(
             title = stringResource(R.string.delete),
             icon = Icons.Default.Remove,
             backgroundColor = if (departureTime != null && isTimeExistsForDeletion) Red else Gray,
-            textColor = Color.White,
+            textColor = White,
             isEnabled = departureTime != null && isTimeExistsForDeletion,
             modifier = Modifier.width(ScreenSize.timetableEditButtonWidth()),
             onClick = onDeleteTime
@@ -1213,13 +1275,13 @@ private fun CopyTimeButtonSection(
                 imageVector = Icons.Default.ContentCopy,
                 contentDescription = null,
                 modifier = Modifier.size(ScreenSize.settingsSheetButtonFontSize()),
-                tint = Color.White
+                tint = White
             )
             Text(
                 text = stringResource(R.string.copyingYourTimetable),
                 fontSize = ScreenSize.settingsSheetButtonFontSize().value.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = White
             )
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
@@ -1229,7 +1291,7 @@ private fun CopyTimeButtonSection(
                     .graphicsLayer {
                         rotationZ = if (isCopyTimeDropdownOpen) 180f else 0f
                     },
-                tint = Color.White
+                tint = White
             )
         }
     }
@@ -1249,13 +1311,11 @@ private fun CalendarTypeDropdownView(
         modifier = modifier
             .width(ScreenSize.timetableTypeMenuWidth())
             .background(
-                color = Color.White,
-                shape = RoundedCornerShape(4.dp)
+                color = White,
             )
             .border(
-                width = 1.dp,
+                width = ScreenSize.borderWidth(),
                 color = Gray,
-                shape = RoundedCornerShape(4.dp)
             ),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
@@ -1291,8 +1351,8 @@ private fun CalendarTypeDropdownView(
             }
             
             if (index < availableCalendarTypes.size - 1) {
-                Divider(
-                    modifier = Modifier.height(1.dp),
+                HorizontalDivider(
+                    modifier = Modifier.height(ScreenSize.borderWidth()),
                     color = Gray
                 )
             }
@@ -1315,12 +1375,10 @@ private fun TrainTypeDropdownView(
             .width(ScreenSize.timetableTypeMenuWidth())
             .background(
                 color = Primary,
-                shape = RoundedCornerShape(4.dp)
             )
             .border(
-                width = 1.dp,
-                color = Color.White,
-                shape = RoundedCornerShape(4.dp)
+                width = ScreenSize.borderWidth(),
+                color = White,
             ),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
@@ -1342,7 +1400,7 @@ private fun TrainTypeDropdownView(
                             vertical = ScreenSize.settingsSheetInputPaddingVertical(),
                             horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
                         ),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -1352,19 +1410,19 @@ private fun TrainTypeDropdownView(
                         tint = colorForTrainType(trainType)
                     )
                     Text(
-                        text = trainType.localized(context),
+                        text = getTrainTypeDisplayName(trainType, context),
                         fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
+                        color = White,
                         maxLines = 1
                     )
                 }
             }
             
             if (index < availableTrainTypes.size - 1) {
-                Divider(
-                    modifier = Modifier.height(1.dp),
-                    color = Color.White
+                HorizontalDivider(
+                    modifier = Modifier.height(ScreenSize.borderWidth()),
+                    color = White
                 )
             }
         }
@@ -1388,12 +1446,10 @@ private fun CopyTimeDropdownView(
             .width(ScreenSize.timetableTypeMenuWidth())
             .background(
                 color = Accent,
-                shape = RoundedCornerShape(4.dp)
             )
             .border(
-                width = 1.dp,
-                color = Color.White,
-                shape = RoundedCornerShape(4.dp)
+                width = ScreenSize.borderWidth(),
+                color = White,
             ),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
@@ -1423,16 +1479,16 @@ private fun CopyTimeDropdownView(
                             text = items[index],
                             fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
+                            color = White,
                             maxLines = 1
                         )
                     }
                 }
                 
                 if (index < items.size - 1) {
-                    Divider(
-                        modifier = Modifier.height(1.dp),
-                        color = Color.White
+                    HorizontalDivider(
+                        modifier = Modifier.height(ScreenSize.borderWidth()),
+                        color = White
                     )
                 }
             }

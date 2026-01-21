@@ -1,7 +1,6 @@
 package com.mytimetablemaker.ui.login
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -13,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -26,15 +24,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.ScreenSize
 import com.mytimetablemaker.ui.common.AdMobBannerView
 import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.main.MainViewModel
 import com.mytimetablemaker.ui.settings.FirestoreViewModel
-import com.mytimetablemaker.ui.theme.Accent
-import com.mytimetablemaker.ui.theme.Gray
-import com.mytimetablemaker.ui.theme.Primary
+import com.mytimetablemaker.ui.theme.*
 
 // MARK: - Login Content Screen
 // Main login screen with authentication form and navigation
@@ -78,14 +78,7 @@ fun LoginContentScreen(
     LaunchedEffect(isShowMessage) {
         if (isShowMessage) {
             showLoginResultAlert = true
-        }
-    }
-    
-    // Handle login success navigation
-    LaunchedEffect(isLoginSuccess) {
-        if (isLoginSuccess && showLoginResultAlert) {
-            // Navigate to settings after successful login
-            onNavigateToSettings()
+            loginViewModel.dismissMessage()
         }
     }
     
@@ -177,8 +170,8 @@ fun LoginContentScreen(
                         fontSize = ScreenSize.loginTextFieldFontSize().value.sp
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = White,
+                        unfocusedContainerColor = White,
                         focusedBorderColor = Primary,
                         unfocusedBorderColor = Gray
                     ),
@@ -216,8 +209,8 @@ fun LoginContentScreen(
                         fontSize = ScreenSize.loginTextFieldFontSize().value.sp
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = White,
+                        unfocusedContainerColor = White,
                         focusedBorderColor = Primary,
                         unfocusedBorderColor = Gray
                     ),
@@ -240,7 +233,7 @@ fun LoginContentScreen(
                 // MARK: - Sign Up Button
                 CommonComponents.CustomButton(
                     title = stringResource(R.string.signup),
-                    backgroundColor = Color.White,
+                    backgroundColor = White,
                     textColor = Primary,
                     modifier = Modifier.width(ScreenSize.loginButtonWidth()),
                     onClick = { showSignUpSheet = true }
@@ -253,9 +246,9 @@ fun LoginContentScreen(
                     Text(
                         text = stringResource(R.string.forgotPassword),
                         textDecoration = TextDecoration.Underline,
-                        fontSize = 16.sp,
+                        fontSize = ScreenSize.loginHeadlineFontSize().value.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = White
                     )
                 }
                 
@@ -267,7 +260,7 @@ fun LoginContentScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Gray.copy(alpha = 0.3f)),
+                        .background(Gray.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
@@ -313,8 +306,29 @@ fun LoginContentScreen(
                     showLoginResultAlert = false
                     loginViewModel.dismissMessage()
                     if (isLoginSuccess) {
-                        onNavigateToSettings()
+                        CoroutineScope(Dispatchers.Main).launch {
+                            delay(100)
+                            onNavigateToSettings()
+                        }
                     }
+                }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
+    }
+    
+    // MARK: - Message Alert
+    if (isShowMessage) {
+        AlertDialog(
+            onDismissRequest = { 
+                loginViewModel.dismissMessage()
+            },
+            title = { Text(alertTitle) },
+            text = { Text(alertMessage) },
+            confirmButton = {
+                TextButton(onClick = { 
+                    loginViewModel.dismissMessage()
                 }) {
                     Text(stringResource(R.string.ok))
                 }

@@ -1,7 +1,16 @@
 package com.mytimetablemaker.models
 
 import android.content.Context
-import com.mytimetablemaker.extensions.localized
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import com.mytimetablemaker.BuildConfig
+import com.mytimetablemaker.R
 
 // MARK: - GTFS Date Constants
 // Hardcoded dates for GTFS data files (format: YYYYMMDD)
@@ -89,15 +98,15 @@ enum class LocalDataSource {
     // Used for cache key generation to avoid issues with special characters in file paths
     fun gtfsFileName(): String {
         return when (this) {
-            LocalDataSource.KEIO_BUS -> "keiobus"
-            LocalDataSource.NISHITOKYO_BUS -> "nishitokyobus"
-            LocalDataSource.KAWASAKI_BUS -> "kawasakibus"
-            LocalDataSource.KAWASAKI_TSURUMI_RINKO_BUS -> "kawasakitsurumirinkobus"
-            LocalDataSource.KANTO_BUS -> "kantobus"
-            LocalDataSource.IZUHAKONE_BUS -> "izuhakonebus"
-            LocalDataSource.KEISEI_TRANSIT_BUS -> "keiseitransitbus"
-            LocalDataSource.YOKOHAMA_BUS -> "yokohamabus"
-            LocalDataSource.TOEI_BUS -> "toeibus"
+            KEIO_BUS -> "keiobus"
+            NISHITOKYO_BUS -> "nishitokyobus"
+            KAWASAKI_BUS -> "kawasakibus"
+            KAWASAKI_TSURUMI_RINKO_BUS -> "kawasakitsurumirinkobus"
+            KANTO_BUS -> "kantobus"
+            IZUHAKONE_BUS -> "izuhakonebus"
+            KEISEI_TRANSIT_BUS -> "keiseitransitbus"
+            YOKOHAMA_BUS -> "yokohamabus"
+            TOEI_BUS -> "toeibus"
             else -> {
                 // For non-GTFS operators, use fileName but remove special characters
                 fileName()
@@ -124,34 +133,34 @@ enum class LocalDataSource {
     // Get localized display name for operator selection UI
     fun operatorDisplayName(context: Context): String {
         return when (this) {
-            LocalDataSource.JR_EAST -> "JR-East".localized(context)
-            LocalDataSource.TOKYO_METRO -> "TokyoMetro".localized(context)
-            LocalDataSource.TOEI_METRO -> "ToeiMetro".localized(context)
-            LocalDataSource.TOKYU -> "Tokyu".localized(context)
-            LocalDataSource.KEIKYU -> "Keikyu".localized(context)
-            LocalDataSource.ODAKYU -> "Odakyu".localized(context)
-            LocalDataSource.TOBU -> "Tobu".localized(context)
-            LocalDataSource.SEIBU -> "Seibu".localized(context)
-            LocalDataSource.SOTETSU -> "Sotetsu".localized(context)
-            LocalDataSource.YOKOHAMA_METRO -> "YokohamaMetro".localized(context)
-            LocalDataSource.RINKAI -> "TokyoWaterfrontAreaRapidTransit".localized(context)
-            LocalDataSource.YURIKAMOME -> "Yurikamome".localized(context)
-            LocalDataSource.TSUKUBA -> "MetropolitanIntercityRailway".localized(context)
-            LocalDataSource.TAMA -> "TamaMonorail".localized(context)
-            LocalDataSource.TOEI_BUS -> "ToeiBus".localized(context)
-            LocalDataSource.YOKOHAMA_BUS -> "YokohamaBus".localized(context)
-            LocalDataSource.TOKYU_BUS -> "TokyuBus".localized(context)
-            LocalDataSource.SEIBU_BUS -> "SeibuBus".localized(context)
-            LocalDataSource.SOTETSU_BUS -> "SotetsuBus".localized(context)
-            LocalDataSource.KANACHU_BUS -> "Kanachu".localized(context)
-            LocalDataSource.KOKUSAI_KOGYO -> "KokusaiKogyo".localized(context)
-            LocalDataSource.KEIO_BUS -> "KeioBus".localized(context)
-            LocalDataSource.NISHITOKYO_BUS -> "NishitokyoBus".localized(context)
-            LocalDataSource.KAWASAKI_BUS -> "KawasakiBus".localized(context)
-            LocalDataSource.KAWASAKI_TSURUMI_RINKO_BUS -> "KawasakiTsurumiRinkoBus".localized(context)
-            LocalDataSource.KANTO_BUS -> "KantoBus".localized(context)
-            LocalDataSource.IZUHAKONE_BUS -> "IzuhakoneBus".localized(context)
-            LocalDataSource.KEISEI_TRANSIT_BUS -> "KeiseiTransitBus".localized(context)
+            JR_EAST -> context.getString(R.string.jrEast)
+            TOKYO_METRO -> context.getString(R.string.tokyoMetro)
+            TOEI_METRO -> context.getString(R.string.toeiMetro)
+            TOKYU -> context.getString(R.string.tokyu)
+            KEIKYU -> context.getString(R.string.keikyu)
+            ODAKYU -> context.getString(R.string.odakyu)
+            TOBU -> context.getString(R.string.tobu)
+            SEIBU -> context.getString(R.string.seibu)
+            SOTETSU -> context.getString(R.string.sotetsu)
+            YOKOHAMA_METRO -> context.getString(R.string.yokohamaMetro)
+            RINKAI -> context.getString(R.string.tokyoWaterfrontAreaRapidTransit)
+            YURIKAMOME -> context.getString(R.string.yurikamome)
+            TSUKUBA -> context.getString(R.string.metropolitanIntercityRailway)
+            TAMA -> context.getString(R.string.tamaMonorail)
+            TOEI_BUS -> context.getString(R.string.toeiBus)
+            YOKOHAMA_BUS -> context.getString(R.string.yokohamaBus)
+            TOKYU_BUS -> context.getString(R.string.tokyuBus)
+            SEIBU_BUS -> context.getString(R.string.seibuBus)
+            SOTETSU_BUS -> context.getString(R.string.sotetsuBus)
+            KANACHU_BUS -> context.getString(R.string.kanachu)
+            KOKUSAI_KOGYO -> context.getString(R.string.kokusaiKogyo)
+            KEIO_BUS -> context.getString(R.string.keioBus)
+            NISHITOKYO_BUS -> context.getString(R.string.nishitokyoBus)
+            KAWASAKI_BUS -> context.getString(R.string.kawasakiBus)
+            KAWASAKI_TSURUMI_RINKO_BUS -> context.getString(R.string.kawasakiTsurumiRinkoBus)
+            KANTO_BUS -> context.getString(R.string.kantoBus)
+            IZUHAKONE_BUS -> context.getString(R.string.izuhakoneBus)
+            KEISEI_TRANSIT_BUS -> context.getString(R.string.keiseiTransitBus)
         }
     }
     
@@ -159,34 +168,34 @@ enum class LocalDataSource {
     // Get short display name for CustomTag (compact version)
     fun operatorShortDisplayName(context: Context): String {
         return when (this) {
-            LocalDataSource.JR_EAST -> "JR-E".localized(context)
-            LocalDataSource.TOKYO_METRO -> "Metro".localized(context)
-            LocalDataSource.TOEI_METRO -> "Toei".localized(context)
-            LocalDataSource.TOKYU -> "Tokyu".localized(context)
-            LocalDataSource.KEIKYU -> "Keikyu".localized(context)
-            LocalDataSource.ODAKYU -> "Odakyu".localized(context)
-            LocalDataSource.TOBU -> "Tobu".localized(context)
-            LocalDataSource.SEIBU -> "Seibu".localized(context)
-            LocalDataSource.SOTETSU -> "Sotetsu".localized(context)
-            LocalDataSource.YOKOHAMA_METRO -> "Yokohama".localized(context)
-            LocalDataSource.RINKAI -> "TWR".localized(context)
-            LocalDataSource.YURIKAMOME -> "Yurikamome".localized(context)
-            LocalDataSource.TSUKUBA -> "MIR".localized(context)
-            LocalDataSource.TAMA -> "Tama".localized(context)
-            LocalDataSource.TOEI_BUS -> "Toei".localized(context)
-            LocalDataSource.YOKOHAMA_BUS -> "Yokohama".localized(context)
-            LocalDataSource.TOKYU_BUS -> "Tokyu".localized(context)
-            LocalDataSource.SEIBU_BUS -> "Seibu".localized(context)
-            LocalDataSource.SOTETSU_BUS -> "Sotetsu".localized(context)
-            LocalDataSource.KANACHU_BUS -> "Kanachu".localized(context)
-            LocalDataSource.KOKUSAI_KOGYO -> "KokusaiKogyo".localized(context)
-            LocalDataSource.KEIO_BUS -> "Keio".localized(context)
-            LocalDataSource.NISHITOKYO_BUS -> "Nishitokyo".localized(context)
-            LocalDataSource.KAWASAKI_BUS -> "Kawasaki".localized(context)
-            LocalDataSource.KAWASAKI_TSURUMI_RINKO_BUS -> "Rinko".localized(context)
-            LocalDataSource.KANTO_BUS -> "Kanto".localized(context)
-            LocalDataSource.IZUHAKONE_BUS -> "Izuhakone".localized(context)
-            LocalDataSource.KEISEI_TRANSIT_BUS -> "KeiseiTransit".localized(context)
+            JR_EAST -> context.getString(R.string.jrE)
+            TOKYO_METRO -> context.getString(R.string.metro)
+            TOEI_METRO -> context.getString(R.string.toei)
+            TOKYU -> context.getString(R.string.tokyuShort)
+            KEIKYU -> context.getString(R.string.keikyuShort)
+            ODAKYU -> context.getString(R.string.odakyuShort)
+            TOBU -> context.getString(R.string.tobuShort)
+            SEIBU -> context.getString(R.string.seibuShort)
+            SOTETSU -> context.getString(R.string.sotetsuShort)
+            YOKOHAMA_METRO -> context.getString(R.string.yokohama)
+            RINKAI -> context.getString(R.string.twr)
+            YURIKAMOME -> context.getString(R.string.yurikamomeShort)
+            TSUKUBA -> context.getString(R.string.mir)
+            TAMA -> context.getString(R.string.tama)
+            TOEI_BUS -> context.getString(R.string.toei)
+            YOKOHAMA_BUS -> context.getString(R.string.yokohama)
+            TOKYU_BUS -> context.getString(R.string.tokyuShort)
+            SEIBU_BUS -> context.getString(R.string.seibuShort)
+            SOTETSU_BUS -> context.getString(R.string.sotetsuShort)
+            KANACHU_BUS -> context.getString(R.string.kanachuShort)
+            KOKUSAI_KOGYO -> context.getString(R.string.kokusaiKogyoShort)
+            KEIO_BUS -> context.getString(R.string.keio)
+            NISHITOKYO_BUS -> context.getString(R.string.nishitokyo)
+            KAWASAKI_BUS -> context.getString(R.string.kawasaki)
+            KAWASAKI_TSURUMI_RINKO_BUS -> context.getString(R.string.rinko)
+            KANTO_BUS -> context.getString(R.string.kanto)
+            IZUHAKONE_BUS -> context.getString(R.string.izuhakone)
+            KEISEI_TRANSIT_BUS -> context.getString(R.string.keiseiTransit)
         }
     }
     
@@ -194,34 +203,34 @@ enum class LocalDataSource {
     // Get ODPT operator code for API queries and data matching
     fun operatorCode(): String? {
         return when (this) {
-            LocalDataSource.JR_EAST -> "odpt.Operator:JR-East"
-            LocalDataSource.TOKYO_METRO -> "odpt.Operator:TokyoMetro"
-            LocalDataSource.TOEI_METRO -> "odpt.Operator:Toei"
-            LocalDataSource.TOKYU -> "odpt.Operator:Tokyu"
-            LocalDataSource.KEIKYU -> "odpt.Operator:Keikyu"
-            LocalDataSource.ODAKYU -> "odpt.Operator:Odakyu"
-            LocalDataSource.TOBU -> "odpt.Operator:Tobu"
-            LocalDataSource.SEIBU -> "odpt.Operator:Seibu"
-            LocalDataSource.SOTETSU -> "odpt.Operator:Sotetsu"
-            LocalDataSource.YOKOHAMA_METRO -> "odpt.Operator:YokohamaMunicipal"
-            LocalDataSource.RINKAI -> "odpt.Operator:TWR"
-            LocalDataSource.YURIKAMOME -> "odpt.Operator:Yurikamome"
-            LocalDataSource.TSUKUBA -> "odpt.Operator:MIR"
-            LocalDataSource.TAMA -> "odpt.Operator:TamaMonorail"
-            LocalDataSource.TOKYU_BUS -> "odpt.Operator:TokyuBus"
-            LocalDataSource.SEIBU_BUS -> "odpt.Operator:SeibuBus"
-            LocalDataSource.SOTETSU_BUS -> "odpt.Operator:SotetsuBus"
-            LocalDataSource.KANACHU_BUS -> "odpt.Operator:Kanachu"
-            LocalDataSource.KOKUSAI_KOGYO -> "odpt.Operator:KokusaiKogyoBus"
-            LocalDataSource.TOEI_BUS -> "Toei/data/ToeiBus-GTFS.zip"
-            LocalDataSource.YOKOHAMA_BUS -> "YokohamaMunicipal/Bus.zip?"
-            LocalDataSource.KEIO_BUS -> "KeioBus/AllLines.zip?"
-            LocalDataSource.NISHITOKYO_BUS -> "TokyuBus/tokyubus_community.zip?"
-            LocalDataSource.KAWASAKI_BUS -> "TransportationBureau_CityOfKawasaki/AllLines.zip?"
-            LocalDataSource.KAWASAKI_TSURUMI_RINKO_BUS -> "KawasakiTsurumiRinkoBus/allrinko.zip?"
-            LocalDataSource.KANTO_BUS -> "KantoBus/AllLines.zip?"
-            LocalDataSource.IZUHAKONE_BUS -> "IzuhakoneBus/IZHB.zip?"
-            LocalDataSource.KEISEI_TRANSIT_BUS -> "KeiseiTransitBus/AllLines.zip?"
+            JR_EAST -> "odpt.Operator:JR-East"
+            TOKYO_METRO -> "odpt.Operator:TokyoMetro"
+            TOEI_METRO -> "odpt.Operator:Toei"
+            TOKYU -> "odpt.Operator:Tokyu"
+            KEIKYU -> "odpt.Operator:Keikyu"
+            ODAKYU -> "odpt.Operator:Odakyu"
+            TOBU -> "odpt.Operator:Tobu"
+            SEIBU -> "odpt.Operator:Seibu"
+            SOTETSU -> "odpt.Operator:Sotetsu"
+            YOKOHAMA_METRO -> "odpt.Operator:YokohamaMunicipal"
+            RINKAI -> "odpt.Operator:TWR"
+            YURIKAMOME -> "odpt.Operator:Yurikamome"
+            TSUKUBA -> "odpt.Operator:MIR"
+            TAMA -> "odpt.Operator:TamaMonorail"
+            TOKYU_BUS -> "odpt.Operator:TokyuBus"
+            SEIBU_BUS -> "odpt.Operator:SeibuBus"
+            SOTETSU_BUS -> "odpt.Operator:SotetsuBus"
+            KANACHU_BUS -> "odpt.Operator:Kanachu"
+            KOKUSAI_KOGYO -> "odpt.Operator:KokusaiKogyoBus"
+            TOEI_BUS -> "Toei/data/ToeiBus-GTFS.zip"
+            YOKOHAMA_BUS -> "YokohamaMunicipal/Bus.zip?"
+            KEIO_BUS -> "KeioBus/AllLines.zip?"
+            NISHITOKYO_BUS -> "TokyuBus/tokyubus_community.zip?"
+            KAWASAKI_BUS -> "TransportationBureau_CityOfKawasaki/AllLines.zip?"
+            KAWASAKI_TSURUMI_RINKO_BUS -> "KawasakiTsurumiRinkoBus/allrinko.zip?"
+            KANTO_BUS -> "KantoBus/AllLines.zip?"
+            IZUHAKONE_BUS -> "IzuhakoneBus/IZHB.zip?"
+            KEISEI_TRANSIT_BUS -> "KeiseiTransitBus/AllLines.zip?"
         }
     }
     
@@ -230,16 +239,16 @@ enum class LocalDataSource {
     // TODO: Implement TransportationLine.Kind enum
     fun transportationType(): TransportationKind {
         return when (this) {
-            LocalDataSource.JR_EAST, LocalDataSource.TOKYO_METRO, LocalDataSource.TOEI_METRO,
-            LocalDataSource.TOKYU, LocalDataSource.KEIKYU, LocalDataSource.ODAKYU, LocalDataSource.TOBU,
-            LocalDataSource.SEIBU, LocalDataSource.SOTETSU, LocalDataSource.YOKOHAMA_METRO,
-            LocalDataSource.RINKAI, LocalDataSource.YURIKAMOME, LocalDataSource.TSUKUBA, LocalDataSource.TAMA ->
+            JR_EAST, TOKYO_METRO, TOEI_METRO,
+            TOKYU, KEIKYU, ODAKYU, TOBU,
+            SEIBU, SOTETSU, YOKOHAMA_METRO,
+            RINKAI, YURIKAMOME, TSUKUBA, TAMA ->
                 TransportationKind.RAILWAY
-            LocalDataSource.TOEI_BUS, LocalDataSource.YOKOHAMA_BUS, LocalDataSource.TOKYU_BUS,
-            LocalDataSource.SEIBU_BUS, LocalDataSource.SOTETSU_BUS, LocalDataSource.KANACHU_BUS,
-            LocalDataSource.KOKUSAI_KOGYO, LocalDataSource.KEIO_BUS, LocalDataSource.NISHITOKYO_BUS,
-            LocalDataSource.KAWASAKI_BUS, LocalDataSource.KAWASAKI_TSURUMI_RINKO_BUS, LocalDataSource.KANTO_BUS,
-            LocalDataSource.IZUHAKONE_BUS, LocalDataSource.KEISEI_TRANSIT_BUS ->
+            TOEI_BUS, YOKOHAMA_BUS, TOKYU_BUS,
+            SEIBU_BUS, SOTETSU_BUS, KANACHU_BUS,
+            KOKUSAI_KOGYO, KEIO_BUS, NISHITOKYO_BUS,
+            KAWASAKI_BUS, KAWASAKI_TSURUMI_RINKO_BUS, KANTO_BUS,
+            IZUHAKONE_BUS, KEISEI_TRANSIT_BUS ->
                 TransportationKind.BUS
         }
     }
@@ -248,18 +257,18 @@ enum class LocalDataSource {
     // Determine the appropriate API type for this operator
     fun apiType(): ODPTAPIType {
         return when (this) {
-            LocalDataSource.TOEI_METRO -> ODPTAPIType.PUBLIC_API
-            LocalDataSource.TOKYO_METRO, LocalDataSource.YOKOHAMA_METRO, LocalDataSource.TSUKUBA,
-            LocalDataSource.TAMA, LocalDataSource.YURIKAMOME, LocalDataSource.RINKAI,
-            LocalDataSource.TOKYU_BUS, LocalDataSource.SEIBU_BUS, LocalDataSource.SOTETSU_BUS ->
+            TOEI_METRO -> ODPTAPIType.PUBLIC_API
+            TOKYO_METRO, YOKOHAMA_METRO, TSUKUBA,
+            TAMA, YURIKAMOME, RINKAI,
+            TOKYU_BUS, SEIBU_BUS, SOTETSU_BUS ->
                 ODPTAPIType.STANDARD
-            LocalDataSource.JR_EAST, LocalDataSource.TOKYU, LocalDataSource.ODAKYU, LocalDataSource.KEIKYU,
-            LocalDataSource.TOBU, LocalDataSource.SEIBU, LocalDataSource.SOTETSU,
-            LocalDataSource.KANACHU_BUS, LocalDataSource.KOKUSAI_KOGYO ->
+            JR_EAST, TOKYU, ODAKYU, KEIKYU,
+            TOBU, SEIBU, SOTETSU,
+            KANACHU_BUS, KOKUSAI_KOGYO ->
                 ODPTAPIType.CHALLENGE
-            LocalDataSource.KEIO_BUS, LocalDataSource.NISHITOKYO_BUS, LocalDataSource.KAWASAKI_BUS,
-            LocalDataSource.KAWASAKI_TSURUMI_RINKO_BUS, LocalDataSource.KANTO_BUS, LocalDataSource.IZUHAKONE_BUS,
-            LocalDataSource.KEISEI_TRANSIT_BUS, LocalDataSource.YOKOHAMA_BUS, LocalDataSource.TOEI_BUS ->
+            KEIO_BUS, NISHITOKYO_BUS, KAWASAKI_BUS,
+            KAWASAKI_TSURUMI_RINKO_BUS, KANTO_BUS, IZUHAKONE_BUS,
+            KEISEI_TRANSIT_BUS, YOKOHAMA_BUS, TOEI_BUS ->
                 ODPTAPIType.GTFS
         }
     }
@@ -267,9 +276,9 @@ enum class LocalDataSource {
     // Indicates if this operator provides train timetables
     fun hasTrainTimeTable(): Boolean {
         return when (this) {
-            LocalDataSource.JR_EAST, LocalDataSource.TOBU, LocalDataSource.SOTETSU,
-            LocalDataSource.TOKYO_METRO, LocalDataSource.TOEI_METRO, LocalDataSource.YOKOHAMA_METRO,
-            LocalDataSource.RINKAI, LocalDataSource.TSUKUBA, LocalDataSource.TAMA ->
+            JR_EAST, TOBU, SOTETSU,
+            TOKYO_METRO, TOEI_METRO, YOKOHAMA_METRO,
+            RINKAI, TSUKUBA, TAMA ->
                 true
             else -> false
         }
@@ -278,11 +287,11 @@ enum class LocalDataSource {
     // Indicates if this operator provides bus timetables
     fun hasBusTimeTable(): Boolean {
         return when (this) {
-            LocalDataSource.TOEI_BUS, LocalDataSource.YOKOHAMA_BUS, LocalDataSource.TOKYU_BUS,
-            LocalDataSource.SEIBU_BUS, LocalDataSource.SOTETSU_BUS, LocalDataSource.KANACHU_BUS,
-            LocalDataSource.KOKUSAI_KOGYO, LocalDataSource.KEIO_BUS, LocalDataSource.NISHITOKYO_BUS,
-            LocalDataSource.KAWASAKI_BUS, LocalDataSource.KAWASAKI_TSURUMI_RINKO_BUS, LocalDataSource.KANTO_BUS,
-            LocalDataSource.IZUHAKONE_BUS, LocalDataSource.KEISEI_TRANSIT_BUS ->
+            TOEI_BUS, YOKOHAMA_BUS, TOKYU_BUS,
+            SEIBU_BUS, SOTETSU_BUS, KANACHU_BUS,
+            KOKUSAI_KOGYO, KEIO_BUS, NISHITOKYO_BUS,
+            KAWASAKI_BUS, KAWASAKI_TSURUMI_RINKO_BUS, KANTO_BUS,
+            IZUHAKONE_BUS, KEISEI_TRANSIT_BUS ->
                 true
             else -> false
         }
@@ -292,7 +301,7 @@ enum class LocalDataSource {
     // Get available train types for each operator
     fun operatorTrainType(): List<String> {
         return when (this) {
-            LocalDataSource.JR_EAST -> listOf(
+            JR_EAST -> listOf(
                 "odpt.TrainType:JR-East.ChuoSpecialRapid",
                 "odpt.TrainType:JR-East.CommuterRapid",
                 "odpt.TrainType:JR-East.CommuterSpecialRapid",
@@ -304,7 +313,7 @@ enum class LocalDataSource {
                 "odpt.TrainType:JR-East.Rapid",
                 "odpt.TrainType:JR-East.SpecialRapid"
             )
-            LocalDataSource.TOKYO_METRO -> listOf(
+            TOKYO_METRO -> listOf(
                 "odpt.TrainType:TokyoMetro.CommuterExpress",
                 "odpt.TrainType:TokyoMetro.CommuterLimitedExpress",
                 "odpt.TrainType:TokyoMetro.CommuterRapid",
@@ -318,7 +327,7 @@ enum class LocalDataSource {
                 "odpt.TrainType:TokyoMetro.SemiExpress",
                 "odpt.TrainType:TokyoMetro.TH-LINER"
             )
-            LocalDataSource.TOEI_METRO -> listOf(
+            TOEI_METRO -> listOf(
                 "odpt.TrainType:Toei.AccessExpress",
                 "odpt.TrainType:Toei.AirportRapidLimitedExpress",
                 "odpt.TrainType:Toei.CommuterLimitedExpress",
@@ -328,7 +337,7 @@ enum class LocalDataSource {
                 "odpt.TrainType:Toei.RapidLimitedExpress",
                 "odpt.TrainType:Toei.Rapid"
             )
-            LocalDataSource.TOKYU -> listOf(
+            TOKYU -> listOf(
                 "odpt.TrainType:Tokyu.CommuterLimitedExpress",
                 "odpt.TrainType:Tokyu.Express",
                 "odpt.TrainType:Tokyu.F-Liner",
@@ -337,7 +346,7 @@ enum class LocalDataSource {
                 "odpt.TrainType:Tokyu.S-TRAIN",
                 "odpt.TrainType:Tokyu.SemiExpress"
             )
-            LocalDataSource.KEIKYU -> listOf(
+            KEIKYU -> listOf(
                 "odpt.TrainType:Keikyu.AccessExpress",
                 "odpt.TrainType:Keikyu.AirportRapidLimitedExpress",
                 "odpt.TrainType:Keikyu.CommuterLimitedExpress",
@@ -349,7 +358,7 @@ enum class LocalDataSource {
                 "odpt.TrainType:Keikyu.RapidLimitedExpress",
                 "odpt.TrainType:Keikyu.Rapid"
             )
-            LocalDataSource.ODAKYU -> listOf(
+            ODAKYU -> listOf(
                 "odpt.TrainType:Odakyu.CommuterExpress",
                 "odpt.TrainType:Odakyu.CommuterSemiExpress",
                 "odpt.TrainType:Odakyu.Express",
@@ -358,7 +367,7 @@ enum class LocalDataSource {
                 "odpt.TrainType:Odakyu.RapidExpress",
                 "odpt.TrainType:Odakyu.SemiExpress"
             )
-            LocalDataSource.TOBU -> listOf(
+            TOBU -> listOf(
                 "odpt.TrainType:Tobu.Express",
                 "odpt.TrainType:Tobu.F-Liner",
                 "odpt.TrainType:Tobu.KawagoeLimitedExpress",
@@ -373,7 +382,7 @@ enum class LocalDataSource {
                 "odpt.TrainType:Tobu.TH-LINER",
                 "odpt.TrainType:Tobu.TJ-Liner"
             )
-            LocalDataSource.SEIBU -> listOf(
+            SEIBU -> listOf(
                 "odpt.TrainType:Seibu.CommuterExpress",
                 "odpt.TrainType:Seibu.CommuterSemiExpress",
                 "odpt.TrainType:Seibu.Express",
@@ -386,7 +395,7 @@ enum class LocalDataSource {
                 "odpt.TrainType:Seibu.S-TRAIN",
                 "odpt.TrainType:Seibu.SemiExpress"
             )
-            LocalDataSource.SOTETSU -> listOf(
+            SOTETSU -> listOf(
                 "odpt.TrainType:Sotetsu.CommuterExpress",
                 "odpt.TrainType:Sotetsu.CommuterLimitedExpress",
                 "odpt.TrainType:Sotetsu.Express",
@@ -394,25 +403,25 @@ enum class LocalDataSource {
                 "odpt.TrainType:Sotetsu.Local",
                 "odpt.TrainType:Sotetsu.Rapid"
             )
-            LocalDataSource.YOKOHAMA_METRO -> listOf(
+            YOKOHAMA_METRO -> listOf(
                 "odpt.TrainType:YokohamaMunicipal.Local",
                 "odpt.TrainType:YokohamaMunicipal.Rapid"
             )
-            LocalDataSource.RINKAI -> listOf(
+            RINKAI -> listOf(
                 "odpt.TrainType:TWR.CommuterRapid",
                 "odpt.TrainType:TWR.Local",
                 "odpt.TrainType:TWR.Rapid"
             )
-            LocalDataSource.YURIKAMOME -> listOf(
+            YURIKAMOME -> listOf(
                 "odpt.TrainType:Yurikamome.Local"
             )
-            LocalDataSource.TSUKUBA -> listOf(
+            TSUKUBA -> listOf(
                 "odpt.TrainType:MIR.CommuterRapid",
                 "odpt.TrainType:MIR.Local",
                 "odpt.TrainType:MIR.Rapid",
                 "odpt.TrainType:MIR.SemiRapid"
             )
-            LocalDataSource.TAMA -> listOf(
+            TAMA -> listOf(
                 "odpt.TrainType:TamaMonorail.Local"
             )
             // Bus operators don't have train types
@@ -424,23 +433,62 @@ enum class LocalDataSource {
     // Get display name for a specific train type using localization
     fun getDisplayName(context: Context, trainType: String?): String {
         if (trainType == null) {
-            return "Unknown".localized(context)
+            return context.getString(R.string.dash)
         }
-        val components = trainType.split(".")
-        val lastComponent = components.lastOrNull() ?: return "Unknown".localized(context)
-        return lastComponent.localized(context)
+        // Extract resource name from train type string (e.g., "odpt.TrainType:JR-East.ChuoSpecialRapid" -> "chuoSpecialRapid")
+        val parts = trainType.split(".")
+        if (parts.size >= 3) {
+            val resourceName = parts[2].replaceFirstChar { it.lowercaseChar() }
+            return when (resourceName) {
+                "accessExpress" -> context.getString(R.string.accessExpress)
+                "airportRapidLimitedExpress" -> context.getString(R.string.airportRapidLimitedExpress)
+                "chuoSpecialRapid" -> context.getString(R.string.chuoSpecialRapid)
+                "commuterExpress" -> context.getString(R.string.commuterExpress)
+                "commuterLimitedExpress" -> context.getString(R.string.commuterLimitedExpress)
+                "commuterRapid" -> context.getString(R.string.commuterRapid)
+                "commuterSemiExpress" -> context.getString(R.string.commuterSemiExpress)
+                "commuterSpecialRapid" -> context.getString(R.string.commuterSpecialRapid)
+                "eveningWing" -> context.getString(R.string.eveningWing)
+                "express" -> context.getString(R.string.express)
+                "haijimaLiner" -> context.getString(R.string.haijimaLiner)
+                "kawagoeLimitedExpress" -> context.getString(R.string.kawagoeLimitedExpress)
+                "limitedExpress" -> context.getString(R.string.limitedExpress)
+                "liner" -> context.getString(R.string.liner)
+                "local" -> context.getString(R.string.local)
+                "morningWing" -> context.getString(R.string.morningWing)
+                "omeSpecialRapid" -> context.getString(R.string.omeSpecialRapid)
+                "rapid" -> context.getString(R.string.rapid)
+                "rapidExpress" -> context.getString(R.string.rapidExpress)
+                "rapidLimitedExpress" -> context.getString(R.string.rapidLimitedExpress)
+                "semiExpress" -> context.getString(R.string.semiExpress)
+                "semiRapid" -> context.getString(R.string.semiRapid)
+                "sectionExpress" -> context.getString(R.string.sectionExpress)
+                "sectionSemiExpress" -> context.getString(R.string.sectionSemiExpress)
+                "specialRapid" -> context.getString(R.string.specialRapid)
+                "fLiner" -> context.getString(R.string.fLiner)
+                "sTrain" -> context.getString(R.string.sTrain)
+                "slTaiju" -> context.getString(R.string.slTaiju)
+                "thLiner" -> context.getString(R.string.thLiner)
+                "tjLiner" -> context.getString(R.string.tjLiner)
+                else -> trainType
+            }
+        }
+        return trainType
     }
     
     // MARK: - Unified API Link Generation
     // Generate API links using clean enum-based approach
+    // Reads ODPT access tokens directly from BuildConfig (environment variables)
     fun apiLink(
         dataType: APIDataType,
-        transportationKind: TransportationKind = TransportationKind.RAILWAY,
-        odptAccessKey: String = "",
-        odptChallengeKey: String = ""
+        transportationKind: TransportationKind = TransportationKind.RAILWAY
     ): String {
         val operatorCode = operatorCode() ?: return ""
         if (operatorCode.isEmpty()) return ""
+        
+        // Read ODPT access tokens from BuildConfig (environment variables)
+        val odptAccessKey = BuildConfig.ODPT_ACCESS_TOKEN
+        val odptChallengeKey = BuildConfig.ODPT_CHALLENGE_TOKEN
         
         // Generate ODPT API URL for non-GTFS operators
         val odptDataType = if (transportationKind == TransportationKind.RAILWAY) {
@@ -461,13 +509,15 @@ enum class LocalDataSource {
             }
             ODPTAPIType.GTFS -> {
                 // Special handling for Toei Bus (uses public API, no access token needed)
-                if (this == LocalDataSource.TOEI_BUS) {
+                if (this == TOEI_BUS) {
                     "https://api-public.odpt.org/api/v4/files/$operatorCode"
                 } else {
                     // For other GTFS operators, use standard API with date and access token
+                    // Remove trailing '?' from operatorCode if present (some operatorCodes have '?' suffix)
+                    val cleanOperatorCode = operatorCode.trimEnd('?')
                     val dateString = GTFSDates.dateFor(this) ?: return ""
                     if (dateString.isEmpty()) return ""
-                    "https://api.odpt.org/api/v4/files/odpt/$operatorCode?date=$dateString&acl:consumerKey=$odptAccessKey"
+                    "https://api.odpt.org/api/v4/files/odpt/$cleanOperatorCode?date=$dateString&acl:consumerKey=$odptAccessKey"
                 }
             }
         }
@@ -555,17 +605,22 @@ enum class DisplayTrainType(val rawValue: String) {
     UNKNOWN("Unknown");
     
     companion object {
-        val allCases = values().toList()
+        val allCases = entries
     }
 }
 
 // MARK: - ODPT Error Types
 // Custom error types for ODPT operations
 sealed class ODPTError : Exception() {
-    object DateExtractionFailed : ODPTError()
+    class DateExtractionFailed : ODPTError() {
+        private fun readResolve(): Any = DateExtractionFailed()
+    }
+
     data class NetworkError(val errorMessage: String) : ODPTError()
-    object InvalidData : ODPTError()
-    
+    class InvalidData : ODPTError() {
+        private fun readResolve(): Any = InvalidData()
+    }
+
     override val message: String?
         get() = when (this) {
             is DateExtractionFailed -> "Failed to extract date from API response"
@@ -710,7 +765,20 @@ sealed class ODPTCalendarType {
     // Localized display name for each calendar type
     // For .specific types, shows only the display type (identifier not shown for cleaner UI)
     fun displayName(context: Context): String {
-        return this.debugDisplayName().localized(context)
+        val displayType = this.displayCalendarType()
+        return when (displayType) {
+            is Weekday -> context.getString(R.string.weekday)
+            is Holiday -> context.getString(R.string.holiday)
+            is SaturdayHoliday -> context.getString(R.string.saturdayHoliday)
+            is Sunday -> context.getString(R.string.sunday)
+            is Monday -> context.getString(R.string.monday)
+            is Tuesday -> context.getString(R.string.tuesday)
+            is Wednesday -> context.getString(R.string.wednesday)
+            is Thursday -> context.getString(R.string.thursday)
+            is Friday -> context.getString(R.string.friday)
+            is Saturday -> context.getString(R.string.saturday)
+            is Specific -> context.getString(R.string.dash) // Specific types show dash
+        }
     }
     
     // MARK: - Calendar Tag
@@ -779,15 +847,61 @@ enum class TransferType(val rawValue: String) {
     // Localized display name for each transportation method
     fun transportationDisplayName(context: Context): String {
         return when (this) {
-            NONE -> "None".localized(context)
-            WALKING -> "Walking".localized(context)
-            BICYCLE -> "Bicycle".localized(context)
-            CAR -> "Car".localized(context)
+            NONE -> context.getString(R.string.none)
+            WALKING -> context.getString(R.string.walking)
+            BICYCLE -> context.getString(R.string.bicycle)
+            CAR -> context.getString(R.string.car)
         }
     }
     
+    // MARK: - Icon Property
+    // Icon for each transportation method
+    val icon: ImageVector
+        get() = when (this) {
+            NONE -> Icons.Filled.Cancel
+            WALKING -> Icons.AutoMirrored.Filled.DirectionsWalk
+            BICYCLE -> Icons.AutoMirrored.Filled.DirectionsBike
+            CAR -> Icons.Filled.DirectionsCar
+        }
+    
     companion object {
-        val allCases = values().toList()
+        val allCases = entries
+        
+        // MARK: - Transfer Type Helper Function
+        // Helper function to convert string labels to TransferType enum values
+        fun transferType(label: String, context: Context): TransferType {
+            val labelLower = label.lowercase()
+            val noneLocalized = context.getString(R.string.none).lowercase()
+            val walkingLocalized = context.getString(R.string.walking).lowercase()
+            val bicycleLocalized = context.getString(R.string.bicycle).lowercase()
+            val carLocalized = context.getString(R.string.car).lowercase()
+            
+            return when (labelLower) {
+                "none", noneLocalized -> NONE
+                "walking", walkingLocalized -> WALKING
+                "bicycle", bicycleLocalized -> BICYCLE
+                "car", carLocalized -> CAR
+                else -> WALKING // Default to walking instead of none
+            }
+        }
+        
+        // MARK: - Transfer Type from Raw Value
+        // Helper function to get TransferType from raw value string
+        fun fromRawValue(value: String): TransferType {
+            return entries.find { it.rawValue == value } ?: NONE
+        }
+    }
+}
+
+// MARK: - TransferType Composable Extension
+// Composable extension function for getting localized display name
+@Composable
+fun TransferType.displayName(): String {
+    return when (this) {
+        TransferType.NONE -> stringResource(R.string.none)
+        TransferType.WALKING -> stringResource(R.string.walking)
+        TransferType.BICYCLE -> stringResource(R.string.bicycle)
+        TransferType.CAR -> stringResource(R.string.car)
     }
 }
 

@@ -2,6 +2,7 @@ package com.mytimetablemaker.ui.theme
 
 import androidx.compose.ui.graphics.Color
 import com.mytimetablemaker.models.CustomColor
+import androidx.core.graphics.toColorInt
 
 // MARK: - App Theme Colors
 // Application-wide color constants matching SwiftUI ColorExtensions
@@ -17,21 +18,21 @@ val Accent = CustomColor.ACCENT.color()
 val Red = CustomColor.RED.color()
 val Yellow = CustomColor.YELLOW.color()
 val Gray = CustomColor.GRAY.color()
+val LightGray = Color(0.95f, 0.95f, 0.97f, 0.8f)
 val YellowGreen = CustomColor.YELLOW_GREEN.color()
 val Orange = CustomColor.ORANGE.color()
 val Pink = CustomColor.PINK.color()
 val LightBlue = CustomColor.LIGHT_BLUE.color()
-val White = Color(0xFFFFFFFF)
-val Black = CustomColor.BLACK.color()
+val White = Color.White
+val Black = Color.Black
 
 // Hex string values for color storage
 const val AccentString = "#03DAC5"
-const val GrayString = "#9C9C9C"
 
 // MARK: - CustomColor Extension
 // Convert CustomColor enum to Color object
 fun CustomColor.color(): Color {
-    return Color(android.graphics.Color.parseColor(this.RGB()))
+    return Color(this.RGB().toColorInt())
 }
 
 // Get RGB hex string value for CustomColor

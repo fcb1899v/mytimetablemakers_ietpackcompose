@@ -2,6 +2,7 @@ package com.mytimetablemaker.ui.login
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
@@ -92,12 +93,16 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                 try {
                     auth.signOut()
                     _alertTitle.value = context.getString(R.string.loggedOutSuccessfully)
-                    sharedPreferences.edit().putBoolean("Login", false).apply()
+                    sharedPreferences.edit {
+                        putBoolean("Login", false)
+                    }
                     _isLoginSuccess.value = false
                     _isLoading.value = false
                     _isShowMessage.value = true
                 } catch (e: Exception) {
-                    sharedPreferences.edit().putBoolean("Login", true).apply()
+                    sharedPreferences.edit {
+                        putBoolean("Login", true)
+                    }
                     _isLoginSuccess.value = true
                     _isLoading.value = false
                     _isShowMessage.value = true
@@ -133,7 +138,9 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                     if (user != null) {
                         if (user.isEmailVerified) {
                             _alertTitle.value = context.getString(R.string.loginSuccessfully)
-                            sharedPreferences.edit().putBoolean("Login", true).apply()
+                            sharedPreferences.edit {
+                                putBoolean("Login", true)
+                            }
                             _isLoginSuccess.value = true
                             _isLoading.value = false
                             _isShowMessage.value = true

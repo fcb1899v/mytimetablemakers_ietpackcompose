@@ -3,6 +3,7 @@ package com.mytimetablemaker.extensions
 import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
+import com.mytimetablemaker.R
 import java.util.regex.Pattern
 
 // MARK: - String Extensions for Account Validation
@@ -52,13 +53,13 @@ fun FirebaseAuth.isAuthenticated(): Boolean {
 // Converts Firebase Auth error code to localized user-friendly message
 fun FirebaseAuthException.getLocalizedMessage(context: Context): String {
     return when (errorCode) {
-        "ERROR_INVALID_EMAIL" -> "Incorrect email format".localized(context)
-        "ERROR_USER_NOT_FOUND" -> "Incorrect email or password".localized(context)
-        "ERROR_WRONG_PASSWORD" -> "Incorrect email or password".localized(context)
-        "ERROR_USER_DISABLED" -> "This account is disabled".localized(context)
-        "ERROR_EMAIL_ALREADY_IN_USE" -> "This email has already been registered".localized(context)
-        "ERROR_WEAK_PASSWORD" -> "Incorrect password format".localized(context)
-        else -> "Authentication error occurred".localized(context)
+        "ERROR_INVALID_EMAIL" -> context.getString(R.string.incorrectEmailFormat)
+        "ERROR_USER_NOT_FOUND" -> context.getString(R.string.incorrectEmailOrPassword)
+        "ERROR_WRONG_PASSWORD" -> context.getString(R.string.incorrectEmailOrPassword)
+        "ERROR_USER_DISABLED" -> context.getString(R.string.thisAccountIsDisabled)
+        "ERROR_EMAIL_ALREADY_IN_USE" -> context.getString(R.string.thisEmailHasAlreadyBeenRegistered)
+        "ERROR_WEAK_PASSWORD" -> context.getString(R.string.incorrectPasswordFormat)
+        else -> context.getString(R.string.loginError)
     }
 }
 
@@ -68,43 +69,43 @@ object ValidationMessages {
     
     // MARK: - Common Messages
     // Standard validation error messages for form inputs
-    fun inputError(context: Context): String = "Input error".localized(context)
-    fun checkError(context: Context): String = "Check error".localized(context)
-    fun enterEmail(context: Context): String = "Enter your email".localized(context)
-    fun enterPassword(context: Context): String = "Enter your password".localized(context)
-    fun enterConfirmPassword(context: Context): String = "Enter your confirm password".localized(context)
-    fun incorrectEmailFormat(context: Context): String = "Incorrect email format".localized(context)
-    fun incorrectPasswordFormat(context: Context): String = "Incorrect password format".localized(context)
-    fun passwordMismatch(context: Context): String = "Confirm password don't match".localized(context)
-    fun checkTerms(context: Context): String = "Check the terms and privacy policy".localized(context)
-    fun enterEmailAgain(context: Context): String = "Enter your email again".localized(context)
+    fun inputError(context: Context): String = context.getString(R.string.inputError)
+    fun checkError(context: Context): String = context.getString(R.string.checkError)
+    fun enterEmail(context: Context): String = context.getString(R.string.enterYourEmail)
+    fun enterPassword(context: Context): String = context.getString(R.string.enterYourPassword)
+    fun enterConfirmPassword(context: Context): String = context.getString(R.string.enterYourConfirmPassword)
+    fun incorrectEmailFormat(context: Context): String = context.getString(R.string.incorrectEmailFormat)
+    fun incorrectPasswordFormat(context: Context): String = context.getString(R.string.incorrectPasswordFormat)
+    fun passwordMismatch(context: Context): String = context.getString(R.string.confirmPasswordDontMatch)
+    fun checkTerms(context: Context): String = context.getString(R.string.checkTheTermsAndPrivacyPolicy)
+    fun enterEmailAgain(context: Context): String = context.getString(R.string.enterYourEmailAgain)
     
     // MARK: - Success Messages
     // Success messages for authentication operations
-    fun loginSuccess(context: Context): String = "Login successfully".localized(context)
-    fun logoutSuccess(context: Context): String = "Logged out successfully".localized(context)
-    fun signUpSuccess(context: Context): String = "Signup successfully".localized(context)
-    fun verificationEmailSent(context: Context): String = "Verification email Sent successfully".localized(context)
-    fun passwordResetSent(context: Context): String = "Password reset email Sent successfully".localized(context)
-    fun deleteAccountSuccess(context: Context): String = "Delete account successfully".localized(context)
-    fun accountDeletedSuccess(context: Context): String = "Account deleted successfully".localized(context)
+    fun loginSuccess(context: Context): String = context.getString(R.string.loginSuccessfully)
+    fun logoutSuccess(context: Context): String = context.getString(R.string.loggedOutSuccessfully)
+    fun signUpSuccess(context: Context): String = context.getString(R.string.signupSuccessfully)
+    fun verificationEmailSent(context: Context): String = context.getString(R.string.verificationEmailSentSuccessfully)
+    fun passwordResetSent(context: Context): String = context.getString(R.string.passwordResetEmailSentSuccessfully)
+    fun deleteAccountSuccess(context: Context): String = context.getString(R.string.deleteAccountSuccessfully)
+    fun accountDeletedSuccess(context: Context): String = context.getString(R.string.accountDeletedSuccessfully)
     
     // MARK: - Error Titles
     // Error titles for authentication operations
-    fun loginErrorTitle(context: Context): String = "Login error".localized(context)
-    fun logoutErrorTitle(context: Context): String = "Logout error".localized(context)
-    fun signUpErrorTitle(context: Context): String = "Signup error".localized(context)
-    fun passwordResetErrorTitle(context: Context): String = "Password reset error".localized(context)
-    fun deleteAccountErrorTitle(context: Context): String = "Delete account error".localized(context)
+    fun loginErrorTitle(context: Context): String = context.getString(R.string.loginError)
+    fun logoutErrorTitle(context: Context): String = context.getString(R.string.logoutError)
+    fun signUpErrorTitle(context: Context): String = context.getString(R.string.signupError)
+    fun passwordResetErrorTitle(context: Context): String = context.getString(R.string.passwordResetError)
+    fun deleteAccountErrorTitle(context: Context): String = context.getString(R.string.deleteAccountError)
     
     // MARK: - Error Messages
     // Error messages for authentication operations
-    fun notVerifiedAccount(context: Context): String = "Not verified account".localized(context)
-    fun confirmEmail(context: Context): String = "Confirm your email".localized(context)
-    fun verificationEmailNotSent(context: Context): String = "Verification email could not be sent".localized(context)
-    fun accountNotDeleted(context: Context): String = "Account could not be deleted".localized(context)
-    fun passwordResetTitle(context: Context): String = "Password Reset".localized(context)
-    fun incorrectEmail(context: Context): String = "Incorrect email".localized(context)
+    fun notVerifiedAccount(context: Context): String = context.getString(R.string.notVerifiedAccount)
+    fun confirmEmail(context: Context): String = context.getString(R.string.confirmYourEmail)
+    fun verificationEmailNotSent(context: Context): String = context.getString(R.string.loginError) // Using login error as fallback
+    fun accountNotDeleted(context: Context): String = context.getString(R.string.accountCouldNotBeDeleted)
+    fun passwordResetTitle(context: Context): String = context.getString(R.string.passwordReset)
+    fun incorrectEmail(context: Context): String = context.getString(R.string.incorrectEmail)
     
     // MARK: - Login Validation
     // Generates validation messages for login form

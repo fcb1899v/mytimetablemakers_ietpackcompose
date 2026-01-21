@@ -2,7 +2,9 @@ package com.mytimetablemaker.ui.main
 
 import android.app.Application
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -11,7 +13,6 @@ import androidx.compose.ui.graphics.Color
 import com.mytimetablemaker.extensions.*
 import com.mytimetablemaker.models.ODPTCalendarType
 import com.mytimetablemaker.models.TransportationLineKind
-import com.mytimetablemaker.ui.theme.Gray
 import com.mytimetablemaker.ui.theme.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -40,13 +41,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     
     // Route visibility settings with SharedPreferences persistence
+    // Match SwiftUI: separate flags for back and go routes
     var isShowBackRoute2 by mutableStateOf(false)
-    var isShowGoRoute2 by mutableStateOf(false)
-    
-    // Line change settings with SharedPreferences persistence
-    var changeLine1 by mutableStateOf(0)
         private set
-    var changeLine2 by mutableStateOf(0)
+    var isShowGoRoute2 by mutableStateOf(false)
+        private set
+    
+    // Computed property: returns the appropriate route2 flag based on isBack
+    val isShowRoute2: Boolean
+        get() = if (isBack) isShowBackRoute2 else isShowGoRoute2
+
+    // Line change settings with SharedPreferences persistence
+    var changeLine1 by mutableIntStateOf(0)
+        private set
+    var changeLine2 by mutableIntStateOf(0)
         private set
     
     // Route direction identifiers with SharedPreferences persistence
@@ -104,8 +112,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         goOrBack2 = "back2"
         isTimeStop = false
         selectDate = Date()
-        dateLabel = selectDate.setDate(getApplication())
-        timeLabel = selectDate.setTime()
+        dateLabel = selectDate.setDate
+        timeLabel = selectDate.setTime
         home = "back1".departurePoint(sharedPreferences)
         office = "back1".destination(sharedPreferences)
         stationArray1 = "back1".stationArray(sharedPreferences)
@@ -134,9 +142,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     // Updates route visibility settings from SharedPreferences
+    // Match SwiftUI: update both back and go route flags
     fun setRoute2() {
         isShowBackRoute2 = "back2".isShowRoute2(sharedPreferences)
         isShowGoRoute2 = "go2".isShowRoute2(sharedPreferences)
+    }
+    
+    // Set route 2 visibility for both back and go routes
+    // Used when updating from settings screens
+    fun setRoute2Value(value: Boolean) {
+        isShowBackRoute2 = value
+        isShowGoRoute2 = value
     }
     
     // Updates line change settings based on current direction
@@ -168,20 +184,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     // MARK: - SharedPreferences Persistence
     // Save route visibility settings to SharedPreferences
+    // Match SwiftUI: save both back and go route flags
     fun saveRoute2Settings() {
-        sharedPreferences.edit().apply {
+        sharedPreferences.edit {
             putBoolean("back2".isShowRoute2Key(), isShowBackRoute2)
             putBoolean("go2".isShowRoute2Key(), isShowGoRoute2)
-            apply()
         }
     }
     
     // Save line change settings to SharedPreferences
     fun saveChangeLineSettings() {
-        sharedPreferences.edit().apply {
+        sharedPreferences.edit {
             putInt(goOrBack1.changeLineKey(), changeLine1)
             putInt(goOrBack2.changeLineKey(), changeLine2)
-            apply()
         }
     }
     
@@ -202,11 +217,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Switches to return direction and updates line settings
     fun updateDate(date: Date) {
         selectDate = date
-        dateLabel = date.setDate(getApplication())
+        dateLabel = date.setDate
     }
     
     fun updateTime(date: Date) {
-        timeLabel = date.setTime()
+        timeLabel = date.setTime
     }
     
     fun backButton() {
@@ -231,8 +246,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         timerJob = viewModelScope.launch {
             while (true) {
                 val now = Date()
-                dateLabel = now.setDate(getApplication())
-                timeLabel = now.setTime()
+                dateLabel = now.setDate
+                timeLabel = now.setTime
                 delay(1000)
             }
         }
@@ -317,10 +332,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val currentCalendarType2: ODPTCalendarType
         get() = currentCalendarType(goOrBack2, 1)
     
-    // Route visibility based on current direction
-    val isShowRoute2: Boolean
-        get() = if (isBack) isShowBackRoute2 else isShowGoRoute2
-    
     // Timetable data for both routes using line-specific calendar types
     // Note: timetableArray returns data for all lines (0-2) in the route
     // For simplicity, we use the calendar type of the first line for all lines in the route
@@ -339,10 +350,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         get() = goOrBack2.timeArray(sharedPreferences, selectDate, currentTime)
     
     val timeArrayString1: List<String>
-        get() = timeArray1.map { it.stringTime() }
+        get() = timeArray1.map { it.stringTime }
     
     val timeArrayString2: List<String>
-        get() = timeArray2.map { it.stringTime() }
+        get() = timeArray2.map { it.stringTime }
     
     // Countdown information for next trains
     val countdownTime1: String
@@ -360,6 +371,4 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 // MARK: - Boolean Extensions
 // Extensions for boolean values to provide route and weekday information
-fun Boolean.goOrBack1(): String = if (this) "back1" else "go1"
-fun Boolean.goOrBack2(): String = if (this) "back2" else "go2"
 

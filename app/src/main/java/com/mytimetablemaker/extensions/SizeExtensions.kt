@@ -1,7 +1,10 @@
 package com.mytimetablemaker.extensions
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -11,468 +14,298 @@ import androidx.compose.ui.unit.dp
 object ScreenSize {
     
     // MARK: - Basic Screen Properties
+    // Use LocalConfiguration for actual screen size (matches SwiftUI UIScreen.main.bounds)
+    // Note: LocalWindowInfo.containerSize is window/container size, not screen size
     @Composable
-    fun screenWidth(): Float {
-        val configuration = LocalConfiguration.current
-        return configuration.screenWidthDp.toFloat()
-    }
-    
+    fun screenWidth(): Dp = LocalConfiguration.current.screenWidthDp.dp
     @Composable
-    fun screenHeight(): Float {
-        val configuration = LocalConfiguration.current
-        return configuration.screenHeightDp.toFloat()
-    }
-    
+    fun screenHeight(): Dp = LocalConfiguration.current.screenHeightDp.dp
     @Composable
-    fun customWidth(): Float {
-        val width = screenWidth()
-        return if (width < 600) width else 600f
-    }
-    
+    fun customWidth(): Dp = if (screenWidth() < 600.dp) screenWidth() else 600.dp
     @Composable
-    fun statusBarHeight(): Float {
-        // TODO: Get actual status bar height from WindowInsets
-        // For now, return approximate value
-        return 44f // Approximate status bar height
+    fun statusBarHeight(): Dp = with(LocalDensity.current) {
+        WindowInsets.statusBars.getTop(this).toDp()
     }
-    
+
     // MARK: - Splash Screen
     @Composable
-    fun splashTitleFontSize(): Dp = (customWidth() * 0.08f).dp
-    
+    fun splashTitleFontSize(): Dp = customWidth() * 0.075f
     @Composable
-    fun splashIconSize(): Dp = (customWidth() * 0.3f).dp
-    
+    fun splashIconSize(): Dp = customWidth() * 0.3f
     @Composable
-    fun splashLoadingFontSize(): Dp = (customWidth() * 0.06f).dp
-    
+    fun splashLoadingFontSize(): Dp = customWidth() * 0.06f
     @Composable
-    fun splashLoadingSpacing(): Dp = (screenHeight() * 0.02f).dp
+    fun splashLoadingSpacing(): Dp = screenHeight() * 0.02f
     
     // MARK: - Header & Navigation
     @Composable
-    fun headerTopMargin(): Dp = (statusBarHeight() + 5f).dp
-    
+    fun headerHeight(): Dp = operationButtonWidth() + 10.dp
     @Composable
-    fun headerHeight(): Dp = (statusBarHeight() + operationButtonWidth().value + 10f).dp
-    
+    fun headerDateFontSize(): Dp = customWidth() / 20f
     @Composable
-    fun headerDateFontSize(): Dp = (customWidth() / 20f).dp
-    
+    fun headerDateHeight(): Dp = customWidth() / 30f
     @Composable
-    fun headerDateHeight(): Dp = (customWidth() / 30f).dp
-    
+    fun headerDateMargin(): Dp = customWidth() / 6f
     @Composable
-    fun headerDateMargin(): Dp = (customWidth() / 6f).dp
-    
+    fun headerSpace(): Dp = customWidth() / 60f
     @Composable
-    fun headerSpace(): Dp = (customWidth() / 60f).dp
-    
+    fun headerSettingsButtonSize(): Dp = customWidth() / 16f
     @Composable
-    fun headerSettingsButtonSize(): Dp = (customWidth() / 16f).dp
-    
+    fun operationButtonWidth(): Dp = customWidth() / 6f
     @Composable
-    fun operationButtonWidth(): Dp = (customWidth() / 6f).dp
-    
+    fun operationButtonHeight(): Dp = customWidth() / 12f
     @Composable
-    fun operationButtonHeight(): Dp = (customWidth() / 12f).dp
-    
-    @Composable
-    fun operationButtonMargin(): Dp = (customWidth() / 24f).dp
+    fun operationButtonMargin(): Dp = customWidth() / 24f
     
     // MARK: - Main Content Layout
     @Composable
-    fun routeSingleWidth(): Dp = (customWidth() - 10f * routeSidePadding().value).dp
-    
+    fun routeSingleWidth(): Dp = customWidth() -  routeSidePadding() * 10f
     @Composable
-    fun routeDoubleWidth(): Dp = (customWidth() / 2f - 4f * routeSidePadding().value).dp
-    
+    fun routeDoubleWidth(): Dp = customWidth() / 2f - routeSidePadding() * 4f
     @Composable
-    fun routeHeight(): Dp = (screenHeight() - admobBannerHeight().value - headerHeight().value).dp
-    
+    fun routeWidth(isShowRoute2: Boolean): Dp = if (isShowRoute2) routeDoubleWidth() else routeSingleWidth()
     @Composable
-    fun routeSidePadding(): Dp = (customWidth() / 40f).dp
-    
+    fun routeHeight(): Dp = screenHeight() - admobBannerHeight() - statusBarHeight()
     @Composable
-    fun routeBottomSpace(): Dp = (routeHeight().value / 150f).dp
-    
+    fun routeSidePadding(): Dp = customWidth() * 0.02f
     @Composable
-    fun routeCountdownFontSize(): Dp = (customWidth() / 12f).dp
-    
+    fun routeBottomSpace(): Dp = routeHeight() / 150f
     @Composable
-    fun routeCountdownTopSpace(): Dp {
-        val rHeight = routeHeight().value
-        return if (rHeight > 600) {
-            ((rHeight - 600) / 20 + 5).dp
-        } else {
-            5.dp
-        }
-    }
-    
+    fun routeCountdownFontSize(): Dp = customWidth() / 12f
     @Composable
-    fun routeCountdownPadding(): Dp {
-        val rHeight = routeHeight().value
-        return (customWidth() / 50f + (if (rHeight > 600) ((rHeight - 600) / 10) else 0f)).dp
-    }
-    
+    fun routeCountdownTopSpace(): Dp = if (routeHeight() > 600.dp) (routeHeight() - 600.dp) / 20f + 5.dp else 5.dp
     @Composable
-    fun stationFontSize(): Dp = (customWidth() / 27f).dp
-    
+    fun routeCountdownPadding(): Dp = customWidth() / 50f + (if (routeHeight() > 600.dp) ((routeHeight() - 600.dp) / 10) else 0.dp)
     @Composable
-    fun transferHeight(): Dp = (screenHeight() * 0.036f).dp
-    
+    fun stationFontSize(): Dp = customWidth() / 27f
     @Composable
-    fun lineNameHeight(): Dp = (screenHeight() * 0.045f).dp
-    
+    fun transferHeight(): Dp = screenHeight() * 0.036f
     @Composable
-    fun lineFontSize(): Dp = (customWidth() / 27f).dp
-    
+    fun lineNameHeight(): Dp = screenHeight() * 0.045f
     @Composable
-    fun lineImageForegroundSize(): Dp = (customWidth() / 20f).dp
-    
+    fun lineFontSize(): Dp = customWidth() / 27f
     @Composable
-    fun lineImageForegroundPadding(): Dp = (customWidth() / 80f).dp
-    
+    fun lineImageForegroundSize(): Dp = customWidth() / 20f
     @Composable
-    fun lineImageBackgroundSize(): Dp = (customWidth() / 15f).dp
-    
+    fun lineImageBackgroundSize(): Dp = customWidth() / 15f
     @Composable
-    fun lineImageBackgroundPadding(): Dp = (customWidth() / 200f).dp
-    
+    fun timeFontSize(): Dp = customWidth() / 18f
+
+    // MARK: - AdMob Banner
     @Composable
-    fun lineImagePadding(): Dp = (customWidth() / 300f).dp
-    
-    @Composable
-    fun timeFontSize(): Dp = (customWidth() / 18f).dp
-    
-    @Composable
-    fun admobBannerWidth(): Dp = (customWidth() - 100f).dp
-    
+    fun admobBannerWidth(): Dp = customWidth()
     @Composable
     fun admobBannerMinWidth(): Dp = 320.dp
-    
     @Composable
-    fun admobBannerHeight(): Dp {
-        val height = screenHeight() - headerHeight().value - 75f
-        return if (height < 500) {
-            50.dp
-        } else {
-            (height / 10f).dp
-        }
-    }
-    
+    fun admobBannerHeight(): Dp = if ((screenHeight() - headerHeight() - 75.dp) < 500.dp) 50.dp else (screenHeight() - headerHeight() - 75.dp) / 10
+
     // MARK: - Login
     @Composable
-    fun loginTitleFontSize(): Dp = (customWidth() * 0.06f).dp
-    
+    fun loginTitleFontSize(): Dp = customWidth() * 0.06f
     @Composable
-    fun loginButtonWidth(): Dp = (customWidth() * 0.88f).dp
-    
+    fun loginButtonWidth(): Dp = customWidth() * 0.88f
     @Composable
-    fun loginTextFieldFontSize(): Dp = (customWidth() * 0.036f).dp
-    
+    fun loginTextFieldFontSize(): Dp = customWidth() * 0.036f
     @Composable
-    fun loginEyeIconSize(): Dp = (customWidth() * 0.042f).dp
-    
+    fun loginEyeIconSize(): Dp = customWidth() * 0.042f
     @Composable
-    fun loginTitleTopMargin(): Dp = (screenHeight() * 0.12f).dp
-    
+    fun loginTitleTopMargin(): Dp = screenHeight() * 0.12f
     @Composable
-    fun loginTitleBottomMargin(): Dp = (screenHeight() * 0.02f).dp
-    
+    fun loginTitleBottomMargin(): Dp = screenHeight() * 0.02f
     @Composable
-    fun loginTextHeight(): Dp = (screenHeight() * 0.045f).dp
-    
+    fun loginTextHeight(): Dp = screenHeight() * 0.045f
     @Composable
-    fun loginMargin(): Dp = (screenHeight() * 0.03f).dp
+    fun loginMargin(): Dp = screenHeight() * 0.03f
+    @Composable
+    fun loginHeadlineFontSize(): Dp = customWidth() * 0.042f
+    @Composable
+    fun loginSubheadlineFontSize(): Dp = customWidth() * 0.034f
+    @Composable
+    fun loginCheckboxSize(): Dp = customWidth() * 0.06f
     
     // MARK: - Timetable
     @Composable
-    fun timetableDisplayWidth(): Dp = (customWidth() * 0.90f).dp
-    
+    fun timetableDisplayWidth(): Dp = customWidth() * 0.90f
     @Composable
-    fun timetableHourFontSize(): Dp = (customWidth() * 0.036f).dp
-    
+    fun timetableHourFontSize(): Dp = customWidth() * 0.036f
     @Composable
-    fun timetableMinuteFontSize(): Dp = (customWidth() * 0.032f).dp
-    
+    fun timetableMinuteFontSize(): Dp = customWidth() * 0.032f
     @Composable
-    fun timetableRideTimeFontSize(): Dp = (customWidth() * 0.020f).dp
-    
+    fun timetableRideTimeFontSize(): Dp = customWidth() * 0.020f
     @Composable
-    fun timetableMinuteSpacing(): Dp = (customWidth() * 0.008f).dp
-    
+    fun timetableMinuteSpacing(): Dp = customWidth() * 0.008f
     @Composable
-    fun timetableHorizontalSpacing(): Dp = (customWidth() * 0.04f).dp
-    
+    fun timetableHorizontalSpacing(): Dp = customWidth() * 0.04f
     @Composable
-    fun timetableWeekToggleSpacing(): Dp = (customWidth() * 0.016f).dp
-    
+    fun timetableHourFrameWidth(): Dp = customWidth() * 0.1f
     @Composable
-    fun timetableHourFrameWidth(): Dp = (customWidth() * 0.1f).dp
-    
+    fun timetableMinuteFrameWidth(): Dp = customWidth() - timetableHourFrameWidth() - 1.0.dp
     @Composable
-    fun timetableMinuteFrameWidth(): Dp {
-        val hourWidth = timetableHourFrameWidth().value
-        return (customWidth() - hourWidth - 1f).dp
-    }
-    
+    fun timetableTypeMenuWidth(): Dp = customWidth() * 0.50f
     @Composable
-    fun timetableNumberWidth(): Dp = (customWidth() * 0.048f).dp
-    
+    fun timetableEditButtonWidth(): Dp = customWidth() * 0.44f
     @Composable
-    fun timetableTypeMenuWidth(): Dp = (customWidth() * 0.50f).dp
-    
+    fun timetablePickerWidth(): Dp = customWidth() * 0.43f
     @Composable
-    fun timetableEditButtonWidth(): Dp = (customWidth() * 0.44f).dp
-    
+    fun timetableTypeMenuOffsetX(): Dp = customWidth() * 0.00f
     @Composable
-    fun timetablePickerWidth(): Dp = (customWidth() * 0.43f).dp
-    
+    fun timetableNumberHeight(): Dp = screenHeight() * 0.018f
     @Composable
-    fun timetableTypeMenuOffsetX(): Dp = (customWidth() * 0.00f).dp
-    
+    fun timetableGridHeight(): Dp = screenHeight() * 0.024f
     @Composable
-    fun timetableNumberHeight(): Dp = (screenHeight() * 0.018f).dp
-    
+    fun timetableDisplayHeight(): Dp = screenHeight() * 0.06f
     @Composable
-    fun timetableGridHeight(): Dp = (screenHeight() * 0.024f).dp
-    
+    fun timetableMaxHeight(): Dp = screenHeight() * 0.64f
     @Composable
-    fun timetableDisplayHeight(): Dp = (screenHeight() * 0.06f).dp
-    
+    fun timetableVerticalSpacing(): Dp = screenHeight() * 0.012f
     @Composable
-    fun timetableEditTitleHeight(): Dp = (screenHeight() * 0.06f).dp
-    
+    fun timetableTypeMenuOffsetY(): Dp = screenHeight() * 0.000f
     @Composable
-    fun timetableMaxHeight(): Dp = (screenHeight() * 0.64f).dp
-    
+    fun timetableCopyMenuOffsetY(): Dp = screenHeight() * 0.13f
     @Composable
-    fun timetableVerticalSpacing(): Dp = (screenHeight() * 0.012f).dp
-    
+    fun timetableCalendarMenuOffsetY(): Dp = screenHeight() * 0.00f
     @Composable
-    fun timetableTypeMenuPadding(): Dp = (screenHeight() * 0.16f).dp
-    
+    fun timetableContentViewMenuOffsetY(): Dp = screenHeight() * 0.10f
     @Composable
-    fun timetablePickerSpacing(): Dp = (screenHeight() * 0.02f).dp
-    
+    fun timetablePickerTopPadding(): Dp = screenHeight() * 0.000f
     @Composable
-    fun timetableTypeMenuOffsetY(): Dp = (screenHeight() * -0.045f).dp
-    
+    fun timetablePickerBottomPadding(): Dp = screenHeight() * 0.000f
     @Composable
-    fun timetableCopyMenuOffsetY(): Dp = (screenHeight() * 0.13f).dp
-    
+    fun settingsTimetableSheetHeight(): Dp = screenHeight() * 0.6f
     @Composable
-    fun timetableCalendarMenuOffsetY(): Dp = (screenHeight() * -0.34f).dp
-    
-    @Composable
-    fun timetableContentViewMenuOffsetY(): Dp = (screenHeight() * 0.10f).dp
-    
-    @Composable
-    fun timetablePickerTopPadding(): Dp = (screenHeight() * -0.036f).dp
-    
-    @Composable
-    fun timetablePickerBottomPadding(): Dp = (screenHeight() * -0.012f).dp
-    
-    @Composable
-    fun timetableScrollViewMaxHeight(): Dp = (screenHeight() * 0.6f).dp
-    
-    @Composable
-    fun settingsTimetableSheetHeight(): Dp = (screenHeight() * 0.6f).dp
-    
-    @Composable
-    fun calculateContentHeight(trainTimesCount: Int): Dp {
-        val maxItemsPerRow = 10
-        return if (trainTimesCount > maxItemsPerRow) {
-            val rows = (trainTimesCount + maxItemsPerRow - 1) / maxItemsPerRow
-            (rows.toFloat() * timetableNumberHeight().value).dp
-        } else {
-            timetableGridHeight()
-        }
-    }
-    
+    fun calculateContentHeight(trainTimesCount: Int): Dp =
+        if (trainTimesCount > 10) timetableNumberHeight() * (trainTimesCount + 9) / 10 else timetableGridHeight()
+
     // MARK: - Settings
     @Composable
-    fun settingsTitleFontSize(): Dp = (screenHeight() * 0.022f).dp
-    
+    fun settingsTitleFontSize(): Dp = screenHeight() * 0.020f
     @Composable
-    fun settingsHeaderFontSize(): Dp = (screenHeight() * 0.016f).dp
-    
+    fun settingsHeaderFontSize(): Dp = screenHeight() * 0.016f
     @Composable
-    fun settingsFontSize(): Dp = (screenHeight() * 0.018f).dp
+    fun settingsFontSize(): Dp = screenHeight() * 0.018f
     
     // MARK: - Settings Sheet Common
     @Composable
-    fun settingsSheetHorizontalPadding(): Dp = (customWidth() * 0.06f).dp
-    
+    fun settingsSheetVerticalSpacing(): Dp = screenHeight() * 0.012f
     @Composable
-    fun settingsSheetHorizontalSpacing(): Dp = (customWidth() * 0.015f).dp
-    
+    fun settingsSheetHorizontalPadding(): Dp = customWidth() * 0.06f
     @Composable
-    fun settingsSheetTitleFontSize(): Dp = (customWidth() * 0.040f).dp
-    
+    fun settingsSheetHorizontalSpacing(): Dp = customWidth() * 0.02f
     @Composable
-    fun settingsSheetHeadlineFontSize(): Dp = (customWidth() * 0.032f).dp
-    
+    fun settingsSheetTitleFontSize(): Dp = customWidth() * 0.038f
     @Composable
-    fun settingsSheetInputFontSize(): Dp = (customWidth() * 0.036f).dp
-    
+    fun settingsSheetHeadlineFontSize(): Dp = customWidth() * 0.030f
     @Composable
-    fun settingsSheetButtonFontSize(): Dp = (customWidth() * 0.040f).dp
-    
+    fun settingsSheetInputFontSize(): Dp = customWidth() * 0.034f
     @Composable
-    fun settingsSheetInputPaddingHorizontal(): Dp = (customWidth() * 0.04f).dp
-    
+    fun settingsSheetButtonFontSize(): Dp = customWidth() * 0.036f
     @Composable
-    fun settingsSheetStrokeLineWidth(): Dp = (customWidth() * 0.002f).dp
-    
+    fun settingsSheetInputPaddingHorizontal(): Dp = customWidth() * 0.04f
     @Composable
-    fun settingsSheetIconSize(): Dp = (customWidth() * 0.016f).dp
-    
+    fun settingsSheetStrokeLineWidth(): Dp = customWidth() * 0.002f
     @Composable
-    fun settingsSheetPickerSelectWidth(): Dp = (customWidth() * 0.10f).dp
-    
+    fun settingsSheetLineTagSize(): Dp = customWidth() * 0.05f
     @Composable
-    fun settingsSheetPickerSpacing(): Dp = (customWidth() * -0.030f).dp
-    
+    fun settingsSheetIconSize(): Dp = customWidth() * 0.045f
     @Composable
-    fun settingsSheetIconSpacing(): Dp = (customWidth() * 0.02f).dp
-    
+    fun settingsSheetIconSpacing(): Dp = customWidth() * 0.016f
     @Composable
-    fun settingsSheetVerticalSpacing(): Dp = (screenHeight() * 0.012f).dp
-    
+    fun settingsSheetRectangleButtonPaddingHorizontal(): Dp = customWidth() * 0.030f
     @Composable
-    fun settingsSheetSaveButtonSpacing(): Dp = (screenHeight() * 0.03f).dp
-    
+    fun settingsSheetRectangleButtonPaddingVertical(): Dp = screenHeight() * 0.00f
     @Composable
-    fun settingsSheetInputPaddingVertical(): Dp = (screenHeight() * 0.008f).dp
-    
+    fun settingsSheetRectangleButtonHeight(): Dp = screenHeight() * 0.036f
     @Composable
-    fun settingsSheetCornerRadius(): Dp = (screenHeight() * 0.016f).dp
-    
+    fun settingsSheetPickerSelectWidth(): Dp = customWidth() * 0.08f
     @Composable
-    fun settingsSheetPickerSelectHeight(): Dp = (screenHeight() * 0.10f).dp
-    
+    fun settingsSheetPickerSpacing(): Dp = customWidth() * 0.01f
     @Composable
-    fun settingsSheetPickerDisplayHeight(): Dp = (screenHeight() * 0.022f).dp
-    
+    fun settingsSheetInputPaddingVertical(): Dp = screenHeight() * 0.008f
     @Composable
-    fun settingsSheetButtonHeight(): Dp = (screenHeight() * 0.044f).dp
-    
+    fun settingsSheetCornerRadius(): Dp = screenHeight() * 0.015f
     @Composable
-    fun settingsSheetButtonCornerRadius(): Dp = (screenHeight() * 0.022f).dp
-    
+    fun settingsSheetPickerSelectHeight(): Dp = screenHeight() * 0.075f
+    @Composable
+    fun settingsSheetPickerDisplayHeight(): Dp = screenHeight() * 0.022f
+    @Composable
+    fun settingsSheetPickerItemPaddingVertical(): Dp = screenHeight() * 0.004f
+    @Composable
+    fun settingsSheetButtonHeight(): Dp = screenHeight() * 0.044f
+    @Composable
+    fun settingsSheetButtonCornerRadius(): Dp = screenHeight() * 0.022f
+
     // MARK: - Settings Line Sheet
     @Composable
-    fun settingsLineSheetPickerPadding(): Dp = (screenHeight() * -0.032f).dp
-    
+    fun settingsLineSheetPickerPadding(): Dp = screenHeight() * 0.000f
     @Composable
-    fun settingsLineSheetShadowRadius(): Dp = (screenHeight() * 0.006f).dp
-    
+    fun settingsLineSheetGridSpacing(): Dp = screenHeight() * 0.01f
     @Composable
-    fun settingsLineSheetTitleSpacing(): Dp = (screenHeight() * 0.012f).dp
-    
+    fun settingsLineSheetSuggestionItemHeight(): Dp = screenHeight() * 0.046f
     @Composable
-    fun settingsLineSheetGridSpacing(): Dp = (screenHeight() * 0.02f).dp
-    
+    fun settingsLineSheetTagPaddingVertical(): Dp = screenHeight() * 0.001f
     @Composable
-    fun settingsLineSheetColorVerticalPadding(): Dp = (screenHeight() * 0.008f).dp
-    
+    fun settingsLineSheetDropdownOffsetX(): Dp = customWidth() * 0.16f
     @Composable
-    fun settingsLineSheetSuggestionItemHeight(): Dp = (screenHeight() * 0.046f).dp
-    
+    fun settingsLineSheetDropdownOffsetY(): Dp = screenHeight() * 0.005f
     @Composable
-    fun settingsLineSheetMaxSuggestionHeight(): Dp = (screenHeight() * 0.280f).dp
-    
+    fun settingsLineSheetOperatorOffset(): Dp = screenHeight() * 0.13f
     @Composable
-    fun settingsLineSheetStopMaxSuggestionHeight(): Dp = (screenHeight() * 0.234f).dp
-    
+    fun settingsLineSheetLineOffset(): Dp = screenHeight() * 0.18f
     @Composable
-    fun settingsLineSheetTagPaddingVertical(): Dp = (screenHeight() * 0.003f).dp
-    
+    fun settingsLineSheetDepartureOffset(): Dp = screenHeight() * 0.32f
     @Composable
-    fun settingsLineSheetSuggestionSpacing(): Dp = (screenHeight() * 0.002f).dp
-    
+    fun settingsLineSheetArrivalOffset(): Dp = screenHeight() * 0.37f
     @Composable
-    fun settingsLineSheetSuggestionPaddingVertical(): Dp = (screenHeight() * 0.004f).dp
-    
+    fun settingsLineSheetTransportationDropdownOffsetY(): Dp = screenHeight() * 0.01f
     @Composable
-    fun settingsLineSheetOperatorOffset(): Dp = (screenHeight() * 0.13f).dp
-    
+    fun settingsLineSheetCaptionFontSize(): Dp = customWidth() * 0.024f
     @Composable
-    fun settingsLineSheetLineOffset(): Dp = (screenHeight() * 0.18f).dp
-    
+    fun settingsLineSheetColorSettingWidth(): Dp = customWidth() * 1.0f
     @Composable
-    fun settingsLineSheetColorOffset(): Dp = (screenHeight() * 0.25f).dp
-    
+    fun settingsLineSheetColorHorizontalPadding(): Dp = customWidth() * 0.09f
     @Composable
-    fun settingsLineSheetDepartureOffset(): Dp = (screenHeight() * 0.32f).dp
-    
+    fun settingsLineSheetColorCircleSize(): Dp = customWidth() * 0.09f
     @Composable
-    fun settingsLineSheetArrivalOffset(): Dp = (screenHeight() * 0.37f).dp
-    
+    fun settingsLineSheetColorCircleSmallSize(): Dp = customWidth() * 0.05f
     @Composable
-    fun settingsLineSheetCaptionFontSize(): Dp = (customWidth() * 0.024f).dp
-    
-    @Composable
-    fun settingsLineSheetColorSettingWidth(): Dp = (customWidth() * 0.80f).dp
-    
-    @Composable
-    fun settingsLineSheetColorHorizontalPadding(): Dp = (customWidth() * 0.04f).dp
-    
-    @Composable
-    fun settingsLineSheetColorCircleSize(): Dp = (customWidth() * 0.08f).dp
-    
-    @Composable
-    fun settingsLineSheetColorCircleSmallSize(): Dp = (customWidth() * 0.04f).dp
-    
-    @Composable
-    fun settingsLineSheetTagPaddingHorizontal(): Dp = (customWidth() * 0.006f).dp
+    fun settingsLineSheetTagPaddingHorizontal(): Dp = customWidth() * 0.01f
     
     // MARK: - Settings Transfer Sheet
     @Composable
-    fun settingsTransferSheetVerticalSpacing(): Dp = (screenHeight() * 0.02f).dp
-    
+    fun settingsTransferSheetVerticalSpacing(): Dp = screenHeight() * 0.02f
     @Composable
-    fun settingsTransferSheetCheckmarkSpacing(): Dp = (screenHeight() * 0.009f).dp
-    
+    fun settingsTransferSheetCheckmarkSpacing(): Dp = screenHeight() * 0.009f
     @Composable
-    fun settingsTransferSheetPickerWidth(): Dp = (customWidth() * 0.28f).dp
-    
+    fun settingsTransferSheetPickerWidth(): Dp = customWidth() * 0.28f
     @Composable
-    fun settingsTransferSheetPaddingLeft(): Dp = (customWidth() * 0.03f).dp
+    fun settingsTransferSheetPaddingLeft(): Dp = customWidth() * 0.03f
     
-    // MARK: - Components
+    // MARK: - Custom Component
     @Composable
-    fun customToggleSpacing(): Dp = (screenHeight() * 0.006f).dp
-    
+    fun customToggleSpacing(): Dp = screenHeight() * 0.006f
     @Composable
-    fun customToggleCornerRadius(): Dp = (screenHeight() * 0.026f).dp
-    
+    fun customToggleCornerRadius(): Dp = screenHeight() * 0.026f
     @Composable
-    fun customToggleWidth(): Dp = (screenHeight() * 0.051f).dp
-    
+    fun customToggleWidth(): Dp = screenHeight() * 0.051f
     @Composable
-    fun customToggleHeight(): Dp = (screenHeight() * 0.029f).dp
-    
+    fun customToggleHeight(): Dp = screenHeight() * 0.018f
     @Composable
-    fun customToggleCircleSize(): Dp = (screenHeight() * 0.022f).dp
-    
+    fun customToggleCircleSize(): Dp = screenHeight() * 0.022f
     @Composable
-    fun customToggleCircleOffset(): Dp = (screenHeight() * 0.011f).dp
-    
+    fun customToggleCircleOffset(): Dp = screenHeight() * 0.1f
     @Composable
-    fun customTogglePaddingHorizontal(): Dp = (customWidth() * 0.02f).dp
-}
+    fun customTogglePaddingHorizontal(): Dp = customWidth() * 0.02f
+    @Composable
+    fun customTextFieldPaddingVertical(): Dp = customWidth() * 0.012f
+    @Composable
+    fun progressIndicatorSize(): Dp = customWidth() * 0.1f
 
-// MARK: - Boolean Extension for Route Width
-// Extension function for route width calculation based on boolean value
-@Composable
-fun Boolean.routeWidth(): Dp {
-    return if (this) {
-        ScreenSize.routeDoubleWidth()
-    } else {
-        ScreenSize.routeSingleWidth()
-    }
+    
+    // MARK: - Common UI Elements
+    @Composable
+    fun dividerWidth(): Dp = 1.5.dp
+    @Composable
+    fun shadowOffset(): Dp = 0.5.dp
+    @Composable
+    fun borderWidth(): Dp = 1.dp
 }
-

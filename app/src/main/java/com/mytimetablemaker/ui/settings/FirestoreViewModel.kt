@@ -2,6 +2,7 @@ package com.mytimetablemaker.ui.settings
 
 import android.app.Application
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -257,7 +258,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             if (document.exists() && document.data != null) {
                 val data = document.data!!
                 
-                sharedPreferences.edit().apply {
+                sharedPreferences.edit {
                     data["switch"]?.let { putBoolean(goorback.isShowRoute2Key(), it as? Boolean ?: false) }
                     data["changeline"]?.let { putString(goorback.changeLineKey(), it.toString()) }
                     data["departpoint"]?.let { putString(goorback.departurePointKey(), it.toString()) }
@@ -278,7 +279,6 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                     
                     data["transportatione"]?.let { putString(goorback.transportationKey(0), it.toString()) }
                     data["transittimee"]?.let { putString(goorback.transferTimeKey(0), it.toString()) }
-                    apply()
                 }
                 
                 if (goorback == "go2") {
@@ -327,22 +327,20 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                     val enhancedData = data[enhancedHourKey] as? Map<*, *>
                     if (enhancedData != null) {
                         // New format with structured data
-                        sharedPreferences.edit().apply {
+                        sharedPreferences.edit {
                             putString(timetableKey, enhancedData["timetable"]?.toString() ?: "")
                             putString(timetableRideTimeKey, enhancedData["rideTime"]?.toString() ?: "")
                             putString(timetableTrainTypeKey, enhancedData["trainType"]?.toString() ?: "")
-                            apply()
                         }
                     } else {
                         // Legacy format - fallback to old string-only format for backward compatibility
                         val hourDataString = data[hourKey] as? String
                         if (hourDataString != null) {
-                            sharedPreferences.edit().apply {
+                            sharedPreferences.edit {
                                 putString(timetableKey, hourDataString)
                                 // Clear ride time and train type for legacy data
                                 putString(timetableRideTimeKey, "")
                                 putString(timetableTrainTypeKey, "")
-                                apply()
                             }
                         }
                     }
@@ -352,78 +350,5 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             println("❌ Error getting document for ${calendarType.debugDisplayName()}: ${e.message}")
         }
     }
-}
-
-// MARK: - ODPTCalendarType Extensions
-// Extensions for calendar type utilities
-fun ODPTCalendarType.calendarTag(): String {
-    // For .specific types, extract identifier from rawValue for unique key
-    if (this is ODPTCalendarType.Specific) {
-        val components = this.rawValue.split(".")
-        val lastComponent = components.lastOrNull() ?: return "weekday"
-        return lastComponent.lowercase()
-    }
-    
-    // For standard types, use display type tag
-    val displayType = this.displayCalendarType()
-    return when (displayType) {
-        is ODPTCalendarType.SaturdayHoliday -> "weekend"
-        else -> displayType.debugDisplayName().lowercase()
-    }
-}
-
-fun ODPTCalendarType.debugDisplayName(): String {
-    val displayType = this.displayCalendarType()
-    return when (displayType) {
-        is ODPTCalendarType.Weekday -> "Weekday"
-        is ODPTCalendarType.Holiday -> "Holiday"
-        is ODPTCalendarType.SaturdayHoliday -> "Saturday/Holiday"
-        is ODPTCalendarType.Sunday -> "Sunday"
-        is ODPTCalendarType.Monday -> "Monday"
-        is ODPTCalendarType.Tuesday -> "Tuesday"
-        is ODPTCalendarType.Wednesday -> "Wednesday"
-        is ODPTCalendarType.Thursday -> "Thursday"
-        is ODPTCalendarType.Friday -> "Friday"
-        is ODPTCalendarType.Saturday -> "Saturday"
-        is ODPTCalendarType.Specific -> "Specific"
-    }
-}
-
-fun ODPTCalendarType.displayCalendarType(): ODPTCalendarType {
-    // Convert .specific calendar types to standard types for display
-    if (this is ODPTCalendarType.Specific) {
-        val components = this.rawValue.split(".")
-        val lastComponent = components.lastOrNull()
-        
-        if (lastComponent != null) {
-            // Check if last component is a day type name
-            when (lastComponent) {
-                "Weekday" -> return ODPTCalendarType.Weekday
-                "Saturday" -> return ODPTCalendarType.Saturday
-                "Holiday" -> return ODPTCalendarType.Holiday
-                else -> {
-                    // Handle identifier patterns (e.g., "odpt.Calendar:Specific.Toei.81-170" or "21_7")
-                    val partsByDash = lastComponent.split("-")
-                    val partsByUnderscore = lastComponent.split("_")
-                    val lastPart = if (partsByDash.size > 1) {
-                        partsByDash.lastOrNull() ?: ""
-                    } else if (partsByUnderscore.size > 1) {
-                        partsByUnderscore.lastOrNull() ?: ""
-                    } else {
-                        lastComponent
-                    }
-                    
-                    return when (lastPart) {
-                        "100", "109" -> ODPTCalendarType.Holiday
-                        "160" -> ODPTCalendarType.Saturday
-                        "170", "179" -> ODPTCalendarType.Weekday
-                        else -> ODPTCalendarType.Weekday  // Fallback to weekday
-                    }
-                }
-            }
-        }
-        return ODPTCalendarType.Weekday  // Default fallback
-    }
-    return this
 }
 

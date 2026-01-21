@@ -1,9 +1,11 @@
 package com.mytimetablemaker.extensions
 
 import androidx.compose.ui.graphics.Color
+import com.mytimetablemaker.models.CustomColor
 import com.mytimetablemaker.models.DisplayTrainType
 import com.mytimetablemaker.models.ODPTCalendarType
 import com.mytimetablemaker.ui.theme.*
+import androidx.core.graphics.toColorInt
 
 // MARK: - Color Extensions
 // Extensions for color management and hex color support
@@ -28,19 +30,17 @@ fun Color(hex: String): Color? {
 // MARK: - String Color Extensions
 // Extensions for string-based color operations
 
-// Convert hex color string to integer value
-val String.colorInt: Int
-    get() {
-        val cleanString = this.replace("#", "").trim()
-        if (cleanString.isEmpty()) {
-            return 0xAAAAAA // Default gray color
-        }
-        return cleanString.toIntOrNull(16) ?: 0xAAAAAA
-    }
-
 // Safely convert hex string to Color with fallback
 val String.safeColor: Color
-    get() = Color(this.colorInt)
+    get() {
+        return try {
+            val colorString = if (this.startsWith("#")) this else "#$this"
+            Color(colorString.toColorInt())
+        } catch (e: Exception) {
+            // Fallback to default gray color if parsing fails
+            Gray
+        }
+    }
 
 // MARK: - Integer Color Extensions
 // Extensions for countdown color calculations
@@ -76,7 +76,7 @@ fun colorForTrainType(trainType: String?): Color {
         DisplayTrainType.valueOf(lastComponent.uppercase().replace("-", "_"))
     } catch (e: IllegalArgumentException) {
         // Try to find by rawValue
-        DisplayTrainType.values().find { it.rawValue == lastComponent } ?: return White
+        DisplayTrainType.entries.find { it.rawValue == lastComponent } ?: return White
     }
     
     return displayTrainType.color
@@ -149,6 +149,83 @@ val DisplayTrainType.color: Color
         DisplayTrainType.SL_TAIJU,
         DisplayTrainType.EVENING_WING,
         DisplayTrainType.MORNING_WING -> LightBlue
+    }
+
+// MARK: - CustomColor Extensions
+// Extensions for CustomColor enum to provide RGB color values
+// Matches SwiftUI CustomColor extension structure
+
+// Convert RGB string to Color object
+// Matches SwiftUI: var color: Color { return Color(hex: self.RGB) ?? .gray }
+val CustomColor.color: Color
+    get() = run {
+        val rgbString = this.RGB
+        val hexString = if (rgbString.startsWith("#")) rgbString else "#$rgbString"
+        
+        try {
+            val parsedColor = Color(hexString.toColorInt())
+            if (parsedColor.alpha > 0f && parsedColor != Color.Unspecified && parsedColor != Color.Transparent) {
+                parsedColor
+            } else {
+                // Fallback to gray color directly using hex value to avoid circular reference
+                Color(0xFF9C9C9C)
+            }
+        } catch (e: Exception) {
+            // Fallback to gray color directly using hex value to avoid circular reference
+            Color(0xFF9C9C9C)
+        }
+    }
+
+// Hex color values for each custom color
+// Matches SwiftUI CustomColor.RGB property
+val CustomColor.RGB: String
+    get() = when (this) {
+        CustomColor.RED -> "#E60012"
+        CustomColor.DARK_RED -> "#A22041"
+        CustomColor.ORANGE -> "#F58220"
+        CustomColor.BROWN -> "#8F4C38"
+        CustomColor.YELLOW -> "#FFD400"
+        CustomColor.BEIGE -> "#C1A470"
+        CustomColor.YELLOW_GREEN -> "#9ACD32"
+        CustomColor.ORIVE -> "#9FB01C"
+        CustomColor.GREEN -> "#009739"
+        CustomColor.DARK_GREEN -> "#004E2E"
+        CustomColor.BLUE_GREEN -> "#00AC9A"
+        CustomColor.LIGHT_BLUE -> "#00BFFF"
+        CustomColor.BLUE -> "#0000FF"
+        CustomColor.NAVY_BLUE -> "#003580"
+        CustomColor.PRIMARY -> "#3700B3"
+        CustomColor.LAVENDER -> "#8F76D6"
+        CustomColor.PURPLE -> "#B22C8D"
+        CustomColor.MAGENTA -> "#E4007F"
+        CustomColor.PINK -> "#E85298"
+        CustomColor.GRAY -> "#9C9C9C"
+        CustomColor.SILVER -> "#89A1AD"
+        CustomColor.GOLD -> "#C5C544"
+        CustomColor.BLACK -> "#000000"
+        CustomColor.ACCENT -> "#03DAC5"
+    }
+
+// Resource name for localization
+// Converts rawValue to string resource name format (camelCase)
+// Matches SwiftUI color.rawValue.localized resource name format
+val CustomColor.resourceName: String
+    get() = when (this) {
+        CustomColor.PRIMARY -> "indigo"
+        CustomColor.ACCENT -> "defaultColor"
+        else -> {
+            // Convert "DARK RED" to "darkRed", "YELLOW GREEN" to "yellowGreen", etc.
+            val words = this.rawValue.lowercase().split(" ")
+            words[0] + words.drop(1).joinToString("") {
+                it.replaceFirstChar { char ->
+                    if (char.isLowerCase()) {
+                        char.titlecase(java.util.Locale.getDefault())
+                    } else {
+                        char.toString()
+                    }
+                }
+            }
+        }
     }
 
 // MARK: - ODPT Calendar Type Color Extensions

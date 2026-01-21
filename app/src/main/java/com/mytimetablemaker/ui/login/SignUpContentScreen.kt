@@ -1,9 +1,7 @@
 package com.mytimetablemaker.ui.login
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,9 +31,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.ScreenSize
 import com.mytimetablemaker.ui.common.CommonComponents
-import com.mytimetablemaker.ui.theme.Primary
-import com.mytimetablemaker.ui.theme.Accent
-import com.mytimetablemaker.ui.theme.Gray
+import com.mytimetablemaker.ui.theme.*
+import androidx.core.net.toUri
 
 // MARK: - Sign Up Content Screen
 // User registration screen with form validation and terms agreement
@@ -119,8 +116,8 @@ fun SignUpContentScreen(
                         fontSize = ScreenSize.loginTextFieldFontSize().value.sp
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = White,
+                        unfocusedContainerColor = White,
                         focusedBorderColor = Gray.copy(alpha = 0.5f),
                         unfocusedBorderColor = Gray.copy(alpha = 0.5f)
                     ),
@@ -154,8 +151,8 @@ fun SignUpContentScreen(
                         fontSize = ScreenSize.loginTextFieldFontSize().value.sp
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = White,
+                        unfocusedContainerColor = White,
                         focusedBorderColor = Gray.copy(alpha = 0.5f),
                         unfocusedBorderColor = Gray.copy(alpha = 0.5f)
                     ),
@@ -189,8 +186,8 @@ fun SignUpContentScreen(
                         fontSize = ScreenSize.loginTextFieldFontSize().value.sp
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
+                        focusedContainerColor = White,
+                        unfocusedContainerColor = White,
                         focusedBorderColor = Gray.copy(alpha = 0.5f),
                         unfocusedBorderColor = Gray.copy(alpha = 0.5f)
                     ),
@@ -221,7 +218,7 @@ fun SignUpContentScreen(
                         ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
-                                color = Color.White
+                                color = White
                             )
                         }
                     }
@@ -241,24 +238,24 @@ fun SignUpContentScreen(
                     // Checkbox button to toggle terms agreement
                     IconButton(
                         onClick = { loginViewModel.toggle() },
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(ScreenSize.loginCheckboxSize())
                     ) {
                         Icon(
                             imageVector = if (isTermsAgree) Icons.Filled.CheckBox else Icons.Filled.CheckBoxOutlineBlank,
                             contentDescription = "Terms agreement",
-                            tint = if (isTermsAgree) Accent else Color.White,
-                            modifier = Modifier.size(24.dp)
+                            tint = if (isTermsAgree) Accent else White,
+                            modifier = Modifier.size(ScreenSize.loginCheckboxSize())
                         )
                     }
                     
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(ScreenSize.settingsSheetHorizontalSpacing()))
                     
                     // Button to open terms and privacy policy in browser
                     val termsUrl = stringResource(R.string.termsUrl)
                     Row(
                         modifier = Modifier.clickable {
                             try {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(termsUrl))
+                                val intent = Intent(Intent.ACTION_VIEW, termsUrl.toUri())
                                 context.startActivity(intent)
                             } catch (e: Exception) {
                                 // Handle error
@@ -267,13 +264,13 @@ fun SignUpContentScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.iHaveReadAndAgreeToThe),
-                            fontSize = 14.sp,
-                            color = Color.White
+                            fontSize = ScreenSize.loginSubheadlineFontSize().value.sp,
+                            color = White
                         )
                         Text(
                             text = stringResource(R.string.termsAndPrivacyPolicyLower),
-                            fontSize = 14.sp,
-                            color = Color.White,
+                            fontSize = ScreenSize.loginSubheadlineFontSize().value.sp,
+                            color = White,
                             textDecoration = TextDecoration.Underline
                         )
                     }
@@ -292,7 +289,7 @@ fun SignUpContentScreen(
             ) {
                 CommonComponents.CustomBackButton(
                     onClick = onDismiss,
-                    foregroundColor = Color.White
+                    foregroundColor = White
                 )
             }
             
@@ -302,7 +299,7 @@ fun SignUpContentScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Gray.copy(alpha = 0.3f)),
+                        .background(Gray.copy(alpha = 0.3f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
@@ -336,7 +333,7 @@ fun SignUpContentScreen(
                         Text(stringResource(R.string.ok))
                     }
                 },
-                containerColor = Color.White
+                containerColor = White
             )
         }
     }

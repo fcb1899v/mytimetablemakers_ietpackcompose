@@ -37,15 +37,20 @@ class CacheStore(private val context: Context) {
     // Load cached data from file system
     fun loadData(fileName: String): ByteArray? {
         val url = path(fileName)
+        android.util.Log.d("CacheStore", "loadData: Checking ${url.absolutePath}, exists=${url.exists()}, isFile=${url.isFile}, size=${if (url.exists()) url.length() else 0}")
         return if (url.exists() && url.isFile) {
             try {
-                FileInputStream(url).use { input ->
+                val data = FileInputStream(url).use { input ->
                     input.readBytes()
                 }
+                android.util.Log.d("CacheStore", "loadData: Successfully loaded ${data.size} bytes from ${url.absolutePath}")
+                data
             } catch (e: IOException) {
+                android.util.Log.e("CacheStore", "loadData: IOException while loading from ${url.absolutePath}: ${e.message}", e)
                 null
             }
         } else {
+            android.util.Log.d("CacheStore", "loadData: File does not exist or is not a file: ${url.absolutePath}")
             null
         }
     }
@@ -54,13 +59,20 @@ class CacheStore(private val context: Context) {
     fun saveData(data: ByteArray, fileName: String) {
         val url = path(fileName)
         try {
+            android.util.Log.d("CacheStore", "saveData: Saving ${data.size} bytes to ${url.absolutePath}")
             // Atomic write: write to temporary file first, then rename
             val tempFile = File(url.parent, "${url.name}.tmp")
             FileOutputStream(tempFile).use { output ->
                 output.write(data)
             }
-            tempFile.renameTo(url)
+            val renamed = tempFile.renameTo(url)
+            if (renamed) {
+                android.util.Log.d("CacheStore", "saveData: Successfully saved data to ${url.absolutePath}, file exists=${url.exists()}, file size=${url.length()}")
+            } else {
+                android.util.Log.e("CacheStore", "saveData: Failed to rename temp file to ${url.absolutePath}")
+            }
         } catch (e: IOException) {
+            android.util.Log.e("CacheStore", "saveData: IOException while saving to ${url.absolutePath}: ${e.message}", e)
             e.printStackTrace()
         }
     }
