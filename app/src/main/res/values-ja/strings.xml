@@ -67,7 +67,7 @@
     <string name="termsUrl">https://nakajimamasao-appstudio.web.app/terms/ja</string>
     <string name="contact">お問い合わせ</string>
     <string name="contactUrl">https://nakajimamasao-appstudio.web.app/contact/ja</string>
-    <string name="settingYourTimetable">Setting your timetable</string>
+    <string name="settingYourTimetable">時刻表の設定</string>
 
     <!-- MARK: - Settings Transfer Sheet -->
     <!-- Home and destination transportation settings -->
@@ -113,6 +113,7 @@
     <string name="update">更新</string>
     <string name="delete">削除</string>
     <string name="copyingYourTimetable">発車時刻のコピー</string>
+    <string name="weekdaysExceptPublicHolidays">平日（祝日除く）</string>
     <string name="departureTime">発車時刻</string>
     <string name="rideTime">乗車時間</string>
     <string name="dateFormat">yyyy/M/d (E)</string>
@@ -364,5 +365,13 @@
     <string name="language">言語</string>
     <string name="japanese">日本語</string>
     <string name="english">英語</string>
+
+    <!-- MARK: - Accessibility & Misc -->
+    <string name="unknown">不明</string>
+    <string name="hidePassword">パスワードを隠す</string>
+    <string name="showPassword">パスワードを表示</string>
+    <string name="termsAgreement">利用規約への同意</string>
+    <string name="appIcon">アプリアイコン</string>
+    <string name="splashImage">スプラッシュ画像</string>
 </resources>
 

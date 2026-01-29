@@ -5,12 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckBox
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
@@ -21,8 +18,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,9 +40,7 @@ fun SignUpContentScreen(
     val context = LocalContext.current
     
     // MARK: - State Variables
-    // Password visibility toggle states for input fields
-    var isPasswordVisible by remember { mutableStateOf(false) }
-    var isConfirmPasswordVisible by remember { mutableStateOf(false) }
+    // Password visibility toggle states for input fields (now handled internally by CustomLoginTextField)
     
     // Observe ViewModel state
     val isLoading by loginViewModel.isLoading.collectAsState()
@@ -76,20 +69,53 @@ fun SignUpContentScreen(
             decorFitsSystemWindows = false
         )
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Primary)
-        ) {
-            Column(
+        Scaffold(
+            topBar = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsTopHeight(WindowInsets.statusBars)
+                        .background(Primary)
+                )
+            },
+            bottomBar = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                        .background(Primary)
+                )
+            }
+        ) { paddingValues ->
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = (ScreenSize.loginButtonWidth().value * 0.06f).dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Top
+                    .background(Primary)
+                    .padding(paddingValues)
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(horizontal = (ScreenSize.loginButtonWidth().value * 0.06f).dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Top
+                ) {
+
                 Spacer(modifier = Modifier.height(ScreenSize.loginTitleTopMargin()))
-                
+
+                // MARK: - Top App Bar
+                // Back button at top
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    CommonComponents.CustomBackButton(
+                        onClick = onDismiss,
+                        foregroundColor = White
+                    )
+                }
+
                 // MARK: - Title
                 Text(
                     text = stringResource(R.string.createAccount),
@@ -103,95 +129,44 @@ fun SignUpContentScreen(
                 
                 // MARK: - Email Input Field
                 // Text field for email address entry with validation
-                OutlinedTextField(
+                CommonComponents.CustomLoginTextField(
                     value = email,
                     onValueChange = { loginViewModel.updateEmail(it) },
-                    label = { Text(stringResource(R.string.email)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    singleLine = true,
+                    placeholder = stringResource(R.string.email),
                     modifier = Modifier
                         .width(ScreenSize.loginButtonWidth())
                         .height(ScreenSize.loginTextHeight()),
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = ScreenSize.loginTextFieldFontSize().value.sp
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = White,
-                        unfocusedContainerColor = White,
-                        focusedBorderColor = Gray.copy(alpha = 0.5f),
-                        unfocusedBorderColor = Gray.copy(alpha = 0.5f)
-                    ),
-                    shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
+                    keyboardType = KeyboardType.Email
                 )
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
                 // MARK: - Password Input Field
                 // Secure text field with visibility toggle for password entry
-                OutlinedTextField(
+                CommonComponents.CustomLoginTextField(
                     value = password,
                     onValueChange = { loginViewModel.updatePassword(it) },
-                    label = { Text(stringResource(R.string.password)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                            Icon(
-                                imageVector = if (isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
-                                tint = Gray
-                            )
-                        }
-                    },
-                    singleLine = true,
+                    placeholder = stringResource(R.string.password),
                     modifier = Modifier
                         .width(ScreenSize.loginButtonWidth())
                         .height(ScreenSize.loginTextHeight()),
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = ScreenSize.loginTextFieldFontSize().value.sp
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = White,
-                        unfocusedContainerColor = White,
-                        focusedBorderColor = Gray.copy(alpha = 0.5f),
-                        unfocusedBorderColor = Gray.copy(alpha = 0.5f)
-                    ),
-                    shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
+                    keyboardType = KeyboardType.Password,
+                    isPassword = true
                 )
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
                 // MARK: - Confirm Password Input Field
                 // Secure text field with visibility toggle for password confirmation
-                OutlinedTextField(
+                CommonComponents.CustomLoginTextField(
                     value = passwordConfirm,
                     onValueChange = { loginViewModel.updatePasswordConfirm(it) },
-                    label = { Text(stringResource(R.string.confirmPassword)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
-                            Icon(
-                                imageVector = if (isConfirmPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                contentDescription = if (isConfirmPasswordVisible) "Hide password" else "Show password",
-                                tint = Gray
-                            )
-                        }
-                    },
-                    singleLine = true,
+                    placeholder = stringResource(R.string.confirmPassword),
                     modifier = Modifier
                         .width(ScreenSize.loginButtonWidth())
                         .height(ScreenSize.loginTextHeight()),
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = ScreenSize.loginTextFieldFontSize().value.sp
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = White,
-                        unfocusedContainerColor = White,
-                        focusedBorderColor = Gray.copy(alpha = 0.5f),
-                        unfocusedBorderColor = Gray.copy(alpha = 0.5f)
-                    ),
-                    shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
+                    keyboardType = KeyboardType.Password,
+                    isPassword = true
                 )
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
@@ -217,7 +192,7 @@ fun SignUpContentScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(ScreenSize.loginLoadingIndicatorSize()),
                                 color = White
                             )
                         }
@@ -230,10 +205,10 @@ fun SignUpContentScreen(
                 // Checkbox and link to terms and privacy policy
                 Row(
                     modifier = Modifier
-                        .width(ScreenSize.loginButtonWidth())
+                        .fillMaxWidth()
                         .padding(horizontal = ScreenSize.settingsSheetHorizontalSpacing()),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.Top
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Checkbox button to toggle terms agreement
                     IconButton(
@@ -279,20 +254,6 @@ fun SignUpContentScreen(
                 Spacer(modifier = Modifier.weight(1f))
             }
             
-            // MARK: - Top App Bar
-            // Back button at top
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                CommonComponents.CustomBackButton(
-                    onClick = onDismiss,
-                    foregroundColor = White
-                )
-            }
-            
             // MARK: - Loading Indicator
             // Display loading overlay during authentication process
             if (isLoading) {
@@ -303,11 +264,11 @@ fun SignUpContentScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.padding(16.dp)
+                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius()),
+                        modifier = Modifier.padding(ScreenSize.alertDialogContentPadding())
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(ScreenSize.alertDialogContentPadding())
                         )
                     }
                 }
@@ -336,6 +297,7 @@ fun SignUpContentScreen(
                 containerColor = White
             )
         }
+    }
     }
 }
 

@@ -31,6 +31,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Date and time state
     var selectDate by mutableStateOf(Date())
         private set
+    /** When timer is running, updated every second; null when stopped. UI uses this ?: selectDate for localized date display. */
+    var displayDate by mutableStateOf<Date?>(null)
+        private set
     var dateLabel by mutableStateOf("")
         private set
     var timeLabel by mutableStateOf("")
@@ -112,14 +115,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         goOrBack2 = "back2"
         isTimeStop = false
         selectDate = Date()
-        dateLabel = selectDate.setDate
+        displayDate = null
+        dateLabel = selectDate.formatDate(getApplication())
         timeLabel = selectDate.setTime
-        home = "back1".departurePoint(sharedPreferences)
-        office = "back1".destination(sharedPreferences)
-        stationArray1 = "back1".stationArray(sharedPreferences)
-        stationArray2 = "back2".stationArray(sharedPreferences)
-        lineNameArray1 = "back1".lineNameArray(sharedPreferences)
-        lineNameArray2 = "back2".lineNameArray(sharedPreferences)
+        val appContext = getApplication<Application>()
+        home = "back1".departurePoint(sharedPreferences, appContext)
+        office = "back1".destination(sharedPreferences, appContext)
+        stationArray1 = "back1".stationArray(sharedPreferences, appContext)
+        stationArray2 = "back2".stationArray(sharedPreferences, appContext)
+        lineNameArray1 = "back1".lineNameArray(sharedPreferences, appContext)
+        lineNameArray2 = "back2".lineNameArray(sharedPreferences, appContext)
         lineColorArray1 = "back1".lineColorArray(sharedPreferences)
         lineColorArray2 = "back2".lineColorArray(sharedPreferences)
         transportationArray1 = "back1".transportationArray(sharedPreferences)
@@ -157,14 +162,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     // Updates line change settings based on current direction
     fun setLineData() {
-        home = goOrBack1.departurePoint(sharedPreferences)
-        office = goOrBack1.destination(sharedPreferences)
+        val appContext = getApplication<Application>()
+        home = goOrBack1.departurePoint(sharedPreferences, appContext)
+        office = goOrBack1.destination(sharedPreferences, appContext)
         changeLine1 = goOrBack1.changeLineInt(sharedPreferences)
         changeLine2 = goOrBack2.changeLineInt(sharedPreferences)
-        stationArray1 = goOrBack1.stationArray(sharedPreferences)
-        stationArray2 = goOrBack2.stationArray(sharedPreferences)
-        lineNameArray1 = goOrBack1.lineNameArray(sharedPreferences)
-        lineNameArray2 = goOrBack2.lineNameArray(sharedPreferences)
+        stationArray1 = goOrBack1.stationArray(sharedPreferences, appContext)
+        stationArray2 = goOrBack2.stationArray(sharedPreferences, appContext)
+        lineNameArray1 = goOrBack1.lineNameArray(sharedPreferences, appContext)
+        lineNameArray2 = goOrBack2.lineNameArray(sharedPreferences, appContext)
         lineColorArray1 = goOrBack1.lineColorArray(sharedPreferences)
         lineColorArray2 = goOrBack2.lineColorArray(sharedPreferences)
         rideTimeArray1 = goOrBack1.rideTimeArray(sharedPreferences)
@@ -217,7 +223,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Switches to return direction and updates line settings
     fun updateDate(date: Date) {
         selectDate = date
-        dateLabel = date.setDate
+        displayDate = null
+        dateLabel = date.formatDate(getApplication())
     }
     
     fun updateTime(date: Date) {
@@ -246,7 +253,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         timerJob = viewModelScope.launch {
             while (true) {
                 val now = Date()
-                dateLabel = now.setDate
+                displayDate = now
+                dateLabel = now.formatDate(getApplication())
                 timeLabel = now.setTime
                 delay(1000)
             }
@@ -256,6 +264,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Stops real-time timer
     fun stopButton() {
         isTimeStop = true
+        displayDate = null
         timerJob?.cancel()
         timerJob = null
     }

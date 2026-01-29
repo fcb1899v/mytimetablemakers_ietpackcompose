@@ -46,8 +46,9 @@ val String.safeColor: Color
 // Extensions for countdown color calculations
 
 // Calculate color based on countdown time relative to departure time
+// minusHHMMSS returns seconds; convert to MMSS with SStoMMSS for countdownColor ranges
 fun Int.countdownColor(departTime: Int): Color {
-    return (departTime * 100).minusHHMMSS(this).HHMMSStoMMSS.countdownColor
+    return (departTime * 100).minusHHMMSS(this).SStoMMSS.countdownColor
 }
 
 // Determine color based on countdown time ranges

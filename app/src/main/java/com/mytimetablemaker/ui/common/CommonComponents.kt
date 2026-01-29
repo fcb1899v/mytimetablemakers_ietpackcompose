@@ -7,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +39,8 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.focusable
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -120,9 +122,9 @@ object CommonComponents {
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = null,
                     tint = foregroundColor,
-                    modifier = Modifier.size(ScreenSize.settingsHeaderFontSize().value.dp)
+                    modifier = Modifier.size(ScreenSize.settingsHeaderIconSize())
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(ScreenSize.settingsHeaderIconSpace()))
                 Text(
                     text = stringResource(R.string.backToHomepage),
                     fontSize = ScreenSize.settingsHeaderFontSize().value.sp,
@@ -177,7 +179,7 @@ object CommonComponents {
             
             // Switch component
             // Material3 Switch has a default height, scale it to match customToggleHeight
-            val defaultSwitchHeight = 20.dp
+            val defaultSwitchHeight = ScreenSize.customSwitchDefaultHeight()
             val targetHeight = ScreenSize.customToggleHeight()
             val scaleFactor = targetHeight.value / defaultSwitchHeight.value
             
@@ -556,7 +558,7 @@ object CommonComponents {
                     modifier = Modifier
                         .wrapContentWidth()
                         .focusable(false),
-                    contentPadding = PaddingValues(vertical = 4.dp)
+                    contentPadding = PaddingValues(vertical = ScreenSize.settingsSheetDropdownContentPaddingVertical())
                 ) {
                     items(
                         count = items.size,
@@ -629,7 +631,10 @@ object CommonComponents {
         focusRequester: FocusRequester? = null,
         title: String? = null,
         isCheckmarkValid: Boolean? = null,
-        onFocusChanged: ((Boolean) -> Unit)? = null
+        onFocusChanged: ((Boolean) -> Unit)? = null,
+        visualTransformation: VisualTransformation = VisualTransformation.None,
+        keyboardType: KeyboardType = KeyboardType.Text,
+        trailingIcon: @Composable (() -> Unit)? = null
     ) {
         val inputFontSize = ScreenSize.settingsSheetInputFontSize()
         val headlineFontSize = ScreenSize.settingsSheetHeadlineFontSize()
@@ -680,7 +685,7 @@ object CommonComponents {
                 textStyle = textStyle,
                 interactionSource = interactionSource,
                 keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
+                    keyboardType = keyboardType,
                     autoCorrectEnabled = false
                 )
             ) { innerTextField ->
@@ -689,7 +694,7 @@ object CommonComponents {
                     innerTextField = innerTextField,
                     enabled = true,
                     singleLine = true,
-                    visualTransformation = VisualTransformation.None,
+                    visualTransformation = visualTransformation,
                     interactionSource = interactionSource,
                     placeholder = {
                         Text(
@@ -698,9 +703,10 @@ object CommonComponents {
                             color = Color(0xFF9C9C9C),
                         )
                     },
+                    trailingIcon = trailingIcon,
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = LightGray,
-                        unfocusedContainerColor = LightGray,
+                        focusedContainerColor = White.copy(alpha = 0.95f),
+                        unfocusedContainerColor = White.copy(alpha = 0.95f),
                         focusedTextColor = Primary,
                         unfocusedTextColor = Primary,
                         focusedPlaceholderColor = Gray,
@@ -733,5 +739,88 @@ object CommonComponents {
                 )
             }
         }
+    }
+    
+    // MARK: - Custom Login TextField
+    // Custom text field component for login screens with password visibility toggle.
+    // Uses OutlinedTextField so that visualTransformation (password mask) is applied correctly.
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun CustomLoginTextField(
+        value: String,
+        onValueChange: (String) -> Unit,
+        placeholder: String,
+        modifier: Modifier = Modifier,
+        focusRequester: FocusRequester? = null,
+        keyboardType: KeyboardType = KeyboardType.Text,
+        onFocusChanged: ((Boolean) -> Unit)? = null,
+        isPassword: Boolean = false
+    ) {
+        val inputFontSize = ScreenSize.settingsSheetInputFontSize()
+        
+        // Password visibility: false = masked (***), true = plain text
+        var isPasswordVisible by remember { mutableStateOf(false) }
+        
+        val visualTransformation = if (isPassword && !isPasswordVisible)
+            PasswordVisualTransformation() else
+            VisualTransformation.None
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier
+                .then(modifier)
+                .then(
+                    if (focusRequester != null) {
+                        Modifier.focusRequester(focusRequester)
+                    } else {
+                        Modifier
+                    }
+                )
+                .onFocusChanged { focusState ->
+                    onFocusChanged?.invoke(focusState.isFocused)
+                },
+            placeholder = {
+                Text(
+                    text = placeholder,
+                    fontSize = inputFontSize.value.sp,
+                    lineHeight = (inputFontSize.value * 1.2f).sp,
+                    color = Gray,
+                )
+            },
+            singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(
+                fontSize = inputFontSize.value.sp,
+                color = Primary
+            ),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = keyboardType,
+                autoCorrectEnabled = false
+            ),
+            visualTransformation = visualTransformation,
+            trailingIcon = if (isPassword) {
+                {
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                        Icon(
+                            imageVector = if (isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = if (isPasswordVisible) "Hide password" else "Show password",
+                            tint = Gray,
+                            modifier = Modifier.size(ScreenSize.loginEyeIconSize())
+                        )
+                    }
+                }
+            } else null,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = White.copy(alpha = 0.95f),
+                unfocusedContainerColor = White.copy(alpha = 0.95f),
+                focusedTextColor = Primary,
+                unfocusedTextColor = Primary,
+                focusedPlaceholderColor = Gray,
+                unfocusedPlaceholderColor = Gray,
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+            ),
+            shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius()),
+        )
     }
 }

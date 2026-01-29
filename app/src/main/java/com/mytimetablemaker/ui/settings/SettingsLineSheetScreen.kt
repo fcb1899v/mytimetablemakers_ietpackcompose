@@ -175,14 +175,14 @@ fun SettingsLineSheetScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .windowInsetsPadding(WindowInsets.statusBars)
-                    .height(64.dp)
+                    .height(ScreenSize.settingsSheetTopBarHeight())
                     .background(White)
             ) {
                 // Back button aligned to the left
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
-                        .padding(start = 8.dp)
+                        .padding(start = ScreenSize.settingsSheetBackButtonPadding())
                 ) {
                     CommonComponents.CustomBackButton(
                         onClick = {

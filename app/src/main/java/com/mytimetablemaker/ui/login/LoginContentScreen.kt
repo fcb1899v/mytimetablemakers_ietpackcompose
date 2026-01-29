@@ -1,24 +1,20 @@
 package com.mytimetablemaker.ui.login
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,7 +47,6 @@ fun LoginContentScreen(
     val context = LocalContext.current
     
     // MARK: - State Variables
-    var isPasswordVisible by remember { mutableStateOf(false) }
     var showSignUpSheet by remember { mutableStateOf(false) }
     var showResetAlert by remember { mutableStateOf(false) }
     var showLoginResultAlert by remember { mutableStateOf(false) }
@@ -84,17 +79,19 @@ fun LoginContentScreen(
     
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    CommonComponents.CustomBackButton(
-                        foregroundColor = Primary,
-                        onClick = onNavigateBack
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Accent
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(Accent)
+            )
+        },
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                    .background(Primary)
             )
         }
     ) { paddingValues ->
@@ -104,33 +101,7 @@ fun LoginContentScreen(
                 .background(Accent)
                 .padding(paddingValues)
         ) {
-            // MARK: - Background and Ad Banner
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Spacer(modifier = Modifier.weight(1f))
-                
-                // Splash image
-                androidx.compose.foundation.Image(
-                    painter = painterResource(id = R.drawable.splash),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                )
-                
-                // AdMob banner at bottom
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(ScreenSize.admobBannerHeight())
-                        .background(Primary)
-                ) {
-                    AdMobBannerView()
-                }
-            }
-            
+
             // MARK: - Login Form
             Column(
                 modifier = Modifier
@@ -139,8 +110,21 @@ fun LoginContentScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top
             ) {
+
                 Spacer(modifier = Modifier.height(ScreenSize.loginTitleTopMargin()))
-                
+
+                // MARK: - Top App Bar
+                // Back button at top
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    CommonComponents.CustomBackButton(
+                        onClick = onNavigateBack,
+                        foregroundColor = Primary
+                    )
+                }
+
                 // MARK: - Title Section
                 Text(
                     text = stringResource(R.string.login),
@@ -153,68 +137,36 @@ fun LoginContentScreen(
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
                 // MARK: - Email Input Field
-                OutlinedTextField(
+                CommonComponents.CustomLoginTextField(
                     value = email,
                     onValueChange = { 
                         // Directly update email value and check login
                         loginViewModel.updateEmail(it)
                         loginViewModel.loginCheck()
                     },
-                    label = { Text(stringResource(R.string.email)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    singleLine = true,
+                    placeholder = stringResource(R.string.email),
                     modifier = Modifier
                         .width(ScreenSize.loginButtonWidth())
                         .height(ScreenSize.loginTextHeight()),
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = ScreenSize.loginTextFieldFontSize().value.sp
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = White,
-                        unfocusedContainerColor = White,
-                        focusedBorderColor = Primary,
-                        unfocusedBorderColor = Gray
-                    ),
-                    shape = RoundedCornerShape(4.dp)
+                    keyboardType = KeyboardType.Email
                 )
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
                 // MARK: - Password Input Field
-                OutlinedTextField(
+                CommonComponents.CustomLoginTextField(
                     value = password,
                     onValueChange = { 
                         // Directly update password value and check login
                         loginViewModel.updatePassword(it)
                         loginViewModel.loginCheck()
                     },
-                    label = { Text(stringResource(R.string.password)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                            Icon(
-                                imageVector = if (isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                contentDescription = null,
-                                modifier = Modifier.size(ScreenSize.loginEyeIconSize()),
-                                tint = Gray
-                            )
-                        }
-                    },
-                    singleLine = true,
+                    placeholder = stringResource(R.string.password),
                     modifier = Modifier
                         .width(ScreenSize.loginButtonWidth())
                         .height(ScreenSize.loginTextHeight()),
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = ScreenSize.loginTextFieldFontSize().value.sp
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = White,
-                        unfocusedContainerColor = White,
-                        focusedBorderColor = Primary,
-                        unfocusedBorderColor = Gray
-                    ),
-                    shape = RoundedCornerShape(4.dp)
+                    keyboardType = KeyboardType.Password,
+                    isPassword = true
                 )
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
@@ -251,10 +203,39 @@ fun LoginContentScreen(
                         color = White
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.weight(1f))
             }
-            
+
+            // MARK: - Splash Image and Ad Banner Placeholder
+            // Splash image at bottom with ad banner placeholder
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                // Splash Image
+                Image(
+                    painter = painterResource(id = R.drawable.splash),
+                    contentDescription = "Splash Image",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height((ScreenSize.screenHeight().value * 0.7f).dp),
+                    contentScale = ContentScale.FillWidth
+                )
+
+                // Ad Banner Placeholder
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(ScreenSize.admobBannerHeight())
+                        .background(Primary)
+                ) {
+                    AdMobBannerView()
+                }
+            }
+
             // MARK: - Loading Indicator
             if (isLoading) {
                 Box(
@@ -264,11 +245,11 @@ fun LoginContentScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
-                        modifier = Modifier.padding(16.dp),
-                        shape = RoundedCornerShape(10.dp)
+                        modifier = Modifier.padding(ScreenSize.alertDialogContentPadding()),
+                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(ScreenSize.alertDialogContentPadding())
                         )
                     }
                 }
@@ -344,14 +325,13 @@ fun LoginContentScreen(
             text = {
                 Column {
                     Text(stringResource(R.string.resetYourPassword))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
+                    Spacer(modifier = Modifier.height(ScreenSize.loginSpacingSmall()))
+                    CommonComponents.CustomLoginTextField(
                         value = resetEmail,
                         onValueChange = { resetEmail = it },
-                        label = { Text(stringResource(R.string.email)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = stringResource(R.string.email),
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardType = KeyboardType.Email
                     )
                 }
             },

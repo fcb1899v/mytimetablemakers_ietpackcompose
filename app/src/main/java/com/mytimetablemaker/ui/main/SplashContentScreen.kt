@@ -105,7 +105,7 @@ fun SplashContentScreen(
             // App Icon
             Image(
                 painter = painterResource(id = R.drawable.icon),
-                contentDescription = "App Icon",
+                contentDescription = stringResource(R.string.appIcon),
                 modifier = Modifier
                     .size(ScreenSize.splashIconSize()),
                 contentScale = ContentScale.Fit
@@ -125,7 +125,7 @@ fun SplashContentScreen(
             // Splash Image
             Image(
                 painter = painterResource(id = R.drawable.splash),
-                contentDescription = "Splash Image",
+                contentDescription = stringResource(R.string.splashImage),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height((ScreenSize.screenHeight().value * 0.7f).dp),
