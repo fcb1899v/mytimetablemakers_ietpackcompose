@@ -1,5 +1,6 @@
 package com.mytimetablemaker.ui.main
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -9,10 +10,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Train
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +25,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.runtime.getValue
@@ -46,6 +47,7 @@ import java.util.Date
 import android.content.SharedPreferences
 import android.content.Context
 import android.app.Application
+import androidx.compose.material.icons.filled.KeyboardDoubleArrowDown
 import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,7 +80,7 @@ fun MainContentScreen(
     var sheetLineIndex by remember { mutableStateOf<Int?>(null) }
     
     // Use ViewModel properties directly - they are tracked by Compose automatically
-    val dateLabel = mainViewModel.dateLabel
+    val dateToDisplay = mainViewModel.displayDate ?: mainViewModel.selectDate
     val timeLabel = mainViewModel.timeLabel
     val isTimeStop = mainViewModel.isTimeStop
     val isBack = mainViewModel.isBack
@@ -173,52 +175,53 @@ fun MainContentScreen(
     val timeArrayString1 = mainViewModel.timeArrayString1
     val timeArrayString2 = mainViewModel.timeArrayString2
 
-    // Set status bar color to Primary
+    // Set status bar icons appearance (light/dark)
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (view.context as? android.app.Activity)?.window
-        window?.let {
-            WindowCompat.setDecorFitsSystemWindows(it, false)
-            @Suppress("DEPRECATION")
-            it.statusBarColor = android.graphics.Color.TRANSPARENT
-            // Set status bar content to light (white icons) for dark background
-            WindowCompat.getInsetsController(it, view).apply {
-                isAppearanceLightStatusBars = false
-            }
+        if (window != null) {
+            val controller = WindowCompat.getInsetsController(window, view)
+            // Set status bar content to light (white icons) for dark background (Primary color)
+            controller.isAppearanceLightStatusBars = false
         }
         onDispose { }
     }
     
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(White)
-    ) {
-        // MARK: - Status Bar Background
-        // Fill status bar area with Primary color
+    Scaffold(
+        topBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(Primary)
+            )
+        },
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                    .background(Primary)
+            )
+        }
+    ) { paddingValues ->
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsTopHeight(WindowInsets.statusBars)
-                .background(Primary)
-                .align(Alignment.TopCenter)
-        )
-        
+                .fillMaxSize()
+                .background(White)
+                .padding(paddingValues)
+        ) {
         // MARK: - Main Content
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             // MARK: - Header Section
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Primary)
-                    .padding(horizontal = ScreenSize.headerSpace(), vertical = ScreenSize.headerSpace()),
+                    .background(Primary),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(ScreenSize.headerSpace())
             ) {
                 // Date and Time Display
                 val context = LocalContext.current
@@ -235,7 +238,7 @@ fun MainContentScreen(
                     
                     Box {
                         Text(
-                            text = dateLabel,
+                            text = dateToDisplay.formatDate(context),
                             fontSize = ScreenSize.headerDateFontSize().value.sp,
                             fontWeight = FontWeight.Normal,
                             color = White,
@@ -380,7 +383,7 @@ fun MainContentScreen(
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings",
+                            contentDescription = stringResource(R.string.settings),
                             tint = White,
                             modifier = Modifier.size(ScreenSize.headerSettingsButtonSize())
                         )
@@ -388,130 +391,22 @@ fun MainContentScreen(
                 }
             }
         
-        // MARK: - Transfer Information Display
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(horizontal = 0.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.Top
-        ) {
-            if (ScreenSize.screenWidth().value > 600) {
-                Spacer(modifier = Modifier.weight(1f))
-            }
-            
-            // First direction route
-            Column(
+            // MARK: - Transfer Information Display
+            Row(
                 modifier = Modifier
-                    .width(ScreenSize.routeWidth(isShowRoute2))
-                    .padding(horizontal = ScreenSize.routeSidePadding())
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(ScreenSize.routeBottomSpace())
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 0.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.Top
             ) {
-                Spacer(modifier = Modifier.height(ScreenSize.routeCountdownTopSpace()))
-                
-                // Countdown Time
-                Text(
-                    text = countdownTime1,
-                    fontSize = ScreenSize.routeCountdownFontSize().value.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = countdownColor1,
-                    modifier = Modifier
-                        .padding(vertical = ScreenSize.routeCountdownPadding())
-                        .height(ScreenSize.routeCountdownFontSize() + ScreenSize.routeCountdownPadding() * 2)
-                )
-                
-                // Home/Office View (destination)
-                HomeOfficeView(
-                    goorback = goOrBack1,
-                    num = 1,
-                    timeArray = timeArrayString1,
-                    sharedPreferences = sharedPreferences
-                )
-                
-                // Transfer and Station Line Views
-                for (num in 0..changeLine1) {
-                    TransferView(
-                        goorback = goOrBack1,
-                        num = num + 1,
-                        transportationArray = transportationArray1,
-                        lineColorArray = lineColorArray1,
-                        lineCodeArray = lineCodeArray1,
-                        lineKindArray = lineKindArray1,
-                        transferTimeArray = transferTimeArray1,
-                        mainViewModel = mainViewModel,
-                        onTransferClick = {
-                            if (num + 1 < 2) {
-                                isShowingTransferSheet = true
-                            } else {
-                                CoroutineScope(Dispatchers.Main).launch {
-                                    sheetGoorback = goOrBack1
-                                    sheetLineIndex = maxOf((num + 1) - 2, 0)
-                                    delay(10)
-                                    isShowingLineSheet = true
-                                }
-                            }
-                        }
-                    )
-                    
-                    StationLineView(
-                        goorback = goOrBack1,
-                        num = num,
-                        stationArray = stationArray1,
-                        lineNameArray = lineNameArray1,
-                        lineColorArray = lineColorArray1,
-                        transportationArray = transportationArray1,
-                        lineCodeArray = lineCodeArray1,
-                        lineKindArray = lineKindArray1,
-                        mainViewModel = mainViewModel,
-                        onLineClick = {
-                            CoroutineScope(Dispatchers.Main).launch {
-                                sheetGoorback = goOrBack1
-                                sheetLineIndex = maxOf((num + 2) - 2, 0)
-                                delay(10)
-                                isShowingLineSheet = true
-                            }
-                        }
-                    )
+                if (ScreenSize.screenWidth().value > 600) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
-                
-                // Transfer View (arrival)
-                TransferView(
-                    goorback = goOrBack1,
-                    num = 0,
-                    transportationArray = transportationArray1,
-                    lineColorArray = lineColorArray1,
-                    lineCodeArray = lineCodeArray1,
-                    lineKindArray = lineKindArray1,
-                    transferTimeArray = transferTimeArray1,
-                    mainViewModel = mainViewModel,
-                    onTransferClick = {
-                        isShowingTransferSheet = true
-                    }
-                )
-                
-                // Home/Office View (departure)
-                HomeOfficeView(
-                    goorback = goOrBack1,
-                    num = 0,
-                    timeArray = timeArrayString1,
-                    sharedPreferences = sharedPreferences
-                )
-                
-                Spacer(modifier = Modifier.weight(1f))
-            }
 
-            // Second direction route (if enabled)
-            if (isShowRoute2) {
-                VerticalDivider(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .width(ScreenSize.dividerWidth()),
-                    color = Primary
-                )
+                Spacer(modifier = Modifier.width(ScreenSize.routeSidePadding()))
 
+                // First direction route
                 Column(
                     modifier = Modifier
                         .width(ScreenSize.routeWidth(isShowRoute2))
@@ -520,44 +415,44 @@ fun MainContentScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(ScreenSize.routeBottomSpace())
                 ) {
+
                     Spacer(modifier = Modifier.height(ScreenSize.routeCountdownTopSpace()))
-                    
+
                     // Countdown Time
                     Text(
-                        text = countdownTime2,
+                        text = countdownTime1,
                         fontSize = ScreenSize.routeCountdownFontSize().value.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = countdownColor2,
-                        modifier = Modifier
-                            .padding(vertical = ScreenSize.routeCountdownPadding())
-                            .height(ScreenSize.routeCountdownFontSize() + ScreenSize.routeCountdownPadding() * 2)
+                        fontWeight = FontWeight.Medium,
+                        color = countdownColor1,
                     )
-                    
+
+                    Spacer(modifier = Modifier.height(ScreenSize.routeCountdownSpace()))
+
                     // Home/Office View (destination)
                     HomeOfficeView(
-                        goorback = goOrBack2,
+                        goorback = goOrBack1,
                         num = 1,
-                        timeArray = timeArrayString2,
+                        timeArray = timeArrayString1,
                         sharedPreferences = sharedPreferences
                     )
-                    
+
                     // Transfer and Station Line Views
-                    for (num in 0..changeLine2) {
+                    for (num in 0..changeLine1) {
                         TransferView(
-                            goorback = goOrBack2,
+                            goorback = goOrBack1,
                             num = num + 1,
-                            transportationArray = transportationArray2,
-                            lineColorArray = lineColorArray2,
-                            lineCodeArray = lineCodeArray2,
-                            lineKindArray = lineKindArray2,
-                            transferTimeArray = transferTimeArray2,
+                            transportationArray = transportationArray1,
+                            lineColorArray = lineColorArray1,
+                            lineCodeArray = lineCodeArray1,
+                            lineKindArray = lineKindArray1,
+                            transferTimeArray = transferTimeArray1,
                             mainViewModel = mainViewModel,
                             onTransferClick = {
                                 if (num + 1 < 2) {
                                     isShowingTransferSheet = true
                                 } else {
                                     CoroutineScope(Dispatchers.Main).launch {
-                                        sheetGoorback = goOrBack2
+                                        sheetGoorback = goOrBack1
                                         sheetLineIndex = maxOf((num + 1) - 2, 0)
                                         delay(10)
                                         isShowingLineSheet = true
@@ -565,20 +460,20 @@ fun MainContentScreen(
                                 }
                             }
                         )
-                        
+
                         StationLineView(
-                            goorback = goOrBack2,
+                            goorback = goOrBack1,
                             num = num,
-                            stationArray = stationArray2,
-                            lineNameArray = lineNameArray2,
-                            lineColorArray = lineColorArray2,
-                            transportationArray = transportationArray2,
-                            lineCodeArray = lineCodeArray2,
-                            lineKindArray = lineKindArray2,
+                            stationArray = stationArray1,
+                            lineNameArray = lineNameArray1,
+                            lineColorArray = lineColorArray1,
+                            transportationArray = transportationArray1,
+                            lineCodeArray = lineCodeArray1,
+                            lineKindArray = lineKindArray1,
                             mainViewModel = mainViewModel,
                             onLineClick = {
                                 CoroutineScope(Dispatchers.Main).launch {
-                                    sheetGoorback = goOrBack2
+                                    sheetGoorback = goOrBack1
                                     sheetLineIndex = maxOf((num + 2) - 2, 0)
                                     delay(10)
                                     isShowingLineSheet = true
@@ -586,63 +481,189 @@ fun MainContentScreen(
                             }
                         )
                     }
-                    
+
                     // Transfer View (arrival)
                     TransferView(
-                        goorback = goOrBack2,
+                        goorback = goOrBack1,
                         num = 0,
-                        transportationArray = transportationArray2,
-                        lineColorArray = lineColorArray2,
-                        lineCodeArray = lineCodeArray2,
-                        lineKindArray = lineKindArray2,
-                        transferTimeArray = transferTimeArray2,
+                        transportationArray = transportationArray1,
+                        lineColorArray = lineColorArray1,
+                        lineCodeArray = lineCodeArray1,
+                        lineKindArray = lineKindArray1,
+                        transferTimeArray = transferTimeArray1,
                         mainViewModel = mainViewModel,
                         onTransferClick = {
                             isShowingTransferSheet = true
                         }
                     )
-                    
+
                     // Home/Office View (departure)
                     HomeOfficeView(
-                        goorback = goOrBack2,
+                        goorback = goOrBack1,
                         num = 0,
-                        timeArray = timeArrayString2,
+                        timeArray = timeArrayString1,
                         sharedPreferences = sharedPreferences
                     )
-                    
+
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                // Second direction route (if enabled)
+                if (isShowRoute2) {
+
+                    Spacer(modifier = Modifier.width(ScreenSize.dividerSidePadding()))
+
+                    VerticalDivider(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(ScreenSize.dividerWidth()),
+                        color = Primary,
+                    )
+
+                    Spacer(modifier = Modifier.width(ScreenSize.dividerSidePadding()))
+
+                    Column(
+                        modifier = Modifier
+                            .width(ScreenSize.routeWidth(isShowRoute2))
+                            .padding(horizontal = ScreenSize.routeSidePadding())
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(ScreenSize.routeBottomSpace())
+                    ) {
+
+                        Spacer(modifier = Modifier.height(ScreenSize.routeCountdownTopSpace()))
+
+                        // Countdown Time
+                        Text(
+                            text = countdownTime2,
+                            fontSize = ScreenSize.routeCountdownFontSize().value.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = countdownColor2,
+                        )
+
+                        Spacer(modifier = Modifier.height(ScreenSize.routeCountdownSpace()))
+
+                        // Home/Office View (destination)
+                        HomeOfficeView(
+                            goorback = goOrBack2,
+                            num = 1,
+                            timeArray = timeArrayString2,
+                            sharedPreferences = sharedPreferences
+                        )
+
+                        // Transfer and Station Line Views
+                        for (num in 0..changeLine2) {
+                            TransferView(
+                                goorback = goOrBack2,
+                                num = num + 1,
+                                transportationArray = transportationArray2,
+                                lineColorArray = lineColorArray2,
+                                lineCodeArray = lineCodeArray2,
+                                lineKindArray = lineKindArray2,
+                                transferTimeArray = transferTimeArray2,
+                                mainViewModel = mainViewModel,
+                                onTransferClick = {
+                                    if (num + 1 < 2) {
+                                        isShowingTransferSheet = true
+                                    } else {
+                                        CoroutineScope(Dispatchers.Main).launch {
+                                            sheetGoorback = goOrBack2
+                                            sheetLineIndex = maxOf((num + 1) - 2, 0)
+                                            delay(10)
+                                            isShowingLineSheet = true
+                                        }
+                                    }
+                                }
+                            )
+
+                            StationLineView(
+                                goorback = goOrBack2,
+                                num = num,
+                                stationArray = stationArray2,
+                                lineNameArray = lineNameArray2,
+                                lineColorArray = lineColorArray2,
+                                transportationArray = transportationArray2,
+                                lineCodeArray = lineCodeArray2,
+                                lineKindArray = lineKindArray2,
+                                mainViewModel = mainViewModel,
+                                onLineClick = {
+                                    CoroutineScope(Dispatchers.Main).launch {
+                                        sheetGoorback = goOrBack2
+                                        sheetLineIndex = maxOf((num + 2) - 2, 0)
+                                        delay(10)
+                                        isShowingLineSheet = true
+                                    }
+                                }
+                            )
+                        }
+
+                        // Transfer View (arrival)
+                        TransferView(
+                            goorback = goOrBack2,
+                            num = 0,
+                            transportationArray = transportationArray2,
+                            lineColorArray = lineColorArray2,
+                            lineCodeArray = lineCodeArray2,
+                            lineKindArray = lineKindArray2,
+                            transferTimeArray = transferTimeArray2,
+                            mainViewModel = mainViewModel,
+                            onTransferClick = {
+                                isShowingTransferSheet = true
+                            }
+                        )
+
+                        // Home/Office View (departure)
+                        HomeOfficeView(
+                            goorback = goOrBack2,
+                            num = 0,
+                            timeArray = timeArrayString2,
+                            sharedPreferences = sharedPreferences
+                        )
+
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(ScreenSize.routeSidePadding()))
+
+                if (ScreenSize.screenWidth().value > 600) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
-            
-            if (ScreenSize.screenWidth().value > 600) {
-                Spacer(modifier = Modifier.weight(1f))
+
+            // MARK: - Ad Banner (画面最下部)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Primary),
+                contentAlignment = Alignment.Center
+            ) {
+                AdMobBannerView(
+                    modifier = Modifier
+                        .width(ScreenSize.admobBannerWidth())
+                        .height(ScreenSize.admobBannerHeight())
+                        .then(Modifier.widthIn(min = ScreenSize.admobBannerMinWidth()))
+                )
             }
         }
-
-        // MARK: - Ad Banner
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(ScreenSize.admobBannerHeight())
-                .background(Primary),
-            contentAlignment = Alignment.Center
-        ) {
-            AdMobBannerView(
-                modifier = Modifier
-                    .width(ScreenSize.admobBannerWidth())
-                    .height(ScreenSize.admobBannerHeight())
-                    .then(Modifier.widthIn(min = ScreenSize.admobBannerMinWidth()))
-            )
-        }
-        }
+    }
     }
     
     // Handle sheet navigation using LaunchedEffect
     // Navigate to Line Settings Sheet
     LaunchedEffect(isShowingLineSheet, sheetGoorback, sheetLineIndex) {
         if (isShowingLineSheet && sheetGoorback != null && sheetLineIndex != null) {
-            onNavigateToLineSheet(sheetGoorback!!, sheetLineIndex!!)
+            val currentGoorback = sheetGoorback!!
+            val currentLineIndex = sheetLineIndex!!
+            onNavigateToLineSheet(currentGoorback, currentLineIndex)
             isShowingLineSheet = false
+        }
+    }
+    
+    // Reset navigation parameters after sheet is dismissed
+    // This LaunchedEffect reads the reset values, preventing the warning
+    LaunchedEffect(isShowingLineSheet) {
+        if (!isShowingLineSheet) {
             sheetGoorback = null
             sheetLineIndex = null
         }
@@ -667,11 +688,12 @@ private fun HomeOfficeView(
     timeArray: List<String>,
     sharedPreferences: SharedPreferences
 ) {
+    val context = LocalContext.current
     val time = if (num == 0) timeArray.getOrNull(0) ?: "" else timeArray.getOrNull(1) ?: ""
     val stationName = if (num == 0) {
-        goorback.destination(sharedPreferences)
+        goorback.destination(sharedPreferences, context)
     } else {
-        goorback.departurePoint(sharedPreferences)
+        goorback.departurePoint(sharedPreferences, context)
     }
     
     Row(
@@ -682,13 +704,18 @@ private fun HomeOfficeView(
         Text(
             text = stationName,
             fontSize = ScreenSize.stationFontSize().value.sp,
-            maxLines = 1
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
         )
         
         Text(
             text = time,
             fontSize = ScreenSize.timeFontSize().value.sp,
-            fontWeight = FontWeight.Normal
+            fontWeight = FontWeight.Medium,
+            color = Primary,
+            maxLines = 1
         )
     }
 }
@@ -707,7 +734,7 @@ private fun TransferView(
     mainViewModel: MainViewModel,
     onTransferClick: () -> Unit
 ) {
-    val context = LocalContext.current
+    val context = mainViewModel.getApplication<Application>()
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
     // Calculate timeArray for isDirectConnection check
@@ -737,6 +764,7 @@ private fun TransferView(
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent
             ),
+            shape = RoundedCornerShape(0.dp),
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 LineTimeImage(
@@ -769,7 +797,7 @@ private fun StationLineView(
     mainViewModel: MainViewModel,
     onLineClick: () -> Unit
 ) {
-    val context = LocalContext.current
+    val context = mainViewModel.getApplication<Application>()
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
     // Calculate timeArray for current date and time
@@ -797,15 +825,19 @@ private fun StationLineView(
             Text(
                 text = departureStation,
                 fontSize = ScreenSize.stationFontSize().value.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
+                fontWeight = FontWeight.Medium,
+                color = Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
             
             Text(
                 text = departureTime,
                 fontSize = ScreenSize.timeFontSize().value.sp,
-                fontWeight = FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurface
+                fontWeight = FontWeight.Medium,
+                color = Primary,
+                maxLines = 1
             )
         }
         
@@ -817,7 +849,8 @@ private fun StationLineView(
             contentPadding = PaddingValues(0.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent
-            )
+            ),
+            shape = RoundedCornerShape(0.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -833,6 +866,8 @@ private fun StationLineView(
                     lineKindArray = lineKindArray
                 )
                 
+                Spacer(modifier = Modifier.width(ScreenSize.lineImageTextSpacing()))
+
                 Text(
                     text = lineName,
                     fontSize = ScreenSize.lineFontSize().value.sp,
@@ -851,15 +886,19 @@ private fun StationLineView(
             Text(
                 text = arrivalStation,
                 fontSize = ScreenSize.stationFontSize().value.sp,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
+                fontWeight = FontWeight.Medium,
+                color = Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
-            
+
             Text(
                 text = arrivalTime,
                 fontSize = ScreenSize.timeFontSize().value.sp,
-                fontWeight = FontWeight.Normal,
-                color = MaterialTheme.colorScheme.onSurface
+                fontWeight = FontWeight.Medium,
+                color = Primary,
+                maxLines = 1
             )
         }
     }
@@ -878,45 +917,59 @@ private fun LineTimeImage(
     lineCodeArray: List<String>,
     lineKindArray: List<TransportationLineKind?>
 ) {
+    val context = LocalContext.current
+    val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
+    
     val lineColor = if (isTransfer) {
         Gray
     } else {
         // Check if lineColorArray is empty or num is out of bounds
         if (lineColorArray.isEmpty() || num >= lineColorArray.size) {
-            Accent
+            // Fallback to SharedPreferences if array is empty
+            goorback.lineColor(sharedPreferences, num)
         } else {
             val color = lineColorArray[num]
-            // Check if color is Unspecified, Transparent, White, or has invalid alpha, then use Accent
+            // Check if color is Unspecified, Transparent, White, or has invalid alpha, then use fallback
             when {
                 color == Color.Unspecified || 
                 color == Color.Transparent || 
                 color == White ||
-                color.alpha == 0f -> Accent
+                color.alpha == 0f -> goorback.lineColor(sharedPreferences, num)
                 else -> color
             }
         }
     }
-    val lineCode = if (isTransfer) "" else lineCodeArray.getOrNull(num) ?: ""
-    val transportation = if (isTransfer) transportationArray.getOrNull(num) ?: "" else ""
-    val transportationKind = if (isTransfer) null else lineKindArray.getOrNull(num)
+    val lineCode = if (isTransfer) {
+        ""
+    } else {
+        lineCodeArray.getOrNull(num) ?: goorback.lineCode(sharedPreferences, num)
+    }
+    val transportation = if (isTransfer) {
+        transportationArray.getOrNull(num) ?: ""
+    } else {
+        ""
+    }
+    val transportationKind = if (isTransfer) {
+        null
+    } else {
+        lineKindArray.getOrNull(num) ?: goorback.lineKind(sharedPreferences, num)
+    }
     
     // Determine icon based on transfer type and transportation kind
     val icon = when {
         !isTransfer && transportationKind == TransportationLineKind.BUS -> Icons.Filled.DirectionsBus
         !isTransfer -> Icons.Filled.Train
-        isDirectConnection -> Icons.Filled.KeyboardArrowDown
-        transportation.isNotEmpty() -> {
-            val context = LocalContext.current
-            TransferType.transferType(transportation, context).icon
-        }
-        else -> Icons.AutoMirrored.Filled.DirectionsWalk
+        isDirectConnection -> Icons.Filled.KeyboardDoubleArrowDown
+        transportation.isNotEmpty() ->  TransferType.transferType(transportation, context).icon
+        else -> Icons.Filled.KeyboardDoubleArrowDown
     }
     
     // ZStack equivalent: Rectangle (background), Image (icon), Text (lineCode)
     Box(
         modifier = Modifier
             .size(ScreenSize.lineImageBackgroundSize())
-            .background(lineColor),
+            .aspectRatio(1f)
+            .background(lineColor, RoundedCornerShape(0.dp)),
         contentAlignment = Alignment.Center
     ) {
         // Icon layer (same as SwiftUI's Image)
@@ -1037,8 +1090,8 @@ private fun LineTimeImage(
         }
     }
 }
-
 // MARK: - Helper Functions
 // Get display name (split by ":" and return first component for ODPT format)
+
 
 

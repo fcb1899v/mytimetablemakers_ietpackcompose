@@ -365,4 +365,12 @@
     <string name="language">Language</string>
     <string name="japanese">Japanese</string>
     <string name="english">English</string>
+
+    <!-- MARK: - Accessibility & Misc -->
+    <string name="unknown">Unknown</string>
+    <string name="hidePassword">Hide password</string>
+    <string name="showPassword">Show password</string>
+    <string name="termsAgreement">Terms agreement</string>
+    <string name="appIcon">App Icon</string>
+    <string name="splashImage">Splash Image</string>
 </resources>

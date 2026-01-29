@@ -224,14 +224,14 @@ fun TimetableContentScreen(
                 // MARK: - Header Section
                 // Operator & Line Name Display
                 Text(
-                    text = "${goorback.operatorNameArray(sharedPreferences)[num]} : ${goorback.lineNameArray(sharedPreferences)[num]}",
+                    text = "${goorback.operatorNameArray(sharedPreferences)[num]} : ${goorback.lineNameArray(sharedPreferences, context)[num]}",
                     fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = White,
                     modifier = Modifier.padding(start = ScreenSize.timetableHorizontalSpacing())
                 )
                 
-                val stationArray = goorback.stationArray(sharedPreferences)
+                val stationArray = goorback.stationArray(sharedPreferences, context)
                 Text(
                     text = "${getDisplayName(stationArray[2 * num])}${stringResource(R.string.toSpace)}${getDisplayName(stationArray[2 * num + 1])}",
                     fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,

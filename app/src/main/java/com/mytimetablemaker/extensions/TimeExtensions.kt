@@ -3,6 +3,7 @@ package com.mytimetablemaker.extensions
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.Composable
+import com.mytimetablemaker.R
 import com.mytimetablemaker.models.ODPTCalendarType
 import java.text.SimpleDateFormat
 import java.util.*
@@ -63,7 +64,16 @@ val String.timeToMinutes: Int get() {
 }
 
 // MARK: - Date Extensions
-// Format date for display
+// Format date for display (locale-aware via Context resources)
+fun Date.formatDate(context: Context): String {
+    val pattern = context.getString(R.string.dateFormat)
+    val locales = context.resources.configuration.locales
+    val locale = if (locales.isEmpty) Locale.getDefault() else locales.get(0)
+    val formatter = SimpleDateFormat(pattern, locale)
+    return formatter.format(this)
+}
+
+// Legacy property: uses system default locale (prefer formatDate(context) for app language)
 val Date.setDate: String get() {
     val formatter = SimpleDateFormat("E, MMM d, yyyy", Locale.getDefault())
     return formatter.format(this)
@@ -123,8 +133,9 @@ val Int.countdown: String
     }
 
 // Calculate countdown time from departure time
+// minusHHMMSS returns seconds; convert to MMSS (min*100+sec) with SStoMMSS for correct "MM:SS" display
 fun Int.countdownTime(departTime: Int): String {
-    return (departTime * 100).minusHHMMSS(this).HHMMSStoMMSS.countdown
+    return (departTime * 100).minusHHMMSS(this).SStoMMSS.countdown
 }
 
 // Convert HHMM to minutes

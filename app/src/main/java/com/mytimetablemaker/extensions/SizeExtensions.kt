@@ -39,7 +39,7 @@ object ScreenSize {
     
     // MARK: - Header & Navigation
     @Composable
-    fun headerHeight(): Dp = operationButtonWidth() + 10.dp
+    fun headerHeight(): Dp = operationButtonWidth()
     @Composable
     fun headerDateFontSize(): Dp = customWidth() / 20f
     @Composable
@@ -49,7 +49,7 @@ object ScreenSize {
     @Composable
     fun headerSpace(): Dp = customWidth() / 60f
     @Composable
-    fun headerSettingsButtonSize(): Dp = customWidth() / 16f
+    fun headerSettingsButtonSize(): Dp = customWidth() * 0.08f
     @Composable
     fun operationButtonWidth(): Dp = customWidth() / 6f
     @Composable
@@ -59,37 +59,41 @@ object ScreenSize {
     
     // MARK: - Main Content Layout
     @Composable
-    fun routeSingleWidth(): Dp = customWidth() -  routeSidePadding() * 10f
+    fun routeSingleWidth(): Dp = customWidth() -  routeSidePadding() * 2f
     @Composable
-    fun routeDoubleWidth(): Dp = customWidth() / 2f - routeSidePadding() * 4f
+    fun routeDoubleWidth(): Dp = customWidth() / 2f - routeSidePadding() * 2f
     @Composable
     fun routeWidth(isShowRoute2: Boolean): Dp = if (isShowRoute2) routeDoubleWidth() else routeSingleWidth()
     @Composable
     fun routeHeight(): Dp = screenHeight() - admobBannerHeight() - statusBarHeight()
     @Composable
-    fun routeSidePadding(): Dp = customWidth() * 0.02f
+    fun routeSidePadding(): Dp = customWidth() * 0.025f
+    @Composable
+    fun dividerSidePadding(): Dp = customWidth() * 0.015f
     @Composable
     fun routeBottomSpace(): Dp = routeHeight() / 150f
     @Composable
     fun routeCountdownFontSize(): Dp = customWidth() / 12f
     @Composable
-    fun routeCountdownTopSpace(): Dp = if (routeHeight() > 600.dp) (routeHeight() - 600.dp) / 20f + 5.dp else 5.dp
+    fun routeCountdownTopSpace(): Dp = screenHeight() * 0.03f
     @Composable
-    fun routeCountdownPadding(): Dp = customWidth() / 50f + (if (routeHeight() > 600.dp) ((routeHeight() - 600.dp) / 10) else 0.dp)
+    fun routeCountdownSpace(): Dp = screenHeight() * 0.012f
     @Composable
-    fun stationFontSize(): Dp = customWidth() / 27f
+    fun stationFontSize(): Dp = customWidth() * 0.036f
     @Composable
     fun transferHeight(): Dp = screenHeight() * 0.036f
     @Composable
-    fun lineNameHeight(): Dp = screenHeight() * 0.045f
+    fun lineNameHeight(): Dp = screenHeight() * 0.056f
     @Composable
-    fun lineFontSize(): Dp = customWidth() / 27f
+    fun lineFontSize(): Dp = customWidth() * 0.032f
     @Composable
     fun lineImageForegroundSize(): Dp = customWidth() / 20f
     @Composable
     fun lineImageBackgroundSize(): Dp = customWidth() / 15f
     @Composable
-    fun timeFontSize(): Dp = customWidth() / 18f
+    fun lineImageTextSpacing(): Dp = customWidth() * 0.01f
+    @Composable
+    fun timeFontSize(): Dp = customWidth() * 0.056f
 
     // MARK: - AdMob Banner
     @Composable
@@ -109,7 +113,7 @@ object ScreenSize {
     @Composable
     fun loginEyeIconSize(): Dp = customWidth() * 0.042f
     @Composable
-    fun loginTitleTopMargin(): Dp = screenHeight() * 0.12f
+    fun loginTitleTopMargin(): Dp = screenHeight() * 0.1f
     @Composable
     fun loginTitleBottomMargin(): Dp = screenHeight() * 0.02f
     @Composable
@@ -233,6 +237,10 @@ object ScreenSize {
     fun settingsSheetButtonHeight(): Dp = screenHeight() * 0.044f
     @Composable
     fun settingsSheetButtonCornerRadius(): Dp = screenHeight() * 0.022f
+    @Composable
+    fun settingsSheetTopBarHeight(): Dp = screenHeight() * 0.06f
+    @Composable
+    fun settingsSheetBackButtonPadding(): Dp = customWidth() * 0.02f
 
     // MARK: - Settings Line Sheet
     @Composable
@@ -280,6 +288,14 @@ object ScreenSize {
     @Composable
     fun settingsTransferSheetPaddingLeft(): Dp = customWidth() * 0.03f
     
+    // MARK: - Alert Dialog
+    @Composable
+    fun alertDialogTitleFontSize(): Dp = customWidth() * 0.042f
+    @Composable
+    fun alertDialogTextFontSize(): Dp = customWidth() * 0.034f
+    @Composable
+    fun alertDialogButtonFontSize(): Dp = customWidth() * 0.036f
+
     // MARK: - Custom Component
     @Composable
     fun customToggleSpacing(): Dp = screenHeight() * 0.006f

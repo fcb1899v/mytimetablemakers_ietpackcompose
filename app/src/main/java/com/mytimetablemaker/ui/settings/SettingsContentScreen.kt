@@ -20,17 +20,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.ui.res.stringResource
 import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.*
 import com.mytimetablemaker.extensions.ScreenSize
+import com.mytimetablemaker.ui.common.AdMobBannerView
 import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.main.MainViewModel
 import com.mytimetablemaker.ui.theme.*
 import android.content.SharedPreferences
+import androidx.compose.ui.text.style.TextAlign
 import androidx.core.net.toUri
 import androidx.core.content.edit
 import java.util.Locale
@@ -111,37 +114,51 @@ fun SettingsContentScreen(
         }
     }
     
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(White)
-    ) {
-        // MARK: - Status Bar Background
+    Scaffold(
+        topBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(Primary)
+            )
+        },
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                    .background(Primary)
+            )
+        }
+    ) { paddingValues ->
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsTopHeight(WindowInsets.statusBars)
-                .background(Primary)
-                .align(Alignment.TopCenter)
-        )
-        
+                .fillMaxSize()
+                .background(White)
+                .padding(paddingValues)
+        ) {
         // MARK: - Main Content
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars)
+            modifier = Modifier.fillMaxSize()
         ) {
             // MARK: - Top App Bar
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings),
-                        fontSize = ScreenSize.settingsTitleFontSize().value.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = White
-                    )
-                },
-                navigationIcon = {
+            val topBarHeight = ScreenSize.settingsSheetTopBarHeight()
+            val backButtonPadding = ScreenSize.settingsSheetBackButtonPadding()
+            val titleFontSize = ScreenSize.settingsTitleFontSize()
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(topBarHeight)
+                    .background(Primary)
+            ) {
+                // Back button aligned to the left
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = backButtonPadding)
+                ) {
                     IconButton(onClick = onNavigateToMain) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -149,11 +166,18 @@ fun SettingsContentScreen(
                             tint = White
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Primary
+                }
+                
+                // Title centered on screen
+                Text(
+                    text = stringResource(R.string.settings),
+                    fontSize = titleFontSize.value.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = White,
+                    modifier = Modifier.align(Alignment.Center),
+                    textAlign = TextAlign.Center
                 )
-            )
+            }
             
             // MARK: - Loading Indicator
             if (firestoreViewModel.isLoading) {
@@ -200,32 +224,37 @@ fun SettingsContentScreen(
                     )
                     
                     // Route 2 display toggle
-                    Row(
+                    TextButton(
+                        onClick = { },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical()),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical())
                     ) {
-                        Text(
-                            text = stringResource(R.string.anotherRoute),
-                            fontSize = ScreenSize.settingsFontSize().value.sp,
-                            color = Black
-                        )
-                        CommonComponents.CustomToggle(
-                            isLeftSelected = !showRoute2,
-                            onToggle = { isLeftSelected ->
-                                val newShowRoute2 = !isLeftSelected
-                                showRoute2 = newShowRoute2
-                                saveRoute2Setting(sharedPreferences, newShowRoute2, mainViewModel)
-                            },
-                            leftText = stringResource(R.string.hide),
-                            leftColor = Gray,
-                            rightText = stringResource(R.string.display),
-                            rightColor = Primary,
-                            circleColor = White,
-                            offColor = Gray
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.anotherRoute),
+                                fontSize = ScreenSize.settingsFontSize().value.sp,
+                                color = Black
+                            )
+                            CommonComponents.CustomToggle(
+                                isLeftSelected = !showRoute2,
+                                onToggle = { isLeftSelected ->
+                                    val newShowRoute2 = !isLeftSelected
+                                    showRoute2 = newShowRoute2
+                                    saveRoute2Setting(sharedPreferences, newShowRoute2, mainViewModel)
+                                },
+                                leftText = stringResource(R.string.hide),
+                                leftColor = Gray,
+                                rightText = stringResource(R.string.display),
+                                rightColor = Primary,
+                                circleColor = White,
+                                offColor = Gray
+                            )
+                        }
                     }
                     
                     // Firestore data management buttons (only shown when logged in)
@@ -282,66 +311,99 @@ fun SettingsContentScreen(
                         }
                     )
                     // Language setting toggle
-                    Row(
+                    TextButton(
+                        onClick = { },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical()),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical())
                     ) {
-                        Text(
-                            text = stringResource(R.string.language),
-                            fontSize = ScreenSize.settingsFontSize().value.sp,
-                            color = Black
-                        )
-                        CommonComponents.CustomToggle(
-                            isLeftSelected = isJapaneseSelected,
-                            onToggle = { isLeftSelected ->
-                                isJapaneseSelected = isLeftSelected
-                                saveLanguageSetting(sharedPreferences, isLeftSelected, context)
-                            },
-                            leftText = stringResource(R.string.japanese),
-                            leftColor = Primary,
-                            rightText = stringResource(R.string.english),
-                            rightColor = Primary,
-                            circleColor = White,
-                            offColor = Gray
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.language),
+                                fontSize = ScreenSize.settingsFontSize().value.sp,
+                                color = Black
+                            )
+                            CommonComponents.CustomToggle(
+                                isLeftSelected = isJapaneseSelected,
+                                onToggle = { isLeftSelected ->
+                                    isJapaneseSelected = isLeftSelected
+                                    saveLanguageSetting(sharedPreferences, isLeftSelected, context)
+                                },
+                                leftText = stringResource(R.string.japanese),
+                                leftColor = Primary,
+                                rightText = stringResource(R.string.english),
+                                rightColor = Primary,
+                                circleColor = White,
+                                offColor = Gray
+                            )
+                        }
                     }
-                    Row(
+                    TextButton(
+                        onClick = { },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical()),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical())
                     ) {
-                        Text(
-                            text = stringResource(R.string.version),
-                            fontSize = ScreenSize.settingsFontSize().value.sp,
-                            color = Black
-                        )
-                        Text(
-                            text = getAppVersion(context),
-                            fontSize = ScreenSize.settingsFontSize().value.sp,
-                            color = Gray
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.version),
+                                fontSize = ScreenSize.settingsFontSize().value.sp,
+                                color = Black
+                            )
+                            Text(
+                                text = getAppVersion(context),
+                                fontSize = ScreenSize.settingsFontSize().value.sp,
+                                color = Gray,
+                                modifier = Modifier.padding(end = ScreenSize.settingsFontSize())
+                            )
+                        }
                     }
                 }
                 
-                // MARK: - Ad Banner
+                // MARK: - Ad Banner (画面最下部)
                 Spacer(modifier = Modifier.weight(1f))
-                AdBannerSection()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AdMobBannerView()
+                }
             }
         }
     }
     
     // MARK: - Alerts
+    // Responsive font sizes for alerts
+    val alertTitleFontSize = ScreenSize.alertDialogTitleFontSize()
+    val alertTextFontSize = ScreenSize.alertDialogTextFontSize()
+    val alertButtonFontSize = ScreenSize.alertDialogButtonFontSize()
+    
     // Logout Alert
     if (showLogoutAlert) {
         AlertDialog(
             onDismissRequest = { showLogoutAlert = false },
-            title = { Text(stringResource(R.string.logout)) },
-            text = { Text(stringResource(R.string.logoutYourAccount)) },
+            title = { 
+                Text(
+                    text = stringResource(R.string.logout),
+                    fontSize = alertTitleFontSize.value.sp
+                ) 
+            },
+            text = { 
+                Text(
+                    text = stringResource(R.string.logoutYourAccount),
+                    fontSize = alertTextFontSize.value.sp
+                ) 
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -349,16 +411,23 @@ fun SettingsContentScreen(
                         loginViewModel.logOut()
                     }
                 ) {
-                    Text(stringResource(R.string.ok))
+                    Text(
+                        text = stringResource(R.string.ok),
+                        fontSize = alertButtonFontSize.value.sp
+                    )
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showLogoutAlert = false }
                 ) {
-                    Text(stringResource(R.string.cancel))
+                    Text(
+                        text = stringResource(R.string.cancel),
+                        fontSize = alertButtonFontSize.value.sp
+                    )
                 }
-            }
+            },
+            containerColor = White
         )
     }
     
@@ -366,8 +435,18 @@ fun SettingsContentScreen(
     if (showDeleteAlert) {
         AlertDialog(
             onDismissRequest = { showDeleteAlert = false },
-            title = { Text(stringResource(R.string.deleteAccount)) },
-            text = { Text("⚠️ ${stringResource(R.string.deleteYourAccount)}") },
+            title = { 
+                Text(
+                    text = stringResource(R.string.deleteAccount),
+                    fontSize = alertTitleFontSize.value.sp
+                ) 
+            },
+            text = { 
+                Text(
+                    text = "⚠️ ${stringResource(R.string.deleteYourAccount)}",
+                    fontSize = alertTextFontSize.value.sp
+                ) 
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -375,16 +454,23 @@ fun SettingsContentScreen(
                         loginViewModel.delete()
                     }
                 ) {
-                    Text(stringResource(R.string.ok))
+                    Text(
+                        text = stringResource(R.string.ok),
+                        fontSize = alertButtonFontSize.value.sp
+                    )
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showDeleteAlert = false }
                 ) {
-                    Text(stringResource(R.string.cancel))
+                    Text(
+                        text = stringResource(R.string.cancel),
+                        fontSize = alertButtonFontSize.value.sp
+                    )
                 }
-            }
+            },
+            containerColor = White
         )
     }
     
@@ -392,8 +478,18 @@ fun SettingsContentScreen(
     if (showGetFirestoreAlert) {
         AlertDialog(
             onDismissRequest = { showGetFirestoreAlert = false },
-            title = { Text(stringResource(R.string.getSavedData)) },
-            text = { Text("⚠️ ${stringResource(R.string.overwrittenCurrentData)}") },
+            title = { 
+                Text(
+                    text = stringResource(R.string.getSavedData),
+                    fontSize = alertTitleFontSize.value.sp
+                ) 
+            },
+            text = { 
+                Text(
+                    text = "⚠️ ${stringResource(R.string.overwrittenCurrentData)}",
+                    fontSize = alertTextFontSize.value.sp
+                ) 
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -401,16 +497,23 @@ fun SettingsContentScreen(
                         firestoreViewModel.getFirestore()
                     }
                 ) {
-                    Text(stringResource(R.string.ok))
+                    Text(
+                        text = stringResource(R.string.ok),
+                        fontSize = alertButtonFontSize.value.sp
+                    )
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showGetFirestoreAlert = false }
                 ) {
-                    Text(stringResource(R.string.cancel))
+                    Text(
+                        text = stringResource(R.string.cancel),
+                        fontSize = alertButtonFontSize.value.sp
+                    )
                 }
-            }
+            },
+            containerColor = White
         )
     }
     
@@ -418,8 +521,18 @@ fun SettingsContentScreen(
     if (showSaveFirestoreAlert) {
         AlertDialog(
             onDismissRequest = { showSaveFirestoreAlert = false },
-            title = { Text(stringResource(R.string.saveCurrentData)) },
-            text = { Text("⚠️ ${stringResource(R.string.overwrittenSavedData)}") },
+            title = { 
+                Text(
+                    text = stringResource(R.string.saveCurrentData),
+                    fontSize = alertTitleFontSize.value.sp
+                ) 
+            },
+            text = { 
+                Text(
+                    text = "⚠️ ${stringResource(R.string.overwrittenSavedData)}",
+                    fontSize = alertTextFontSize.value.sp
+                ) 
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -427,16 +540,23 @@ fun SettingsContentScreen(
                         firestoreViewModel.setFirestore()
                     }
                 ) {
-                    Text(stringResource(R.string.ok))
+                    Text(
+                        text = stringResource(R.string.ok),
+                        fontSize = alertButtonFontSize.value.sp
+                    )
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showSaveFirestoreAlert = false }
                 ) {
-                    Text(stringResource(R.string.cancel))
+                    Text(
+                        text = stringResource(R.string.cancel),
+                        fontSize = alertButtonFontSize.value.sp
+                    )
                 }
-            }
+            },
+            containerColor = White
         )
     }
     
@@ -453,6 +573,7 @@ fun SettingsContentScreen(
             onNavigateToLineSheet(selectedRoute)
             showLineSheet = false
         }
+    }
     }
 }
 
@@ -507,22 +628,6 @@ private fun SettingsButton(
                 modifier = Modifier.size(ScreenSize.settingsFontSize())
             )
         }
-    }
-}
-
-// MARK: - Ad Banner Section
-// Displays advertisement banner
-@Composable
-private fun AdBannerSection() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(ScreenSize.admobBannerHeight())
-            .background(Primary),
-        contentAlignment = Alignment.Center
-    ) {
-        // TODO: Implement AdMob banner
-        com.mytimetablemaker.ui.common.AdMobBannerView()
     }
 }
 

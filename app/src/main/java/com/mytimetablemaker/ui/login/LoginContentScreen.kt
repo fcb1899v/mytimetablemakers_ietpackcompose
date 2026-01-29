@@ -96,7 +96,16 @@ fun LoginContentScreen(
                     containerColor = Accent
                 )
             )
+        },
+        bottomBar = {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsBottomHeight(WindowInsets.navigationBars)
+                    .background(Primary)
+            )
         }
+
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -110,16 +119,7 @@ fun LoginContentScreen(
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Spacer(modifier = Modifier.weight(1f))
-                
-                // Splash image
-                androidx.compose.foundation.Image(
-                    painter = painterResource(id = R.drawable.splash),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                )
-                
+
                 // AdMob banner at bottom
                 Box(
                     modifier = Modifier
@@ -252,7 +252,15 @@ fun LoginContentScreen(
                     )
                 }
                 
-                Spacer(modifier = Modifier.weight(1f))
+                // Splash image
+                androidx.compose.foundation.Image(
+                    painter = painterResource(id = R.drawable.splash),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                )
+
+                AdMobBannerView()
             }
             
             // MARK: - Loading Indicator

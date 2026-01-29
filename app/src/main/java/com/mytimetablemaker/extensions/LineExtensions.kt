@@ -276,18 +276,18 @@ fun String.timetableRideTime(sharedPreferences: SharedPreferences, calendarType:
 }
 
 // MARK: - Array Generation Extensions
-fun String.departStationArray(sharedPreferences: SharedPreferences): List<String> {
-    return (0..2).map { this.departStation(sharedPreferences, it) }
+fun String.departStationArray(sharedPreferences: SharedPreferences, context: Context? = null): List<String> {
+    return (0..2).map { this.departStation(sharedPreferences, it, context) }
 }
 
-fun String.arriveStationArray(sharedPreferences: SharedPreferences): List<String> {
-    return (0..2).map { this.arriveStation(sharedPreferences, it) }
+fun String.arriveStationArray(sharedPreferences: SharedPreferences, context: Context? = null): List<String> {
+    return (0..2).map { this.arriveStation(sharedPreferences, it, context) }
 }
 
-fun String.stationArray(sharedPreferences: SharedPreferences): List<String> {
+fun String.stationArray(sharedPreferences: SharedPreferences, context: Context? = null): List<String> {
     return (0..2).flatMap { listOf(
-        this.departStation(sharedPreferences, it),
-        this.arriveStation(sharedPreferences, it)
+        this.departStation(sharedPreferences, it, context),
+        this.arriveStation(sharedPreferences, it, context)
     ) }
 }
 
@@ -295,8 +295,8 @@ fun String.operatorNameArray(sharedPreferences: SharedPreferences): List<String>
     return (0..2).map { this.operatorName(sharedPreferences, it) }
 }
 
-fun String.lineNameArray(sharedPreferences: SharedPreferences): List<String> {
-    return (0..2).map { this.lineName(sharedPreferences, it) }
+fun String.lineNameArray(sharedPreferences: SharedPreferences, context: Context? = null): List<String> {
+    return (0..2).map { this.lineName(sharedPreferences, it, context) }
 }
 
 fun String.lineColorArray(sharedPreferences: SharedPreferences): List<Color> {
