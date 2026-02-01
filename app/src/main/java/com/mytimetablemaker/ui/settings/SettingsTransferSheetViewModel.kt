@@ -77,7 +77,7 @@ class SettingsTransferSheetViewModel(
         selectedOfficeTransferTime2.value = "back2".transferTimeKey(1).userDefaultsInt(sharedPreferences, 0)
         
         // Load Route 2 visibility flag from SharedPreferences
-        // Match SwiftUI implementation: check both back2 and go2 keys
+        // Check both back2 and go2 keys
         val back2Route2Value = "back2".isShowRoute2Key().userDefaultsBool(sharedPreferences, false)
         val go2Route2Value = "go2".isShowRoute2Key().userDefaultsBool(sharedPreferences, false)
         
@@ -87,7 +87,7 @@ class SettingsTransferSheetViewModel(
     
     // MARK: - Route 2 Setting Management
     // Save Route 2 visibility setting to SharedPreferences immediately
-    // Match SwiftUI implementation: save to both back2 and go2 keys
+    // Save to both back2 and go2 keys
     fun saveRoute2Setting() {
         sharedPreferences.edit(commit = true) {
             putBoolean("back2".isShowRoute2Key(), showRoute2.value)
@@ -157,7 +157,7 @@ class SettingsTransferSheetViewModel(
         // Update Route 2 visibility settings
         saveRoute2Setting()
         
-        // Post notification to update MainContentView (same as SwiftUI's NotificationCenter.post)
+        // Post notification to update MainContentView
         // Use SharedPreferences to trigger OnSharedPreferenceChangeListener
         // Use commit() to ensure the notification is sent immediately
         sharedPreferences.edit(commit = true) {

@@ -167,7 +167,7 @@ fun Int.overTime(beforeTime: Int): Int {
 
 // MARK: - Date Extensions (continued)
 // Determine calendar type based on date with fallback to available types
-// SwiftUI version: Returns ODPTCalendarType directly
+// Returns ODPTCalendarType directly
 fun Date.odptCalendarType(fallbackTo: List<ODPTCalendarType>): ODPTCalendarType {
     // Helper function to check if a type or its displayCalendarType is available
     fun isAvailable(type: ODPTCalendarType): Boolean {
@@ -492,7 +492,7 @@ fun String.containsTimeInAnyFormat(departureTime: Int): Boolean {
 // Generate list of copy time options for hour selection
 @Composable
 fun Int.choiceCopyTimeList(context: Context): List<String> {
-    // Note: hour string resource is ":00-" which matches SwiftUI's "Hour" localized string
+    // Note: hour string resource is ":00-"
     val hourString = context.getString(com.mytimetablemaker.R.string.hour)
     return listOf(
         "${this - 1}$hourString",

@@ -303,7 +303,7 @@ object ODPTParser {
                 val descendingRailDirection = jsonObject.get("odpt:descendingRailDirection")?.asString
                 
                 // Parse odpt:stationOrder to create TransportationStop list
-                // SwiftUI: Uses odpt:stationOrder from Railway JSON to create station list
+                // Uses odpt:stationOrder from Railway JSON to create station list
                 val stationOrderArray = jsonObject.get("odpt:stationOrder")?.asJsonArray
                 val stationOrder = stationOrderArray?.mapNotNull { stationElement ->
                     if (stationElement is JsonObject) {

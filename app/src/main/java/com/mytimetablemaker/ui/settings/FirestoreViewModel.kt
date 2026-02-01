@@ -24,10 +24,12 @@ val goorbackarray = listOf("back1", "go1", "back2", "go2")
 // Handles data synchronization between SharedPreferences and Firestore database
 class FirestoreViewModel(application: Application) : AndroidViewModel(application) {
     
-    private val sharedPreferences: SharedPreferences = application.getSharedPreferences("FirestoreViewModel", Application.MODE_PRIVATE)
-    private val firestore = FirebaseFirestore.getInstance()
-    private val auth = FirebaseAuth.getInstance()
-    
+    // Use same SharedPreferences as MainViewModel so save/get sync with app data
+    private val sharedPreferences: SharedPreferences = application.getSharedPreferences("MainViewModel", Application.MODE_PRIVATE)
+    // Lazy init so Firebase is not touched at ViewModel creation (avoids crash on DEVELOPER_ERROR at app start)
+    private val firestore by lazy { FirebaseFirestore.getInstance() }
+    private val auth by lazy { FirebaseAuth.getInstance() }
+
     // MARK: - Published Properties
     // Alert messages, visibility states, and loading indicators for UI updates
     var title by mutableStateOf("")
@@ -42,6 +44,11 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
         private set
     var isLoading by mutableStateOf(false)
         private set
+    
+    // Dismiss Firestore result alert (called from UI when user taps OK)
+    fun dismissMessage() {
+        isShowMessage = false
+    }
     
     // MARK: - Firestore Reference Helper
     // Creates Firestore document reference for current user and route
@@ -61,12 +68,19 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             isFirestoreSuccess = false
             title = getApplication<Application>().getString(R.string.saveDataError)
             message = getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
-            
+
             try {
-                // Process each route (go/back) and upload timetable and line information
-                goorbackarray.forEach { goorback ->
-                    (0..2).forEach { linenumber ->
-                        // Get available calendar types for this route and line
+                run { firestore; auth }
+            } catch (e: Exception) {
+                message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
+                isLoading = false
+                isShowMessage = true
+                return@launch
+            }
+            try {
+                // Process each route (go/back) and upload timetable and line information (sequential await)
+                for (goorback in goorbackarray) {
+                    for (linenumber in 0..2) {
                         val availableCalendarTypes = getAvailableCalendarTypesForRoute(goorback, linenumber)
                         setTimetableFirestore(goorback, linenumber, availableCalendarTypes)
                     }
@@ -182,9 +196,9 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             "linecode1" to goorback.lineCodeArray(sharedPreferences)[0],
             "linecode2" to goorback.lineCodeArray(sharedPreferences)[1],
             "linecode3" to goorback.lineCodeArray(sharedPreferences)[2],
-            "linekind1" to goorback.lineKindArray(sharedPreferences)[0],
-            "linekind2" to goorback.lineKindArray(sharedPreferences)[1],
-            "linekind3" to goorback.lineKindArray(sharedPreferences)[2],
+            "linekind1" to goorback.lineKindArray(sharedPreferences)[0].firestoreRawValue(),
+            "linekind2" to goorback.lineKindArray(sharedPreferences)[1].firestoreRawValue(),
+            "linekind3" to goorback.lineKindArray(sharedPreferences)[2].firestoreRawValue(),
             "ridetime1" to goorback.rideTimeArray(sharedPreferences)[0].toString(),
             "ridetime2" to goorback.rideTimeArray(sharedPreferences)[1].toString(),
             "ridetime3" to goorback.rideTimeArray(sharedPreferences)[2].toString(),
@@ -229,14 +243,21 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             isFirestoreSuccess = false
             title = getApplication<Application>().getString(R.string.getDataError)
             message = getApplication<Application>().getString(R.string.dataCouldNotBeGot)
-            
+
             try {
-                // Process each route (go/back) and download timetable and line information
-                goorbackarray.forEach { goorback ->
-                    (0..2).forEach { linenumber ->
-                        // Get available calendar types for this route and line
+                run { firestore; auth }
+            } catch (e: Exception) {
+                message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
+                isLoading = false
+                isShowMessage = true
+                return@launch
+            }
+            try {
+                // Process each route (go/back) and download timetable and line information (sequential await)
+                for (goorback in goorbackarray) {
+                    for (linenumber in 0..2) {
                         val availableCalendarTypes = getAvailableCalendarTypesForRoute(goorback, linenumber)
-                        availableCalendarTypes.forEach { calendarType ->
+                        for (calendarType in availableCalendarTypes) {
                             getTimetableFirestore(goorback, linenumber, calendarType)
                         }
                     }

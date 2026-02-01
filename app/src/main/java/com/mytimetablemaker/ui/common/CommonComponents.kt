@@ -52,7 +52,6 @@ object CommonComponents {
     
     // MARK: - Custom Button
     // Custom button component for consistent styling
-    // Matches SwiftUI CustomButton implementation
     @Composable
     fun CustomButton(
         title: String,

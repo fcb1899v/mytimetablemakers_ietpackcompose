@@ -165,24 +165,27 @@ class SettingsLineViewModel(
     val hasStops: Boolean
         get() = _lineStops.value.isNotEmpty()
     
+    // All required fields "filled" = four input texts non-empty + ride time > 0
     override val isAllNotEmpty: Boolean
         get() {
-            val result = operatorSelected.value &&
-                    _selectedLine.value != null &&
-                    _selectedDepartureStop.value != null &&
-                    _selectedArrivalStop.value != null &&
-                    (hasTimetableSupport() || _selectedRideTime.value > 0)
-            android.util.Log.d("SettingsLineViewModel", "isAllNotEmpty: operatorSelected=${operatorSelected.value}, selectedLine=${_selectedLine.value != null}, selectedDepartureStop=${_selectedDepartureStop.value != null}, selectedArrivalStop=${_selectedArrivalStop.value != null}, hasTimetableSupport=${hasTimetableSupport()}, selectedRideTime=${_selectedRideTime.value}, result=$result")
+            val operatorFilled = operatorInput.value.trim().isNotEmpty()
+            val lineFilled = lineInput.value.trim().isNotEmpty()
+            val departureFilled = departureStopInput.value.trim().isNotEmpty()
+            val arrivalFilled = arrivalStopInput.value.trim().isNotEmpty()
+            val rideTimeFilled = _selectedRideTime.value > 0
+            val result = operatorFilled && lineFilled && departureFilled && arrivalFilled && rideTimeFilled
+            android.util.Log.d("SettingsLineViewModel", "isAllNotEmpty: operatorFilled=$operatorFilled, lineFilled=$lineFilled, departureFilled=$departureFilled, arrivalFilled=$arrivalFilled, rideTimeFilled=$rideTimeFilled, result=$result")
             return result
         }
     
+    // Whether user has selected both stops from suggestions (_selectedDepartureStop/_selectedArrivalStop)
     val isAllSelected: Boolean
         get() {
-            val result = operatorSelected.value &&
-                    _selectedLine.value != null &&
-                    _selectedDepartureStop.value != null &&
-                    _selectedArrivalStop.value != null
-            android.util.Log.d("SettingsLineViewModel", "isAllSelected: operatorSelected=${operatorSelected.value}, selectedLine=${_selectedLine.value != null}, selectedDepartureStop=${_selectedDepartureStop.value != null}, selectedArrivalStop=${_selectedArrivalStop.value != null}, result=$result")
+            val lineSelected = _selectedLine.value != null
+            val departureSelected = _selectedDepartureStop.value != null
+            val arrivalSelected = _selectedArrivalStop.value != null
+            val result = operatorSelected.value && lineSelected && departureSelected && arrivalSelected
+            android.util.Log.d("SettingsLineViewModel", "isAllSelected: operatorSelected=${operatorSelected.value}, lineSelected=$lineSelected, departureSelected=$departureSelected, arrivalSelected=$arrivalSelected, result=$result")
             return result
         }
     
@@ -454,7 +457,7 @@ class SettingsLineViewModel(
         
         // Update state on main thread
         withContext(Dispatchers.Main) {
-            // Match SwiftUI: Only update lines for the selected kind, keep existing lines for other kind
+            // Only update lines for the selected kind, keep existing lines for other kind
             // This ensures that switching between railway and bus doesn't lose previously loaded data
             val kind = selectedTransportationKind.value.toTransportationKind()
             if (kind == TransportationKind.RAILWAY) {
@@ -527,7 +530,7 @@ class SettingsLineViewModel(
     // MARK: - Line Number Management
     // Update available line numbers with option to preserve current line number
     private fun updateAvailableLineNumbers(shouldPreserveLineNumber: Boolean) {
-        val changeLineValue = sharedPreferences.getInt(_selectedGoorback.value.changeLineKey(), 0)
+        val changeLineValue = _selectedGoorback.value.changeLineKey().userDefaultsInt(sharedPreferences, 0)
         val maxLineNumber = minOf(changeLineValue + 1, 3)
         availableLineNumbers.value = (1..maxLineNumber).toList()
         
@@ -597,7 +600,7 @@ class SettingsLineViewModel(
                 selectedOperatorCode.value = dataSource.operatorCode()
                 operatorSelected.value = true
                 
-                // For GTFS operators, fetch lines from ZIP cache (match SwiftUI behavior)
+                // For GTFS operators, fetch lines from ZIP cache
                 if (selectedTransportationKind.value == TransportationLineKind.BUS && 
                     dataSource.apiType() == ODPTAPIType.GTFS) {
                     android.util.Log.d("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: GTFS operator detected, calling fetchGTFSLinesForOperator for ${dataSource.name}")
@@ -642,7 +645,7 @@ class SettingsLineViewModel(
                         }
                     }
                 } else {
-                    // Match SwiftUI: If operator name is saved but dataSource and operatorCode are not found,
+                    // If operator name is saved but dataSource and operatorCode are not found,
                     // clear operator selection
                     operatorInput.value = ""
                     selectedOperatorCode.value = null
@@ -656,7 +659,7 @@ class SettingsLineViewModel(
                 selectedOperatorCode.value = savedOperatorCode
                 operatorSelected.value = true
                 
-                // For GTFS operators, fetch lines from ZIP cache (match SwiftUI behavior)
+                // For GTFS operators, fetch lines from ZIP cache
                 val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == savedOperatorCode }
                 if (dataSource != null && selectedTransportationKind.value == TransportationLineKind.BUS && 
                     dataSource.apiType() == ODPTAPIType.GTFS) {
@@ -676,7 +679,7 @@ class SettingsLineViewModel(
                     }
                 }
             } else {
-                // Match SwiftUI: If operator name and code are not saved, clear operator input
+                // If operator name and code are not saved, clear operator input
                 operatorInput.value = ""
                 selectedOperatorCode.value = null
                 operatorSelected.value = false
@@ -752,8 +755,7 @@ class SettingsLineViewModel(
             lineSelected.value = _selectedGoorback.value.lineSelected(sharedPreferences, currentLineIndex)
         }
         
-        // Load line color using settingsLineColorString function (matches SwiftUI)
-        // SwiftUI: if let savedColor = UserDefaults.standard.string(forKey: colorKey) { self.selectedLineColor = savedColor }
+        // Load line color using settingsLineColorString function
         val savedLineColorString = _selectedGoorback.value.settingsLineColorString(sharedPreferences, currentLineIndex)
         val grayString = "#9C9C9C"
         selectedLineColor.value = if (savedLineColorString != grayString) {
@@ -827,7 +829,7 @@ class SettingsLineViewModel(
         
         // Load ride time
         val rideTimeKey = _selectedGoorback.value.rideTimeKey(currentLineIndex)
-        val savedRideTime = sharedPreferences.getInt(rideTimeKey, 0)
+        val savedRideTime = rideTimeKey.userDefaultsInt(sharedPreferences, 0)
         _selectedRideTime.value = if (savedRideTime > 0) savedRideTime else 0
         
         // Load transfer settings
@@ -841,7 +843,7 @@ class SettingsLineViewModel(
             }
             
             val transferTimeKey = _selectedGoorback.value.transferTimeKey(currentLineIndex + 2)
-            val savedTransferTime = sharedPreferences.getInt(transferTimeKey, 0)
+            val savedTransferTime = transferTimeKey.userDefaultsInt(sharedPreferences, 0)
             selectedTransferTime.value = if (savedTransferTime > 0) savedTransferTime else 0
         } else {
             selectedTransportation.value = "none"
@@ -953,28 +955,65 @@ class SettingsLineViewModel(
     
     // Load station settings from SharedPreferences
     // Split by ":" and return first component for ODPT format
+    // Also restore _selectedDepartureStop and _selectedArrivalStop so isAllNotEmpty becomes true when reopening the sheet
     private fun loadStationSettings() {
         val currentLineIndex = _selectedLineNumber.value - 1
         val context = getApplication<Application>()
-        
-        // Use settingsDepartStation and settingsArriveStation functions
-        val savedDeparture = _selectedGoorback.value.settingsDepartStation(sharedPreferences, currentLineIndex, context)
+        val lineStops = _lineStops.value
         val notSet = context.getString(R.string.notSet)
-        if (savedDeparture != notSet) {
-            // Split by ":" and return first component for ODPT format
+        
+        // Use settingsDepartStation (same key as departStation; default "notSet")
+        val savedDeparture = _selectedGoorback.value.settingsDepartStation(sharedPreferences, currentLineIndex, context)
+        if (savedDeparture != notSet && savedDeparture.isNotEmpty()) {
             val components = savedDeparture.split(":")
-            departureStopInput.value = components.firstOrNull()?.trim() ?: savedDeparture
+            val displayDeparture = components.firstOrNull()?.trim() ?: savedDeparture
+            departureStopInput.value = displayDeparture
+            // Restore departure stop object so isAllNotEmpty and buttons become active
+            if (lineStops.isNotEmpty()) {
+                val foundStop = lineStops.firstOrNull { stop ->
+                    stop.name == savedDeparture ||
+                    stop.name == displayDeparture ||
+                    stop.title?.ja == savedDeparture ||
+                    stop.title?.ja == displayDeparture ||
+                    stop.title?.en == savedDeparture ||
+                    stop.title?.en == displayDeparture ||
+                    stop.displayName(getApplication()) == displayDeparture
+                }
+                _selectedDepartureStop.value = foundStop
+            } else {
+                _selectedDepartureStop.value = null
+            }
         } else {
             departureStopInput.value = ""
+            _selectedDepartureStop.value = null
         }
         
+        // Use settingsArriveStation (same key as arriveStation; default "notSet")
         val savedArrival = _selectedGoorback.value.settingsArriveStation(sharedPreferences, currentLineIndex, context)
-        if (savedArrival != notSet) {
-            // Split by ":" and return first component for ODPT format
+        val savedArrivalCode = _selectedGoorback.value.arriveStationCode(sharedPreferences, currentLineIndex)
+        if (savedArrival != notSet && savedArrival.isNotEmpty()) {
             val components = savedArrival.split(":")
-            arrivalStopInput.value = components.firstOrNull()?.trim() ?: savedArrival
+            val displayArrival = components.firstOrNull()?.trim() ?: savedArrival
+            arrivalStopInput.value = displayArrival
+            // Restore arrival stop object so isAllNotEmpty and buttons become active
+            if (lineStops.isNotEmpty()) {
+                val foundStop = lineStops.firstOrNull { stop ->
+                    stop.code == savedArrivalCode ||
+                    stop.name == savedArrival ||
+                    stop.name == displayArrival ||
+                    stop.title?.ja == savedArrival ||
+                    stop.title?.ja == displayArrival ||
+                    stop.title?.en == savedArrival ||
+                    stop.title?.en == displayArrival ||
+                    stop.displayName(getApplication()) == displayArrival
+                }
+                _selectedArrivalStop.value = foundStop
+            } else {
+                _selectedArrivalStop.value = null
+            }
         } else {
             arrivalStopInput.value = ""
+            _selectedArrivalStop.value = null
         }
     }
     
@@ -1023,7 +1062,7 @@ class SettingsLineViewModel(
                 return emptyList()
             }
         } else {
-            // Handle railway lines - SwiftUI: Use odpt:stationOrder from Railway JSON
+            // Handle railway lines: use odpt:stationOrder from Railway JSON
             // First try stationOrder from parsed Railway data, then lineStations if already loaded
             if (selectedLine.stationOrder != null && selectedLine.stationOrder.isNotEmpty()) {
                 return selectedLine.stationOrder
@@ -1045,14 +1084,12 @@ class SettingsLineViewModel(
         android.util.Log.d("SettingsLineViewModel", "filterLine called: q='$q', isFocused=$isFocused, fieldIsFocused=$fieldIsFocused, isLineNumberChanging=${isLineNumberChanging.value}, isGoorBackChanging=${isGoorBackChanging.value}, lineSelected=${lineSelected.value}, operatorCode=${selectedOperatorCode.value}, operatorSelected=${operatorSelected.value}")
         
         // Don't show suggestions if line number or direction is being changed or line is already selected
-        // SwiftUI: if isLineNumberChanging || isGoorBackChanging || lineSelected { return }
         if (isLineNumberChanging.value || isGoorBackChanging.value || lineSelected.value) {
             android.util.Log.d("SettingsLineViewModel", "filterLine: Early return - isLineNumberChanging=${isLineNumberChanging.value}, isGoorBackChanging=${isGoorBackChanging.value}, lineSelected=${lineSelected.value}")
             return@withContext
         }
         
         // Don't show line suggestions if operator is not selected from dropdown
-        // SwiftUI: guard let operatorCode = selectedOperatorCode, operatorSelected else { return }
         val operatorCode = selectedOperatorCode.value
         if (operatorCode == null || !operatorSelected.value) {
             android.util.Log.d("SettingsLineViewModel", "filterLine: Early return - operatorCode=$operatorCode, operatorSelected=${operatorSelected.value}")
@@ -1072,7 +1109,7 @@ class SettingsLineViewModel(
         android.util.Log.d("SettingsLineViewModel", "filterLine: Initial searchData count=${searchData.size} for ${selectedTransportationKind.value}, railwayLines=${railwayLines.value.size}, busLines=${busLines.value.size}")
         
         // If data is not loaded yet, wait for data to load (max 2 seconds)
-        // Match SwiftUI: Wait for data to load before filtering
+        // Wait for data to load before filtering
         if (searchData.isEmpty()) {
             var retryCount = 0
             val maxRetries = 20 // 2 seconds max (20 * 100ms)
@@ -1094,11 +1131,10 @@ class SettingsLineViewModel(
         android.util.Log.d("SettingsLineViewModel", "filterLine: After operator filter, searchData count=${searchData.size}")
         
         // For GTFS operators, use lines from busLines (already loaded by fetchGTFSLinesForOperator)
-        // Match SwiftUI: Load from UserDefaults only if operator has not been changed (onAppear case)
+        // Load from UserDefaults only if operator has not been changed (onAppear case)
         val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode }
         if (dataSource != null && dataSource.apiType() == ODPTAPIType.GTFS && !isChangedOperator.value) {
             // For GTFS operators, load from SharedPreferences only if operator has not been changed (onAppear case)
-            // Match SwiftUI: searchData = loadOperatorLineList(...) ?? []
             searchData = _selectedGoorback.value.loadOperatorLineList(_selectedLineNumber.value - 1, sharedPreferences) ?: emptyList()
             android.util.Log.d("SettingsLineViewModel", "🚌 filterLine: GTFS operator - loaded ${searchData.size} lines from SharedPreferences (onAppear case)")
         }
@@ -1234,7 +1270,7 @@ class SettingsLineViewModel(
         android.util.Log.d("SettingsLineViewModel", "filterOperators called: q='$q', isFocused=$isFocused, isOperatorFieldFocused=${isOperatorFieldFocused.value}, operatorSelected=${operatorSelected.value}")
         
         // Don't show suggestions if line number or direction is being changed or operator is already selected
-        // This matches SwiftUI implementation: if isLineNumberChanging || isGoorBackChanging || operatorSelected { return }
+        // Don't show suggestions if line number or direction is being changed or line is already selected
         if (isLineNumberChanging.value || isGoorBackChanging.value || operatorSelected.value) {
             android.util.Log.d("SettingsLineViewModel", "filterOperators: Early return - isLineNumberChanging=${isLineNumberChanging.value}, isGoorBackChanging=${isGoorBackChanging.value}, operatorSelected=${operatorSelected.value}")
             return@withContext
@@ -1245,7 +1281,6 @@ class SettingsLineViewModel(
         android.util.Log.d("SettingsLineViewModel", "filterOperators: fieldIsFocused=$fieldIsFocused, selectedTransportationKind=${selectedTransportationKind.value}")
         
         // Get available operators filtered by transportation kind (railway or bus)
-        // SwiftUI: let availableDataSources = LocalDataSource.allCases.filter { ... }
         val availableDataSources = LocalDataSource.entries
             .filter { dataSource ->
                 dataSource.transportationType() == selectedTransportationKind.value.toTransportationKind() &&
@@ -1255,7 +1290,6 @@ class SettingsLineViewModel(
         android.util.Log.d("SettingsLineViewModel", "filterOperators: availableDataSources count=${availableDataSources.size}")
         
         // Create array of (dataSource, operatorDisplayName) tuples to maintain enum order
-        // SwiftUI: let availableOperatorsWithSource = availableDataSources.compactMap { ... }
         val availableOperatorsWithSource = availableDataSources.mapNotNull { dataSource ->
             dataSource.operatorCode()?.let { operatorCode ->
                 Pair(dataSource, dataSource.operatorDisplayName(getApplication()))
@@ -1268,10 +1302,8 @@ class SettingsLineViewModel(
         }
         
         // Filter operators based on search query
-        // SwiftUI: let filtered: [(LocalDataSource, String)] = if t.isEmpty { ... } else { ... }
         val filtered = if (t.isEmpty()) {
             // If query is empty, show all operators when field is focused (maintain enum order)
-            // SwiftUI: if isOperatorFieldFocused { filtered = availableOperatorsWithSource } else { return }
             if (fieldIsFocused) {
                 // When field is focused and query is empty, always show all operators
                 android.util.Log.d("SettingsLineViewModel", "filterOperators: Query is empty and field is focused, showing all operators")
@@ -1315,9 +1347,7 @@ class SettingsLineViewModel(
         }
         
         // Display in enum order (no reversal)
-        // SwiftUI: operatorSuggestions = Array(sortedResults.prefix(20))
         operatorSuggestions.value = sortedResults.take(20)
-        // SwiftUI: showOperatorSuggestions = isOperatorFieldFocused && !operatorSuggestions.isEmpty
         showOperatorSuggestions.value = fieldIsFocused && operatorSuggestions.value.isNotEmpty()
         
         android.util.Log.d("SettingsLineViewModel", "filterOperators: Final results - operatorSuggestions count=${operatorSuggestions.value.size}, showOperatorSuggestions=${showOperatorSuggestions.value}")
@@ -1473,7 +1503,6 @@ class SettingsLineViewModel(
     // Process operator input changes and trigger search/filter
     suspend fun processOperatorInput(newValue: String) = withContext(Dispatchers.Main) {
         // Don't reset operator selection if line number or direction is being changed
-        // Match SwiftUI: if isLineNumberChanging || isGoorBackChanging { return }
         if (isLineNumberChanging.value || isGoorBackChanging.value) return@withContext
         
         // Get current selected operator name for comparison before updating
@@ -1568,13 +1597,12 @@ class SettingsLineViewModel(
     }
     
     // Process line input changes and trigger search/filter
-    // Match SwiftUI: filterLine is called first, then lineInput is updated via binding
+    // filterLine is called first, then lineInput is updated via binding
     fun processLineInput(newValue: String) {
         // Don't reset station selection if line number or direction is being changed
-        // Match SwiftUI: if isLineNumberChanging || isGoorBackChanging { return }
         if (isLineNumberChanging.value || isGoorBackChanging.value) return
         
-        // Trigger filtering when lineInput changes (match SwiftUI: filterLine is called first)
+        // Trigger filtering when lineInput changes
         // Only show suggestions if operator is selected from dropdown
         viewModelScope.launch {
             filterLine(newValue, isFocused = isLineFieldFocused.value)
@@ -1603,7 +1631,7 @@ class SettingsLineViewModel(
             lineSelected.value = false
         }
         
-        // Update lineInput value (match SwiftUI: lineInput is updated via binding, but we need to set it explicitly)
+        // Update lineInput value
         lineInput.value = newValue
         
         // Show station selection UI for custom line input
@@ -1680,7 +1708,7 @@ class SettingsLineViewModel(
                 }
             }
         } else {
-            // For railway lines, SwiftUI: Use odpt:stationOrder from Railway JSON
+            // For railway lines: use odpt:stationOrder from Railway JSON
             // TrainTimetable API is only used for timetable generation, not for station list
             lineBusStops.value = emptyList()
             
@@ -1830,14 +1858,14 @@ class SettingsLineViewModel(
         showStationSelection.value = false
         
         // Clear operator suggestions and reset operator selection when switching transportation kind
-        // Match SwiftUI: operatorInput and lineInput are kept, but operatorSelected and selectedOperatorCode are reset
+        // operatorInput and lineInput are kept, but operatorSelected and selectedOperatorCode are reset
         operatorSuggestions.value = emptyList()
         showOperatorSuggestions.value = false
         operatorSelected.value = false
         selectedOperatorCode.value = null
         
         // Reset line selection state when switching transportation kind
-        // Match SwiftUI: lineInput is kept, but lineSelected and selectedLine are reset
+        // lineInput is kept, but lineSelected and selectedLine are reset
         lineSelected.value = false
         _selectedLine.value = null
         
@@ -1855,13 +1883,13 @@ class SettingsLineViewModel(
             }
             
             // Re-filter existing data if line input exists
-            // Match SwiftUI: re-filter line suggestions if lineInput is not empty
+            // Re-filter line suggestions if lineInput is not empty
             if (lineInput.value.isNotEmpty() && lineInput.value.trim().isNotEmpty()) {
                 filterLine(lineInput.value, isFocused = isLineFieldFocused.value)
             }
             
             // Re-filter operator suggestions if operator input exists
-            // Match SwiftUI: re-filter operator suggestions if operatorInput is not empty
+            // Re-filter operator suggestions if operatorInput is not empty
             if (operatorInput.value.isNotEmpty() && operatorInput.value.trim().isNotEmpty()) {
                 filterOperators(operatorInput.value, isFocused = isOperatorFieldFocused.value)
             }
@@ -1907,7 +1935,7 @@ class SettingsLineViewModel(
             all = all.filter { it.operatorCode != dataSource.operatorCode() } + gtfsLines
             allData = all.filter { it.operatorCode != dataSource.operatorCode() } + gtfsLines
             
-            // Update lineSuggestions with fetched lines (match SwiftUI behavior)
+            // Update lineSuggestions with fetched lines
             // Filter by selected operator
             val expectedOperatorCode = dataSource.operatorCode()
             android.util.Log.d("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: Filtering lines by operatorCode=$expectedOperatorCode")
@@ -2137,7 +2165,7 @@ class SettingsLineViewModel(
             // Save transfer settings and calculate transfer count
             val changeLineKey = _selectedGoorback.value.changeLineKey()
             val transportationKey = _selectedGoorback.value.transportationKey(lineIndex + 2)
-            val currentChangeLine = sharedPreferences.getInt(changeLineKey, 0)
+            val currentChangeLine = changeLineKey.userDefaultsInt(sharedPreferences, 0)
             val currentTransportation = sharedPreferences.getString(transportationKey, null)
 
             if (currentTransportation != "none" && selectedTransportation.value == "none") {
@@ -2210,7 +2238,7 @@ class SettingsLineViewModel(
         
         saveAllDataToUserDefaults()
         
-        // Post notification to update MainContentView (same as SwiftUI's NotificationCenter.post)
+        // Post notification to update MainContentView
         // Use SharedPreferences to trigger OnSharedPreferenceChangeListener
         sharedPreferences.edit {
             putLong("SettingsLineUpdated", System.currentTimeMillis())

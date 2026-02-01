@@ -18,7 +18,8 @@ import kotlinx.coroutines.tasks.await
 // MARK: - Authentication View Model
 // Handles user authentication, registration, and account management
 class LoginViewModel(private val context: Context) : ViewModel() {
-    private val auth = FirebaseAuth.getInstance()
+    // Lazy init so Firebase Auth is not touched at ViewModel creation (avoids crash on DEVELOPER_ERROR at app start)
+    private val auth by lazy { FirebaseAuth.getInstance() }
     private val sharedPreferences: SharedPreferences = context.getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE)
     
     // MARK: - State Variables

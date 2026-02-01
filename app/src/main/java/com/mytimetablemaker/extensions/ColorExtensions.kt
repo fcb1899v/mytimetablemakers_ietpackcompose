@@ -9,7 +9,6 @@ import androidx.core.graphics.toColorInt
 
 // MARK: - Color Extensions
 // Extensions for color management and hex color support
-// Matches SwiftUI ColorExtensions structure
 
 // MARK: - Hex Color Initializer
 // Initialize color from hex integer value
@@ -154,10 +153,8 @@ val DisplayTrainType.color: Color
 
 // MARK: - CustomColor Extensions
 // Extensions for CustomColor enum to provide RGB color values
-// Matches SwiftUI CustomColor extension structure
 
 // Convert RGB string to Color object
-// Matches SwiftUI: var color: Color { return Color(hex: self.RGB) ?? .gray }
 val CustomColor.color: Color
     get() = run {
         val rgbString = this.RGB
@@ -178,7 +175,6 @@ val CustomColor.color: Color
     }
 
 // Hex color values for each custom color
-// Matches SwiftUI CustomColor.RGB property
 val CustomColor.RGB: String
     get() = when (this) {
         CustomColor.RED -> "#E60012"
@@ -209,7 +205,6 @@ val CustomColor.RGB: String
 
 // Resource name for localization
 // Converts rawValue to string resource name format (camelCase)
-// Matches SwiftUI color.rawValue.localized resource name format
 val CustomColor.resourceName: String
     get() = when (this) {
         CustomColor.PRIMARY -> "indigo"

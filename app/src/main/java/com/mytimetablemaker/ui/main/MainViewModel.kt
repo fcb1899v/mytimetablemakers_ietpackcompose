@@ -44,7 +44,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         private set
     
     // Route visibility settings with SharedPreferences persistence
-    // Match SwiftUI: separate flags for back and go routes
+    // Separate flags for back and go routes
     var isShowBackRoute2 by mutableStateOf(false)
         private set
     var isShowGoRoute2 by mutableStateOf(false)
@@ -147,7 +147,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     // Updates route visibility settings from SharedPreferences
-    // Match SwiftUI: update both back and go route flags
+    // Update both back and go route flags
     fun setRoute2() {
         isShowBackRoute2 = "back2".isShowRoute2(sharedPreferences)
         isShowGoRoute2 = "go2".isShowRoute2(sharedPreferences)
@@ -190,7 +190,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     // MARK: - SharedPreferences Persistence
     // Save route visibility settings to SharedPreferences
-    // Match SwiftUI: save both back and go route flags
+    // Save both back and go route flags
     fun saveRoute2Settings() {
         sharedPreferences.edit {
             putBoolean("back2".isShowRoute2Key(), isShowBackRoute2)

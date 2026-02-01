@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -24,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -38,7 +40,6 @@ import java.util.*
 
 // MARK: - Timetable Content Screen
 // Main timetable editing screen with grid view
-// Matches SwiftUI TimetableContentView structure
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableContentScreen(
@@ -68,7 +69,7 @@ fun TimetableContentScreen(
     
     // Scroll view height for dynamic sizing
     var scrollViewHeight by remember { mutableStateOf(0.dp) }
-    
+
     // MARK: - Helper Functions
     
     // Get display name (split by ":" and return first component for ODPT format)
@@ -81,6 +82,11 @@ fun TimetableContentScreen(
     // This is called when calendar type changes or timetable data is updated
     fun updateValidHours() {
         validHours = goorback.validHourRange(selectedCalendarType, num, sharedPreferences)
+    }
+
+    // Update valid hours for a specific calendar type (use when selecting from dropdown so the new type is applied immediately)
+    fun updateValidHours(newCalendarType: ODPTCalendarType) {
+        validHours = goorback.validHourRange(newCalendarType, num, sharedPreferences)
     }
     
     // Sort calendar types according to enum definition order
@@ -142,7 +148,6 @@ fun TimetableContentScreen(
     // MARK: - Initialization
     LaunchedEffect(Unit) {
         // Load available calendar types from cache or use default
-        // Match SwiftUI: let loadedTypes = goorback.loadAvailableCalendarTypes(num: num)
         val loadedTypesString = goorback.loadAvailableCalendarTypes(sharedPreferences, num)
         
         // loadedTypesString already contains full rawValue (e.g., "odpt.Calendar:Weekday")
@@ -152,16 +157,13 @@ fun TimetableContentScreen(
         }
         
         // Sort calendar types according to enum definition order
-        // Match SwiftUI: availableCalendarTypes = sortCalendarTypesByEnumOrder(loadedTypes)
         availableCalendarTypes = sortCalendarTypesByEnumOrder(loadedTypes)
         
         // Set selectedCalendarType based on current date with fallback to available types
-        // Match SwiftUI: selectedCalendarType = Date().odpTCalendarType(fallbackTo: availableCalendarTypes)
         val currentDate = Date()
         selectedCalendarType = currentDate.odptCalendarType(fallbackTo = availableCalendarTypes)
         
         // Check if data exists for the selected calendar type, if not, try other available types
-        // Match SwiftUI: if !goorback.hasTimetableDataForType(selectedCalendarType, num: num) { ... }
         if (!goorback.hasTimetableDataForType(selectedCalendarType, num, sharedPreferences)) {
             for (calendarType in availableCalendarTypes) {
                 if (goorback.hasTimetableDataForType(calendarType, num, sharedPreferences)) {
@@ -172,11 +174,9 @@ fun TimetableContentScreen(
         }
         
         // Initialize valid hours
-        // Match SwiftUI: updateValidHours()
         updateValidHours()
         
         // Rebuild train type list from existing data if not exists
-        // Match SwiftUI: rebuildTrainTypeListIfNeeded()
         rebuildTrainTypeListIfNeeded()
     }
     
@@ -189,7 +189,7 @@ fun TimetableContentScreen(
     // MARK: - Main Content
     Scaffold(
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
                         text = stringResource(R.string.timetableRidingTime),
@@ -256,10 +256,8 @@ fun TimetableContentScreen(
                     Row(
                         modifier = Modifier
                             .width(ScreenSize.customWidth())
-                            .height(ScreenSize.timetableGridHeight())
+                            .height(ScreenSize.timetableGridHeaderHeight())
                             .background(Black.copy(alpha = 0.5f)),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
@@ -269,27 +267,28 @@ fun TimetableContentScreen(
                         )
                         
                         Spacer(modifier = Modifier.weight(1f))
-                        
-                        Button(
-                            onClick = { isCalendarTypeDropdownOpen = !isCalendarTypeDropdownOpen },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Transparent,
-                                contentColor = Color.Unspecified
-                            ),
-                            modifier = Modifier.wrapContentSize()
+
+                        Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable(
+                                    role = androidx.compose.ui.semantics.Role.Button,
+                                    onClick = { isCalendarTypeDropdownOpen = !isCalendarTypeDropdownOpen }
+                                ),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(
                                 modifier = Modifier
                                     .padding(
-                                        horizontal = ScreenSize.settingsSheetInputPaddingHorizontal(),
-                                        vertical = ScreenSize.settingsSheetInputPaddingVertical()
+                                        vertical = ScreenSize.settingsSheetInputPaddingVertical(),
+                                        horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
                                     )
                                     .background(
                                         color = Gray.copy(alpha = 0.1f),
                                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                                     ),
-                                horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
-                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = selectedCalendarType.displayName(context),
@@ -309,9 +308,9 @@ fun TimetableContentScreen(
                                 )
                             }
                         }
-                        
+
                         Spacer(modifier = Modifier.weight(1f))
-                        
+
                         Box(
                             modifier = Modifier
                                 .width(ScreenSize.borderWidth())
@@ -329,43 +328,43 @@ fun TimetableContentScreen(
                     )
                     
                     // Timetable grid scroll view
-                    // Match SwiftUI ScrollView implementation
-                    Column(
-                        modifier = Modifier
-                            .width(ScreenSize.customWidth())
-                            .height(
-                                if (scrollViewHeight > 0.dp) {
-                                    minOf(scrollViewHeight, ScreenSize.timetableMaxHeight())
-                                } else {
-                                    ScreenSize.timetableMaxHeight()
-                                }
-                            )
-                            .verticalScroll(rememberScrollState())
-                            .background(Black.copy(alpha = 0.25f))
-                            .onGloballyPositioned { coordinates ->
-                                scrollViewHeight = with(density) { coordinates.size.height.toDp() }
-                            },
-                        verticalArrangement = Arrangement.spacedBy(0.dp)
-                    ) {
-                        validHours.forEach { hour ->
-                            TimetableGridView(
-                                goorback = goorback,
-                                num = num,
-                                hour = hour,
-                                selectedCalendarType = selectedCalendarType,
-                                sharedPreferences = sharedPreferences,
-                                onShowSheet = { hourValue ->
-                                    showingTimetableSheetHour = hourValue
-                                }
-                            )
-                            
-                            // Divider
-                            Box(
-                                modifier = Modifier
-                                    .width(ScreenSize.customWidth())
-                                    .height(ScreenSize.borderWidth())
-                                    .background(White)
-                            )
+                    key(selectedCalendarType.rawValue) {
+                        Column(
+                            modifier = Modifier
+                                .width(ScreenSize.customWidth())
+                                .height(
+                                    if (scrollViewHeight > 0.dp) {
+                                        minOf(scrollViewHeight, ScreenSize.timetableMaxHeight())
+                                    } else {
+                                        ScreenSize.timetableMaxHeight()
+                                    }
+                                )
+                                .verticalScroll(rememberScrollState())
+                                .background(Black.copy(alpha = 0.25f))
+                                .onGloballyPositioned { coordinates ->
+                                    scrollViewHeight = with(density) { coordinates.size.height.toDp() }
+                                },
+                            verticalArrangement = Arrangement.spacedBy(0.dp)
+                        ) {
+                            validHours.forEach { hour ->
+                                TimetableGridView(
+                                    goorback = goorback,
+                                    num = num,
+                                    hour = hour,
+                                    selectedCalendarType = selectedCalendarType,
+                                    sharedPreferences = sharedPreferences,
+                                    onShowSheet = { hourValue ->
+                                        showingTimetableSheetHour = hourValue
+                                    }
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .width(ScreenSize.customWidth())
+                                        .height(ScreenSize.borderWidth())
+                                        .background(White)
+                                )
+                            }
                         }
                     }
                     
@@ -400,9 +399,9 @@ fun TimetableContentScreen(
                     availableCalendarTypes = availableCalendarTypes,
                     onCalendarTypeSelected = { calendarType ->
                         selectedCalendarType = calendarType
-                        isCalendarTypeDropdownOpen = false
-                        updateValidHours()
+                        updateValidHours(calendarType)
                         rebuildTrainTypeListIfNeeded()
+                        isCalendarTypeDropdownOpen = false
                     },
                     onDismiss = { isCalendarTypeDropdownOpen = false },
                     modifier = Modifier
@@ -442,7 +441,6 @@ private fun TimetableGridView(
     sharedPreferences: SharedPreferences,
     onShowSheet: (Int) -> Unit
 ) {
-    // Load transportation times for this hour
     val transportationTimes = goorback.loadTransportationTimes(
         selectedCalendarType,
         num,
@@ -472,9 +470,7 @@ private fun TimetableGridView(
                         .fillMaxHeight()
                         .background(White)
                 )
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
+
                 Text(
                     text = hour.addZeroTime(),
                     fontSize = ScreenSize.timetableHourFontSize().value.sp,
@@ -485,9 +481,7 @@ private fun TimetableGridView(
                         .weight(1f)
                         .wrapContentSize(Alignment.Center)
                 )
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
+
                 Box(
                     modifier = Modifier
                         .width(1.dp)
@@ -504,6 +498,8 @@ private fun TimetableGridView(
                 containerColor = Color.Transparent,
                 contentColor = Color.Unspecified
             ),
+            contentPadding = PaddingValues(0.dp),
+            shape = RoundedCornerShape(0.dp),
             modifier = Modifier
                 .width(ScreenSize.timetableMinuteFrameWidth())
                 .height(ScreenSize.calculateContentHeight(transportationTimes.size))
@@ -530,26 +526,30 @@ private fun TimetableGridContent(
     transportationTimes: List<TransportationTime>,
     modifier: Modifier = Modifier
 ) {
-    // Calculate grid layout: 10 items per row with fixed width
-    val availableWidth = ScreenSize.timetableMinuteFrameWidth().value - (ScreenSize.timetableMinuteSpacing().value * 2)
+    val horizontalPadding = ScreenSize.timetableGridContentPaddingHorizontal()
+    val topPadding = ScreenSize.timetableGridContentPaddingTop()
+    val bottomPadding = ScreenSize.timetableGridContentPaddingBottom()
+    val contentWidth = ScreenSize.timetableMinuteFrameWidth() - horizontalPadding * 2
     val itemsPerRow = 10
-    val itemWidth = availableWidth / itemsPerRow
-    
+    val itemWidth = contentWidth.value / itemsPerRow
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(itemsPerRow),
+        contentPadding = PaddingValues(
+            start = horizontalPadding,
+            end = horizontalPadding,
+            top = topPadding,
+            bottom = bottomPadding
+        ),
         modifier = modifier
             .width(ScreenSize.timetableMinuteFrameWidth())
-            .padding(horizontal = ScreenSize.timetableMinuteSpacing()),
-        horizontalArrangement = Arrangement.spacedBy(0.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+            .fillMaxSize(),
     ) {
         itemsIndexed(transportationTimes) { index, transportationTime ->
             Row(
                 modifier = Modifier
                     .width(itemWidth.dp)
                     .height(ScreenSize.timetableNumberHeight()),
-                horizontalArrangement = Arrangement.spacedBy(0.dp),
-                verticalAlignment = Alignment.CenterVertically
             ) {
                 val trainType = (transportationTime as? TrainTime)?.trainType
                 Text(
@@ -557,15 +557,17 @@ private fun TimetableGridContent(
                     fontSize = ScreenSize.timetableMinuteFontSize().value.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colorForTrainType(trainType),
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
-                
                 Text(
                     text = "(${transportationTime.rideTime})",
                     fontSize = ScreenSize.timetableRideTimeFontSize().value.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = White,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -593,9 +595,10 @@ private fun CalendarTypeDropdownView(
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         availableCalendarTypes.forEachIndexed { index, calendarType ->
+            val selectedType = calendarType
             Button(
                 onClick = {
-                    onCalendarTypeSelected(calendarType)
+                    onCalendarTypeSelected(selectedType)
                 },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent,
@@ -614,10 +617,10 @@ private fun CalendarTypeDropdownView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = calendarType.displayName(context),
+                        text = selectedType.displayName(context),
                         fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = calendarType.calendarSubColor,
+                        color = selectedType.calendarSubColor,
                         maxLines = 1
                     )
                 }
@@ -655,7 +658,7 @@ private fun ColorLegendView(
         color.priorityValue
     }
     
-    // TODO: Implement row-based layout for color legend (matching SwiftUI createRows function)
+    // TODO: Implement row-based layout for color legend
     // For now, display in a simple column
     Column(
         modifier = modifier

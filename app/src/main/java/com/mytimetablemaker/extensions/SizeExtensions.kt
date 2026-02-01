@@ -10,11 +10,10 @@ import androidx.compose.ui.unit.dp
 
 // MARK: - Screen Size Extensions
 // Screen dimensions and responsive sizing calculations
-// Matches SwiftUI SizeExtensions structure
 object ScreenSize {
     
     // MARK: - Basic Screen Properties
-    // Use LocalConfiguration for actual screen size (matches SwiftUI UIScreen.main.bounds)
+    // Use LocalConfiguration for actual screen size
     // Note: LocalWindowInfo.containerSize is window/container size, not screen size
     @Composable
     fun screenWidth(): Dp = LocalConfiguration.current.screenWidthDp.dp
@@ -143,11 +142,21 @@ object ScreenSize {
     @Composable
     fun timetableMinuteSpacing(): Dp = customWidth() * 0.008f
     @Composable
-    fun timetableHorizontalSpacing(): Dp = customWidth() * 0.04f
+    fun timetableGridContentPaddingHorizontal(): Dp = customWidth() * 0.012f
     @Composable
-    fun timetableHourFrameWidth(): Dp = customWidth() * 0.1f
+    fun timetableGridContentPaddingTop(): Dp = screenHeight() * 0.002f
     @Composable
-    fun timetableMinuteFrameWidth(): Dp = customWidth() - timetableHourFrameWidth() - 1.0.dp
+    fun timetableGridContentPaddingBottom(): Dp = screenHeight() * 0.005f
+    @Composable
+    fun timetableHorizontalSpacing(): Dp = customWidth() * 0.02f
+    @Composable
+    fun timetableCalendarTypeSelectorPaddingVertical(): Dp = screenHeight() * 0.002f
+    @Composable
+    fun timetableCalendarTypeSelectorPaddingHorizontal(): Dp = customWidth() * 0.015f
+    @Composable
+    fun timetableHourFrameWidth(): Dp = customWidth() * 0.08f
+    @Composable
+    fun timetableMinuteFrameWidth(): Dp = customWidth() - timetableHourFrameWidth() - 2.0.dp
     @Composable
     fun timetableTypeMenuWidth(): Dp = customWidth() * 0.50f
     @Composable
@@ -157,9 +166,17 @@ object ScreenSize {
     @Composable
     fun timetableTypeMenuOffsetX(): Dp = customWidth() * 0.00f
     @Composable
-    fun timetableNumberHeight(): Dp = screenHeight() * 0.018f
+    fun timetableNumberHeight(): Dp = screenHeight() * 0.02f
     @Composable
-    fun timetableGridHeight(): Dp = screenHeight() * 0.024f
+    fun timetableGridHeight(): Dp = screenHeight() * 0.026f
+    @Composable
+    fun timetableGridHeaderHeight(): Dp = screenHeight() * 0.030f
+    @Composable
+    fun calculateContentHeight(trainTimesCount: Int): Dp {
+        val itemsPerRow = 10
+        val addRowCount = (trainTimesCount - 1) / itemsPerRow
+        return screenHeight() * 0.026f + timetableNumberHeight() * addRowCount
+    }
     @Composable
     fun timetableDisplayHeight(): Dp = screenHeight() * 0.06f
     @Composable
@@ -180,15 +197,14 @@ object ScreenSize {
     fun timetablePickerBottomPadding(): Dp = screenHeight() * 0.000f
     @Composable
     fun settingsTimetableSheetHeight(): Dp = screenHeight() * 0.6f
-    @Composable
-    fun calculateContentHeight(trainTimesCount: Int): Dp =
-        if (trainTimesCount > 10) timetableNumberHeight() * (trainTimesCount + 9) / 10 else timetableGridHeight()
 
     // MARK: - Settings
     @Composable
-    fun settingsTitleFontSize(): Dp = screenHeight() * 0.020f
+    fun settingsTitleFontSize(): Dp = screenHeight() * 0.022f
     @Composable
     fun settingsHeaderFontSize(): Dp = screenHeight() * 0.016f
+    @Composable
+    fun settingsHeaderPadding(): Dp = screenHeight() * 0.01f
     @Composable
     fun settingsHeaderIconSize(): Dp = screenHeight() * 0.020f
     @Composable
@@ -204,11 +220,11 @@ object ScreenSize {
     @Composable
     fun settingsSheetHorizontalSpacing(): Dp = customWidth() * 0.02f
     @Composable
-    fun settingsSheetTitleFontSize(): Dp = customWidth() * 0.038f
+    fun settingsSheetTitleFontSize(): Dp = customWidth() * 0.036f
     @Composable
     fun settingsSheetHeadlineFontSize(): Dp = customWidth() * 0.030f
     @Composable
-    fun settingsSheetInputFontSize(): Dp = customWidth() * 0.034f
+    fun settingsSheetInputFontSize(): Dp = customWidth() * 0.036f
     @Composable
     fun settingsSheetButtonFontSize(): Dp = customWidth() * 0.036f
     @Composable
@@ -232,7 +248,7 @@ object ScreenSize {
     @Composable
     fun settingsSheetPickerSpacing(): Dp = customWidth() * 0.01f
     @Composable
-    fun settingsSheetInputPaddingVertical(): Dp = screenHeight() * 0.008f
+    fun settingsSheetInputPaddingVertical(): Dp = screenHeight() * 0.002f
     @Composable
     fun settingsSheetCornerRadius(): Dp = screenHeight() * 0.015f
     @Composable
@@ -302,11 +318,11 @@ object ScreenSize {
     @Composable
     fun alertDialogContentPadding(): Dp = customWidth() * 0.04f
     @Composable
-    fun alertDialogTitleFontSize(): Dp = customWidth() * 0.042f
+    fun alertDialogTitleFontSize(): Dp = customWidth() * 0.036f
     @Composable
-    fun alertDialogTextFontSize(): Dp = customWidth() * 0.034f
+    fun alertDialogTextFontSize(): Dp = customWidth() * 0.033f
     @Composable
-    fun alertDialogButtonFontSize(): Dp = customWidth() * 0.036f
+    fun alertDialogButtonFontSize(): Dp = customWidth() * 0.033f
 
     // MARK: - Custom Component
     @Composable

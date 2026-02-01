@@ -607,6 +607,46 @@ enum class DisplayTrainType(val rawValue: String) {
     companion object {
         val allCases = entries
     }
+    
+    // Localized display name for UI (ODPT train type string resolution uses rawValue match)
+    fun displayName(context: Context): String = when (this) {
+        DEFAULT_LOCAL -> context.getString(R.string.local)
+        DEFAULT_EXPRESS -> context.getString(R.string.express)
+        DEFAULT_RAPID -> context.getString(R.string.rapid)
+        DEFAULT_SPECIAL_RAPID -> context.getString(R.string.specialRapid)
+        DEFAULT_LIMITED_EXPRESS -> context.getString(R.string.limitedExpress)
+        LOCAL -> context.getString(R.string.local)
+        RAPID -> context.getString(R.string.rapid)
+        SEMI_EXPRESS -> context.getString(R.string.semiExpress)
+        EXPRESS -> context.getString(R.string.express)
+        COMMUTER_EXPRESS -> context.getString(R.string.commuterExpress)
+        COMMUTER_SEMI_EXPRESS -> context.getString(R.string.commuterSemiExpress)
+        COMMUTER_RAPID -> context.getString(R.string.commuterRapid)
+        COMMUTER_LIMITED_EXPRESS -> context.getString(R.string.commuterLimitedExpress)
+        RAPID_EXPRESS -> context.getString(R.string.rapidExpress)
+        RAPID_LIMITED_EXPRESS -> context.getString(R.string.rapidLimitedExpress)
+        LIMITED_EXPRESS -> context.getString(R.string.limitedExpress)
+        ACCESS_EXPRESS -> context.getString(R.string.accessExpress)
+        AIRPORT_RAPID_LIMITED_EXPRESS -> context.getString(R.string.airportRapidLimitedExpress)
+        KAWAGOE_LIMITED_EXPRESS -> context.getString(R.string.kawagoeLimitedExpress)
+        SPECIAL_RAPID -> context.getString(R.string.specialRapid)
+        COMMUTER_SPECIAL_RAPID -> context.getString(R.string.commuterSpecialRapid)
+        CHUO_SPECIAL_RAPID -> context.getString(R.string.chuoSpecialRapid)
+        OME_SPECIAL_RAPID -> context.getString(R.string.omeSpecialRapid)
+        SECTION_EXPRESS -> context.getString(R.string.sectionExpress)
+        SECTION_SEMI_EXPRESS -> context.getString(R.string.sectionSemiExpress)
+        SEMI_RAPID -> context.getString(R.string.semiRapid)
+        LINER -> context.getString(R.string.liner)
+        F_LINER -> context.getString(R.string.fLiner)
+        TH_LINER -> context.getString(R.string.thLiner)
+        TJ_LINER -> context.getString(R.string.tjLiner)
+        HAIJIMA_LINER -> context.getString(R.string.haijimaLiner)
+        S_TRAIN -> context.getString(R.string.sTrain)
+        SL_TAIJU -> context.getString(R.string.slTaiju)
+        EVENING_WING -> context.getString(R.string.eveningWing)
+        MORNING_WING -> context.getString(R.string.morningWing)
+        UNKNOWN -> rawValue
+    }
 }
 
 // MARK: - ODPT Error Types
@@ -833,6 +873,17 @@ enum class ODPTAPIType {
     PUBLIC_API,  // Public API without access key
     CHALLENGE,   // Challenge API with challenge key
     GTFS         // No API (Use GTFS Data)
+}
+
+// Get localized display name for ODPT train type string (e.g. "odpt.TrainType:JR-East.ChuoSpecialRapid")
+fun getTrainTypeDisplayName(trainType: String, context: Context): String {
+    val parts = trainType.split(".")
+    if (parts.size >= 3) {
+        val resourceName = parts[2].replaceFirstChar { it.lowercaseChar() }
+        val displayType = DisplayTrainType.entries.firstOrNull { it.rawValue.replaceFirstChar { c -> c.lowercaseChar() } == resourceName }
+        return displayType?.displayName(context) ?: trainType
+    }
+    return trainType
 }
 
 // MARK: - Transfer Type Enumeration

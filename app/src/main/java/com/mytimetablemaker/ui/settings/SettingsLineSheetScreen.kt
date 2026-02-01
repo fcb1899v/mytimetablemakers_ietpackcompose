@@ -121,22 +121,9 @@ fun SettingsLineSheetScreen(
     val selectedDepartureStop by viewModel.selectedDepartureStopState.collectAsState()
     val selectedArrivalStop by viewModel.selectedArrivalStopState.collectAsState()
     
-    // Calculate isAllNotEmpty and isAllSelected directly from state values
-    // This ensures the UI updates when any of the dependencies change
-    val isAllNotEmpty by remember(operatorSelected, selectedLine, selectedDepartureStop, selectedArrivalStop, selectedRideTime) {
-        derivedStateOf {
-            val hasTimetableSupport = viewModel.hasTimetableSupport()
-            
-            val result = operatorSelected &&
-            selectedLine != null &&
-            selectedDepartureStop != null &&
-            selectedArrivalStop != null &&
-            (hasTimetableSupport || selectedRideTime > 0)
-            
-            android.util.Log.d("SettingsLineSheetScreen", "isAllNotEmpty: operatorSelected=$operatorSelected, selectedLine=${selectedLine != null}, selectedDepartureStop=${selectedDepartureStop != null}, selectedArrivalStop=${selectedArrivalStop != null}, hasTimetableSupport=$hasTimetableSupport, selectedRideTime=$selectedRideTime, result=$result")
-            
-            result
-        }
+    // Single source of truth: use ViewModel.isAllNotEmpty (four inputs + ride time > 0); recompose when any input or ride time changes
+    val isAllNotEmpty by remember(operatorInput, lineInput, departureStopInput, arrivalStopInput, selectedRideTime) {
+        derivedStateOf { viewModel.isAllNotEmpty }
     }
     
     val isAllSelected by remember(operatorSelected, selectedLine, selectedDepartureStop, selectedArrivalStop) {
@@ -271,8 +258,7 @@ fun SettingsLineSheetScreen(
                         android.util.Log.d("SettingsLineSheetScreen", "onFocusChanged: isFocused=$isFocused, operatorInput='$operatorInput', operatorSelected=${viewModel.operatorSelected.value}, isLineNumberChanging=${viewModel.isLineNumberChanging.value}, isGoorBackChanging=${viewModel.isGoorBackChanging.value}, showOperatorSuggestions=${viewModel.showOperatorSuggestions.value}")
                         viewModel.isOperatorFieldFocused.value = isFocused
                         if (isFocused) {
-                            // Show all operators when field is focused and operator input is empty (matches SwiftUI behavior)
-                            // SwiftUI: if vm.operatorInput.isEmpty { Task { await vm.filterOperators("") } }
+                            // Show all operators when field is focused and operator input is empty
                             // Reset operatorSelected, isLineNumberChanging, and isGoorBackChanging to allow showing all operators when field is focused
                             // This is necessary because filterOperators returns early if operatorSelected, isLineNumberChanging, or isGoorBackChanging is true
                             viewModel.operatorSelected.value = false
@@ -302,8 +288,7 @@ fun SettingsLineSheetScreen(
                                 // Request focus immediately when lost (no delay needed)
                                 operatorFocusRequester.requestFocus()
                             } else {
-                                // Hide suggestions when field loses focus (matches SwiftUI behavior)
-                                // SwiftUI: vm.showOperatorSuggestions = false
+                                // Hide suggestions when field loses focus
                                 viewModel.showOperatorSuggestions.value = false
                             }
                         }
@@ -393,7 +378,6 @@ fun SettingsLineSheetScreen(
                         viewModel.isLineFieldFocused.value = isFocused
                         if (isFocused) {
                             // Show line suggestions when field is focused, operator is selected, and line input is empty
-                            // Match SwiftUI: if vm.selectedOperatorCode != nil && vm.operatorSelected && vm.lineInput.isEmpty
                             // Reset isLineNumberChanging, isGoorBackChanging, and lineSelected to allow showing suggestions when field is focused
                             viewModel.isLineNumberChanging.value = false
                             viewModel.isGoorBackChanging.value = false
@@ -401,7 +385,6 @@ fun SettingsLineSheetScreen(
                             android.util.Log.d("SettingsLineSheetScreen", "LineInput onFocusChanged: After reset - isLineNumberChanging=${viewModel.isLineNumberChanging.value}, isGoorBackChanging=${viewModel.isGoorBackChanging.value}, lineSelected=${viewModel.lineSelected.value}")
                             
                             // Show all lines when field is focused and operator is selected
-                            // Match SwiftUI: if vm.selectedOperatorCode != nil && vm.operatorSelected && vm.lineInput.isEmpty
                             if (viewModel.selectedOperatorCode.value != null && viewModel.operatorSelected.value && lineInput.isEmpty()) {
                                 android.util.Log.d("SettingsLineSheetScreen", "LineInput onFocusChanged: Calling filterLine(\"\") with empty input, isFocused=true")
                                 CoroutineScope(Dispatchers.Main).launch {
@@ -411,8 +394,7 @@ fun SettingsLineSheetScreen(
                                 android.util.Log.d("SettingsLineSheetScreen", "LineInput onFocusChanged: Conditions not met - selectedOperatorCode=${viewModel.selectedOperatorCode.value}, operatorSelected=${viewModel.operatorSelected.value}, lineInput='$lineInput'")
                             }
                         } else {
-                            // Hide suggestions when field loses focus (matches SwiftUI behavior)
-                            // SwiftUI: vm.showLineSuggestions = false
+                            // Hide suggestions when field loses focus
                             viewModel.showLineSuggestions.value = false
                         }
                     },
@@ -486,7 +468,6 @@ fun SettingsLineSheetScreen(
                     showDepartureSuggestions = showDepartureSuggestions && lineSelected && isDepartureFieldFocused,
                     departureSuggestions = departureSuggestions,
                     onStopSelected = { stop ->
-                        // SwiftUI: vm.isLineNumberChanging = true
                         viewModel.isLineNumberChanging.value = true
                         
                         val arrivalDisplayName = viewModel.selectedArrivalStopState.value?.displayName(context) ?: ""
@@ -535,7 +516,6 @@ fun SettingsLineSheetScreen(
                     showArrivalSuggestions = showArrivalSuggestions && lineSelected && isArrivalFieldFocused,
                     arrivalSuggestions = arrivalSuggestions,
                     onStopSelected = { stop ->
-                        // SwiftUI: vm.isLineNumberChanging = true
                         viewModel.isLineNumberChanging.value = true
                         
                         val departureDisplayName = viewModel.selectedDepartureStopState.value?.displayName(context) ?: ""
@@ -608,10 +588,11 @@ fun SettingsLineSheetScreen(
                     }
                 }
                 
-                // Save Button Section
+                // Save Button Section (active when isAllNotEmpty || isAllSelected)
                 SaveButtonSection(
                     viewModel = viewModel,
                     isAllNotEmpty = isAllNotEmpty,
+                    isAllSelected = isAllSelected,
                     onSave = {
                         CoroutineScope(Dispatchers.Main).launch {
                             viewModel.handleLineSave()
@@ -622,10 +603,11 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Timetable Settings Button Section
+                // Timetable Settings Button Section (active when isAllNotEmpty || isAllSelected)
                 TimetableSettingsButtonSection(
                     viewModel = viewModel,
                     isAllNotEmpty = isAllNotEmpty,
+                    isAllSelected = isAllSelected,
                     onTimetableSettings = {
                         CoroutineScope(Dispatchers.Main).launch {
                             viewModel.handleLineSave()
@@ -636,10 +618,9 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Timetable Auto Settings Button Section
+                // Timetable Auto Settings Button Section (active when isAllSelected only)
                 TimetableAutoSettingsButtonSection(
                     viewModel = viewModel,
-                    isAllNotEmpty = isAllNotEmpty,
                     isAllSelected = isAllSelected,
                     onAutoGenerate = {
                         CoroutineScope(Dispatchers.Main).launch {
@@ -663,7 +644,7 @@ fun SettingsLineSheetScreen(
             }
             
             // MARK: - Operator Suggestions (ZStack layer)
-            // Display operator dropdown in ZStack layer, matching SwiftUI implementation
+            // Display operator dropdown in ZStack layer
             if (showOperatorSuggestions && operatorSuggestions.isNotEmpty() && !isLineNumberChanging && !operatorSelected && isOperatorFieldFocused) {
                 OperatorSuggestionsView(
                     viewModel = viewModel,
@@ -742,7 +723,7 @@ fun SettingsLineSheetScreen(
             }
             
             // MARK: - Line Suggestions (ZStack layer)
-            // Display line dropdown in ZStack layer, matching SwiftUI implementation
+            // Display line dropdown in ZStack layer
             if (showLineSuggestions && lineSuggestions.isNotEmpty() && !isLineNumberChanging && !lineSelected && isLineFieldFocused && operatorSelected) {
                 LineSuggestionsView(
                     viewModel = viewModel,
@@ -776,7 +757,7 @@ fun SettingsLineSheetScreen(
             }
             
             // MARK: - Departure Stop Suggestions (ZStack layer)
-            // Display departure stop dropdown in ZStack layer, matching SwiftUI implementation
+            // Display departure stop dropdown in ZStack layer
             if (showDepartureSuggestions && departureSuggestions.isNotEmpty() && lineSelected && isDepartureFieldFocused) {
                 DepartureStopSuggestionsView(
                     viewModel = viewModel,
@@ -810,7 +791,7 @@ fun SettingsLineSheetScreen(
             }
             
             // MARK: - Arrival Stop Suggestions (ZStack layer)
-            // Display arrival stop dropdown in ZStack layer, matching SwiftUI implementation
+            // Display arrival stop dropdown in ZStack layer
             if (showArrivalSuggestions && arrivalSuggestions.isNotEmpty() && lineSelected && isArrivalFieldFocused) {
                 ArrivalStopSuggestionsView(
                     viewModel = viewModel,
@@ -903,7 +884,6 @@ fun SettingsLineSheetScreen(
         }
     }
     
-    // SwiftUI: .onChange(of: vm.showColorSelection) { isShowing in
     //             if isShowing { clearAllFocus() }
     //         }
     // Clear all focus when color selection is opened
@@ -1004,7 +984,7 @@ private fun RouteHeaderMenu(
         
         Spacer(modifier = Modifier.weight(1f))
         
-        // Clear Button - Improved styling to match SwiftUI design
+        // Clear Button
         CommonComponents.CustomRectangleButton(
             title = stringResource(R.string.clear),
             icon = Icons.Default.Cancel,
@@ -1178,7 +1158,7 @@ private fun LineColorSection(
     val goorback = viewModel.goorback
     val lineIndex = viewModel.selectedLineNumber - 1
     
-    // Use settingsLineColorString function to get color (matches SwiftUI)
+    // Use settingsLineColorString function to get color
     val color = run {
         fun parseColorString(colorString: String?): Color? {
             return colorString?.takeIf { it.isNotEmpty() }?.let {
@@ -1395,7 +1375,6 @@ private fun RideTimeSection(
     val paddingHorizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
     val strokeLineWidth = ScreenSize.settingsSheetStrokeLineWidth()
     
-    // Matches SwiftUI: .padding(.vertical, screen.settingsLineSheetPickerPadding)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1636,7 +1615,6 @@ private fun TransferTimeSettingsSection(
     val paddingHorizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
     val strokeLineWidth = ScreenSize.settingsSheetStrokeLineWidth()
     
-    // Matches SwiftUI: .padding(.vertical, screen.settingsLineSheetPickerPadding)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1689,19 +1667,21 @@ private fun TransferTimeSettingsSection(
 }
 
 // MARK: - Save Button Section
-// Save button for storing line configuration data
+// Save button for storing line configuration data (active when isAllNotEmpty || isAllSelected)
 @Composable
 private fun SaveButtonSection(
     viewModel: SettingsLineViewModel,
     isAllNotEmpty: Boolean,
+    isAllSelected: Boolean,
     onSave: () -> Unit
 ) {
+    val isEnabled = isAllNotEmpty || isAllSelected
     CommonComponents.CustomButton(
         title = stringResource(R.string.inputSave),
         onClick = onSave,
         icon = Icons.Filled.Save,
-        backgroundColor = Accent,
-        isEnabled = isAllNotEmpty,
+        backgroundColor = if (isEnabled) Accent else Gray,
+        isEnabled = isEnabled,
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = ScreenSize.settingsSheetVerticalSpacing())
@@ -1709,29 +1689,30 @@ private fun SaveButtonSection(
 }
 
 // MARK: - Timetable Settings Button Section
-// Button to open manual timetable configuration settings
+// Button to open manual timetable configuration settings (active when isAllNotEmpty || isAllSelected)
 @Composable
 private fun TimetableSettingsButtonSection(
     viewModel: SettingsLineViewModel,
     isAllNotEmpty: Boolean,
+    isAllSelected: Boolean,
     onTimetableSettings: () -> Unit
 ) {
+    val isEnabled = isAllNotEmpty || isAllSelected
     CommonComponents.CustomButton(
         title = stringResource(R.string.timetableSettings),
         onClick = onTimetableSettings,
         icon = Icons.Default.Schedule,
-        backgroundColor = if (isAllNotEmpty) Accent else Gray,
-        isEnabled = isAllNotEmpty,
+        backgroundColor = if (isEnabled) Accent else Gray,
+        isEnabled = isEnabled,
         modifier = Modifier.fillMaxWidth()
     )
 }
 
 // MARK: - Timetable Auto Settings Button Section
-// Button to automatically generate timetable data
+// Button to automatically generate timetable data (active when isAllSelected only)
 @Composable
 private fun TimetableAutoSettingsButtonSection(
     viewModel: SettingsLineViewModel,
-    isAllNotEmpty: Boolean,
     isAllSelected: Boolean,
     onAutoGenerate: () -> Unit
 ) {
@@ -1739,8 +1720,8 @@ private fun TimetableAutoSettingsButtonSection(
         title = stringResource(R.string.autoGenerateTimetable),
         onClick = onAutoGenerate,
         icon = Icons.Default.Schedule,
-        backgroundColor = if (isAllNotEmpty && isAllSelected) Accent else Gray,
-        isEnabled = isAllNotEmpty && isAllSelected,
+        backgroundColor = if (isAllSelected) Primary else Gray,
+        isEnabled = isAllSelected,
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -1837,7 +1818,7 @@ private fun ColorSelectionSection(
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
-    // Use CustomColor.allCases (matches SwiftUI CustomColor.allCases)
+    // Use CustomColor.allCases
     val lineColors = CustomColor.entries
     
     Box(
@@ -1891,7 +1872,6 @@ private fun ColorSelectionSection(
             }
             
             // Color Selection Grid
-            // Matches SwiftUI: ForEach(CustomColor.allCases, id: \.self) { color in
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 modifier = Modifier
@@ -1902,12 +1882,12 @@ private fun ColorSelectionSection(
                 verticalArrangement = Arrangement.spacedBy(ScreenSize.settingsLineSheetGridSpacing())
             ) {
                 items(lineColors) { customColor ->
-                    // Use ColorExtensions.kt's color property (matches SwiftUI color.color)
+                    // Use ColorExtensions.kt's color property
                     // This property uses android.graphics.Color.parseColor for reliable color parsing
                     val color = customColor.color
-                    // Use ColorExtensions.kt's RGB property for storing color string (matches SwiftUI color.RGB)
+                    // Use ColorExtensions.kt's RGB property for storing color string
                     val rgbString = customColor.RGB
-                    // Use CustomColor.resourceName for localization (matches SwiftUI color.rawValue.localized)
+                    // Use CustomColor.resourceName for localization
                     val colorName = when (customColor.resourceName) {
                         "red" -> stringResource(R.string.red)
                         "darkRed" -> stringResource(R.string.darkRed)
@@ -1942,7 +1922,7 @@ private fun ColorSelectionSection(
                             .clickable { onColorSelected(rgbString) },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        // Color circle with border (matches SwiftUI Circle().fill(color.RGB.safeColor))
+                        // Color circle with border
                         Box(
                             modifier = Modifier
                                 .size(ScreenSize.settingsLineSheetColorCircleSize())
@@ -1964,7 +1944,7 @@ private fun ColorSelectionSection(
                             )
                         }
                         
-                        // Color name label (localized, matches SwiftUI color.rawValue.localized)
+                        // Color name label (localized)
                         Text(
                             text = colorName,
                             fontSize = ScreenSize.settingsLineSheetCaptionFontSize().value.sp,

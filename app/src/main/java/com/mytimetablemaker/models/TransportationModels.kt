@@ -107,7 +107,13 @@ fun String.calculateRideTime(arrivalTime: String): Int {
 // Defines transportation line types
 enum class TransportationLineKind {
     RAILWAY,
-    BUS
+    BUS;
+
+    /** String value for Firestore storage (e.g. "Railway", "Bus"). */
+    fun firestoreRawValue(): String = when (this) {
+        RAILWAY -> "Railway"
+        BUS -> "Bus"
+    }
 }
 
 // MARK: - Transportation Line Model

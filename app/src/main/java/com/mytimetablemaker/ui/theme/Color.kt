@@ -5,7 +5,7 @@ import com.mytimetablemaker.models.CustomColor
 import androidx.core.graphics.toColorInt
 
 // MARK: - App Theme Colors
-// Application-wide color constants matching SwiftUI ColorExtensions
+// Application-wide color constants
 // These colors are derived from CustomColor enum to maintain consistency
 
 // Primary theme color (Indigo - #3700B3)

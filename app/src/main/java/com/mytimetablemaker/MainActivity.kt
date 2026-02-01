@@ -29,7 +29,6 @@ import java.util.Locale
 
 // MARK: - Main Activity
 // Main entry point for the Android timetable maker application
-// Matches SwiftUI mytimetablemaker_swiftuiApp structure
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Apply saved language setting before super.onCreate
@@ -69,14 +68,13 @@ class MainActivity : ComponentActivity() {
 
 // MARK: - App Navigation
 // Manages app navigation and ViewModel initialization
-// Matches SwiftUI app structure with TransitViewModel, LoginViewModel, and FirestoreViewModel
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val context = LocalContext.current
     val application = context.applicationContext as android.app.Application
     
-    // Initialize core ViewModels (matching SwiftUI structure)
+    // Initialize core ViewModels
     val mainViewModel = remember { MainViewModel(application) }
     val loginViewModel = remember { LoginViewModel(context) }
     val firestoreViewModel = remember { FirestoreViewModel(application) }
@@ -191,8 +189,7 @@ fun AppNavigation() {
         composable("timetable_settings/{goorback}/{lineIndex}") { backStackEntry ->
             val goorback = backStackEntry.arguments?.getString("goorback") ?: "back1"
             val lineIndex = backStackEntry.arguments?.getString("lineIndex")?.toIntOrNull() ?: 0
-            // Navigate to TimetableContentScreen (TimetableContentView in SwiftUI)
-            // Match SwiftUI: TimetableContentView(goorback, lineIndex) - lineIndex is passed directly
+            // Navigate to TimetableContentScreen
             TimetableContentScreen(
                 goorback = goorback,
                 num = lineIndex, // lineIndex is 0-based, num is also 0-based (timetableKey uses lineNameKey(num) which adds +1 internally)

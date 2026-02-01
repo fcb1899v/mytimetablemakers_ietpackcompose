@@ -131,18 +131,21 @@ fun String.userDefaultsValue(sharedPreferences: SharedPreferences, defaultValue:
 }
 
 fun String.userDefaultsInt(sharedPreferences: SharedPreferences, defaultValue: Int): Int {
-    return if (sharedPreferences.contains(this)) {
+    if (!sharedPreferences.contains(this)) return defaultValue
+    return try {
         sharedPreferences.getInt(this, defaultValue)
-    } else {
-        defaultValue
+    } catch (e: ClassCastException) {
+        // Value was stored as String (e.g. from Firestore getLineInfoFirestore)
+        sharedPreferences.getString(this, null)?.toIntOrNull() ?: defaultValue
     }
 }
 
 fun String.userDefaultsBool(sharedPreferences: SharedPreferences, defaultValue: Boolean): Boolean {
-    return if (sharedPreferences.contains(this)) {
+    if (!sharedPreferences.contains(this)) return defaultValue
+    return try {
         sharedPreferences.getBoolean(this, defaultValue)
-    } else {
-        defaultValue
+    } catch (e: ClassCastException) {
+        sharedPreferences.getString(this, null)?.toBooleanStrictOrNull() ?: defaultValue
     }
 }
 
@@ -850,7 +853,7 @@ fun String.loadTransportationTimes(
         ?.split(" ")?.filter { it.isNotEmpty() } ?: emptyList()
     
     val routeRideTimeKey = this.rideTimeKey(num)
-    val defaultRideTime = sharedPreferences.getInt(routeRideTimeKey, 0)
+    val defaultRideTime = routeRideTimeKey.userDefaultsInt(sharedPreferences, 0)
     
     val transportationTimes = mutableListOf<TransportationTime>()
     for ((index, departureTimeString) in departureTimes.withIndex()) {
@@ -1019,7 +1022,7 @@ fun String.choiceCopyTimeKeyArray(
 ): List<String> {
     val calendarTag = calendarType.calendarTag()
     val oppositeCalendarTag = if (calendarTag == "weekday") "holiday" else "weekday"
-    // Use otherroute extension function (matches SwiftUI: goorback.otherroute)
+    // Use otherroute extension function
     val otherroute = this.otherRoute
     
     return listOf(

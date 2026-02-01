@@ -12,7 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 // MARK: - Material Theme Color Scheme
-// Theme colors based on SwiftUI primary and accent colors
+// Theme colors (primary and accent)
 // Primary: #3700B3 (Indigo)
 // Accent: #03DAC5 (Cyan)
 

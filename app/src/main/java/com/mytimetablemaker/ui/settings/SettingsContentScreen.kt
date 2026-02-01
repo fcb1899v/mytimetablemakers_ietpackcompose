@@ -35,7 +35,6 @@ import android.content.SharedPreferences
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.net.toUri
 import androidx.core.content.edit
-import java.util.Locale
 
 // MARK: - Settings Content Screen
 // Main settings screen with route configuration, account management, and app information
@@ -66,10 +65,7 @@ fun SettingsContentScreen(
     var showGetFirestoreAlert by remember { mutableStateOf(false) }
     var showSaveFirestoreAlert by remember { mutableStateOf(false) }
     
-    // Language setting state
-    var isJapaneseSelected by remember { mutableStateOf(true) }
-    
-    // Observe login status from LoginViewModel (matches SwiftUI myLogin.isLoginSuccess)
+    // Observe login status from LoginViewModel
     val isLoginSuccess by loginViewModel.isLoginSuccess.collectAsState()
     
     // Set status bar color to Primary
@@ -91,10 +87,6 @@ fun SettingsContentScreen(
     LaunchedEffect(Unit) {
         loadRoute2Setting(sharedPreferences) { value ->
             showRoute2 = value
-        }
-        // Load language setting
-        loadLanguageSetting(sharedPreferences) { isJapanese ->
-            isJapaneseSelected = isJapanese
         }
     }
     
@@ -184,7 +176,7 @@ fun SettingsContentScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Card(
-                        modifier = Modifier.padding(ScreenSize.settingsSheetHorizontalPadding()),
+                        modifier = Modifier.padding(horizontal = ScreenSize.settingsSheetHorizontalPadding()),
                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     ) {
                         CircularProgressIndicator(
@@ -199,6 +191,7 @@ fun SettingsContentScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
+                    .padding(top = ScreenSize.settingsHeaderPadding())
             ) {
                 // MARK: - Various Settings Section
                 SettingsSection(
@@ -306,42 +299,11 @@ fun SettingsContentScreen(
                             openUrl(context, termsUrl)
                         }
                     )
-                    // Language setting toggle (use Box so tap is not consumed by empty TextButton)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical())
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = stringResource(R.string.language),
-                                fontSize = ScreenSize.settingsFontSize().value.sp,
-                                color = Black
-                            )
-                            CommonComponents.CustomToggle(
-                                isLeftSelected = isJapaneseSelected,
-                                onToggle = { isLeftSelected ->
-                                    isJapaneseSelected = isLeftSelected
-                                    saveLanguageSetting(sharedPreferences, isLeftSelected, context)
-                                },
-                                leftText = "日本語",
-                                leftColor = Primary,
-                                rightText = "English",
-                                rightColor = Primary,
-                                circleColor = White,
-                                offColor = Gray
-                            )
-                        }
-                    }
                     TextButton(
                         onClick = { },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical())
+                            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding())
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -555,6 +517,44 @@ fun SettingsContentScreen(
         )
     }
     
+    // MARK: - Firestore Result Alert
+    if (firestoreViewModel.isShowMessage) {
+        AlertDialog(
+            onDismissRequest = { firestoreViewModel.dismissMessage() },
+            title = {
+                Text(
+                    text = firestoreViewModel.title,
+                    fontSize = alertTitleFontSize.value.sp
+                )
+            },
+            text = {
+                Text(
+                    text = firestoreViewModel.message,
+                    fontSize = alertTextFontSize.value.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val success = firestoreViewModel.isFirestoreSuccess
+                        firestoreViewModel.dismissMessage()
+                        if (success) {
+                            // Update transfer data for GetFirestore operation
+                            mainViewModel.updateAllDataFromUserDefaults()
+                            onNavigateToMain()
+                        }
+                    }
+                ) {
+                    Text(
+                        text = stringResource(R.string.ok),
+                        fontSize = alertButtonFontSize.value.sp
+                    )
+                }
+            },
+            containerColor = White
+        )
+    }
+    
     // Handle sheet navigation
     LaunchedEffect(showTransferSheet) {
         if (showTransferSheet) {
@@ -587,7 +587,10 @@ private fun SettingsSection(
             fontSize = ScreenSize.settingsHeaderFontSize().value.sp,
             fontWeight = FontWeight.Bold,
             color = Gray,
-            modifier = Modifier.padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsHeaderFontSize())
+            modifier = Modifier.padding(
+                horizontal = ScreenSize.settingsSheetHorizontalPadding(),
+                vertical = ScreenSize.settingsHeaderPadding()
+            )
         )
         content()
     }
@@ -604,7 +607,10 @@ private fun SettingsButton(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding(), vertical = ScreenSize.settingsSheetInputPaddingVertical())
+            .padding(
+                horizontal = ScreenSize.settingsSheetHorizontalPadding(),
+                vertical = ScreenSize.settingsSheetInputPaddingVertical()
+            )
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -639,13 +645,13 @@ private fun loadRoute2Setting(
 }
 
 // Save Route 2 display setting to SharedPreferences and update ViewModel
-// Match SwiftUI implementation: save the same value to both back2 and go2
+// Save the same value to both back2 and go2
 private fun saveRoute2Setting(
     sharedPreferences: SharedPreferences,
     value: Boolean,
     mainViewModel: MainViewModel
 ) {
-    // Save to SharedPreferences for both routes (match SwiftUI implementation)
+    // Save to SharedPreferences for both routes
     // Use commit() to ensure synchronous save
     sharedPreferences.edit(commit = true) {
         putBoolean("back2".isShowRoute2Key(), value)
@@ -675,46 +681,3 @@ private fun getAppVersion(context: android.content.Context): String {
         "Unknown"
     }
 }
-
-// Load language setting from SharedPreferences
-private fun loadLanguageSetting(
-    sharedPreferences: SharedPreferences,
-    onLoaded: (Boolean) -> Unit
-) {
-    val currentLanguage = Locale.getDefault().language
-    val savedLanguage = sharedPreferences.getString("app_language", currentLanguage) ?: currentLanguage
-    onLoaded(savedLanguage == "ja")
-}
-
-// Save language setting to SharedPreferences and apply it
-private fun saveLanguageSetting(
-    sharedPreferences: SharedPreferences,
-    isJapanese: Boolean,
-    context: android.content.Context
-) {
-    val languageCode = if (isJapanese) "ja" else "en"
-    sharedPreferences.edit {
-        putString("app_language", languageCode)
-    }
-    
-    // Apply language setting
-    applyLanguageSetting(context, languageCode)
-}
-
-// Apply language setting to the app
-private fun applyLanguageSetting(context: android.content.Context, languageCode: String) {
-    val locale = Locale.forLanguageTag(languageCode)
-    Locale.setDefault(locale)
-    
-    val configuration = context.resources.configuration
-    configuration.setLocale(locale)
-    // Use createConfigurationContext for API 17+ instead of deprecated updateConfiguration
-    // This creates a new context with the updated configuration
-    context.createConfigurationContext(configuration)
-    
-    // Restart activity to apply language change to the entire app
-    if (context is android.app.Activity) {
-        context.recreate()
-    }
-}
-

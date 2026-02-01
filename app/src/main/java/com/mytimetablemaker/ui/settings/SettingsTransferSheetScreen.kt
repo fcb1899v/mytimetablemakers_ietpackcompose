@@ -252,7 +252,6 @@ fun SettingsTransferSheetScreen(
                 }
 
                 // Save button
-                // SwiftUI: vm.saveSettings()
                 //          NotificationCenter.default.post(name: NSNotification.Name("SettingsTransferUpdated"), object: nil)
                 //          dismiss()
                 // Note: saveSettings() already posts the notification via SharedPreferences
@@ -515,7 +514,6 @@ private fun TransferTimeSettingsSection(
     val headlineFontSize = ScreenSize.settingsSheetHeadlineFontSize()
     val paddingHorizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
     
-    // Matches SwiftUI: .padding(.vertical, screen.settingsLineSheetPickerPadding)
     Row(
         modifier = Modifier
             .fillMaxWidth()

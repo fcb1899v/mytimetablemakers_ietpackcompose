@@ -34,7 +34,6 @@ import com.mytimetablemaker.ui.theme.*
 
 // MARK: - Login Content Screen
 // Main login screen with authentication form and navigation
-// Matches SwiftUI LoginContentView implementation
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginContentScreen(
@@ -242,7 +241,7 @@ fun LoginContentScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Gray.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Card(
                         modifier = Modifier.padding(ScreenSize.alertDialogContentPadding()),
@@ -272,7 +271,7 @@ fun LoginContentScreen(
             )
         }
     }
-    
+
     // MARK: - Login Result Alert
     if (showLoginResultAlert) {
         AlertDialog(

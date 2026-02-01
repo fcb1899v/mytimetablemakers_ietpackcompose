@@ -121,11 +121,11 @@ fun MainContentScreen(
         } else {
             "go2".isShowRoute2(sharedPreferences)
         }
-        // Also update all data when isBack changes (same as SwiftUI's onChange(of: myTransit.isBack))
+        // Also update all data when isBack changes
         mainViewModel.updateAllDataFromUserDefaults()
     }
     
-    // Listen to SharedPreferences changes and update data (same as SwiftUI's onReceive(UserDefaults.didChangeNotification))
+    // Listen to SharedPreferences changes and update data
     // Also listen for SettingsLineUpdated and SettingsTransferUpdated notifications
     DisposableEffect(isBack) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -160,7 +160,7 @@ fun MainContentScreen(
         onDispose { }
     }
 
-    // Update dateLabel and timeLabel when selectDate changes (same as SwiftUI's onChange(of: myTransit.selectDate))
+    // Update dateLabel and timeLabel when selectDate changes
     LaunchedEffect(mainViewModel.selectDate) {
         mainViewModel.updateDate(mainViewModel.selectDate)
         if (isTimeStop) {
@@ -972,7 +972,7 @@ private fun LineTimeImage(
             .background(lineColor, RoundedCornerShape(0.dp)),
         contentAlignment = Alignment.Center
     ) {
-        // Icon layer (same as SwiftUI's Image)
+        // Icon layer
         Icon(
             imageVector = icon,
             contentDescription = null,
@@ -981,7 +981,7 @@ private fun LineTimeImage(
         )
         
         // Line code text with shadow effect (overlay on icon)
-        // SwiftUI uses 8 shadows (radius: 0, offset: ±0.5) for better visibility
+        // Multiple shadows for better visibility
         if (lineCode.isNotEmpty()) {
             val shadowOffset = ScreenSize.shadowOffset()
             val shadowColor = Gray.copy(alpha = 0.5f)

@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -33,53 +34,10 @@ import com.mytimetablemaker.models.*
 import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.theme.*
 import androidx.core.content.edit
-
-// Helper function to get train type display name from resource
-private fun getTrainTypeDisplayName(trainType: String, context: Context): String {
-    // Extract resource name from train type string (e.g., "odpt.TrainType:JR-East.ChuoSpecialRapid" -> "chuoSpecialRapid")
-    val parts = trainType.split(".")
-    if (parts.size >= 3) {
-        val resourceName = parts[2].replaceFirstChar { it.lowercaseChar() }
-        return when (resourceName) {
-            "accessExpress" -> context.getString(R.string.accessExpress)
-            "airportRapidLimitedExpress" -> context.getString(R.string.airportRapidLimitedExpress)
-            "chuoSpecialRapid" -> context.getString(R.string.chuoSpecialRapid)
-            "commuterExpress" -> context.getString(R.string.commuterExpress)
-            "commuterLimitedExpress" -> context.getString(R.string.commuterLimitedExpress)
-            "commuterRapid" -> context.getString(R.string.commuterRapid)
-            "commuterSemiExpress" -> context.getString(R.string.commuterSemiExpress)
-            "commuterSpecialRapid" -> context.getString(R.string.commuterSpecialRapid)
-            "eveningWing" -> context.getString(R.string.eveningWing)
-            "express" -> context.getString(R.string.express)
-            "haijimaLiner" -> context.getString(R.string.haijimaLiner)
-            "kawagoeLimitedExpress" -> context.getString(R.string.kawagoeLimitedExpress)
-            "limitedExpress" -> context.getString(R.string.limitedExpress)
-            "liner" -> context.getString(R.string.liner)
-            "local" -> context.getString(R.string.local)
-            "morningWing" -> context.getString(R.string.morningWing)
-            "omeSpecialRapid" -> context.getString(R.string.omeSpecialRapid)
-            "rapid" -> context.getString(R.string.rapid)
-            "rapidExpress" -> context.getString(R.string.rapidExpress)
-            "rapidLimitedExpress" -> context.getString(R.string.rapidLimitedExpress)
-            "semiExpress" -> context.getString(R.string.semiExpress)
-            "semiRapid" -> context.getString(R.string.semiRapid)
-            "sectionExpress" -> context.getString(R.string.sectionExpress)
-            "sectionSemiExpress" -> context.getString(R.string.sectionSemiExpress)
-            "specialRapid" -> context.getString(R.string.specialRapid)
-            "fLiner" -> context.getString(R.string.fLiner)
-            "sTrain" -> context.getString(R.string.sTrain)
-            "slTaiju" -> context.getString(R.string.slTaiju)
-            "thLiner" -> context.getString(R.string.thLiner)
-            "tjLiner" -> context.getString(R.string.tjLiner)
-            else -> trainType
-        }
-    }
-    return trainType
-}
+import com.mytimetablemaker.models.getTrainTypeDisplayName
 
 // MARK: - Settings Timetable Sheet Screen
 // Sheet for editing timetable times with add/delete/copy functionality
-// Matches SwiftUI SettingsTimetableSheet structure
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsTimetableSheetScreen(
@@ -109,7 +67,7 @@ fun SettingsTimetableSheetScreen(
     LaunchedEffect(Unit) {
         // Load saved ride time as default value (using route-level key without hour)
         val rideTimeKey = goorback.rideTimeKey(num)
-        val savedRideTime = sharedPreferences.getInt(rideTimeKey, 0)
+        val savedRideTime = rideTimeKey.userDefaultsInt(sharedPreferences, 0)
         rideTime = if (savedRideTime == 0) null else savedRideTime
         
         // Load available calendar types
@@ -274,7 +232,7 @@ fun SettingsTimetableSheetScreen(
         val currentTimetableString = sharedPreferences.getString(timetableKey, null) ?: ""
         val currentTrainTypeString = sharedPreferences.getString(timetableTrainTypeKey, null) ?: ""
         val currentRideTimeString = sharedPreferences.getString(timetableRideTimeKey, null) ?: ""
-        val defaultRideTime = sharedPreferences.getInt(routeRideTimeKey, 0)
+        val defaultRideTime = routeRideTimeKey.userDefaultsInt(sharedPreferences, 0)
         
         // Convert to arrays
         val departureTimes = currentTimetableString.timetableComponents.toMutableList()
@@ -323,7 +281,6 @@ fun SettingsTimetableSheetScreen(
         }
         
         // Sort triplets by time (convert to Int for proper sorting)
-        // Matches SwiftUI: timeTypeRidePairs.sort { pair1.time.isTimeLessThan(pair2.time) }
         timeTypeRidePairs.sortWith { (time1, _, _), (time2, _, _) ->
             if (time1.isTimeLessThan(time2)) -1 else 1
         }
@@ -358,7 +315,7 @@ fun SettingsTimetableSheetScreen(
         val currentTimetableString = sharedPreferences.getString(timetableKey, null) ?: ""
         val currentTrainTypeString = sharedPreferences.getString(timetableTrainTypeKey, null) ?: ""
         val currentRideTimeString = sharedPreferences.getString(timetableRideTimeKey, null) ?: ""
-        val defaultRideTime = sharedPreferences.getInt(routeRideTimeKey, 0)
+        val defaultRideTime = routeRideTimeKey.userDefaultsInt(sharedPreferences, 0)
         
         // Convert to arrays
         val departureTimes = currentTimetableString.timetableComponents.toMutableList()
@@ -398,7 +355,6 @@ fun SettingsTimetableSheetScreen(
         }
         
         // Sort triplets by time (convert to Int for proper sorting)
-        // Matches SwiftUI: timeTypeRidePairs.sort { pair1.time.isTimeLessThan(pair2.time) }
         timeTypeRidePairs.sortWith { (time1, _, _), (time2, _, _) ->
             if (time1.isTimeLessThan(time2)) -1 else 1
         }
@@ -493,7 +449,6 @@ fun SettingsTimetableSheetScreen(
     }
     
     // MARK: - Main Content
-    // Matches SwiftUI: .presentationDetents([.height(screen.settingsTimetableSheetHeight)])
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
@@ -501,16 +456,17 @@ fun SettingsTimetableSheetScreen(
             decorFitsSystemWindows = false
         )
     ) {
-        // Set dialog height to match SwiftUI presentationDetents
+        // Set dialog height for sheet
         Scaffold(
             modifier = Modifier.height(ScreenSize.settingsTimetableSheetHeight()),
             topBar = {
-                TopAppBar(
+                CenterAlignedTopAppBar(
                     title = {
                         Text(
                             text = stringResource(R.string.editTimetable),
                             fontSize = ScreenSize.settingsTitleFontSize().value.sp,
                             fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
                             color = Black
                         )
                     },
@@ -911,7 +867,6 @@ private fun DepartureTimeSelectSection(
     val context = LocalContext.current
     val isRailway = goorback.lineKind(sharedPreferences, num) == TransportationLineKind.RAILWAY
     
-    // Matches SwiftUI: .padding(.top, screen.timetablePickerTopPadding)
     //                  .padding(.bottom, screen.timetablePickerBottomPadding)
     Column(
         modifier = Modifier
@@ -1004,7 +959,6 @@ private fun RideTimeSelectSection(
 ) {
     val context = LocalContext.current
     
-    // Matches SwiftUI: .padding(.top, screen.timetablePickerTopPadding)
     //                  .padding(.bottom, screen.timetablePickerBottomPadding)
     Column(
         modifier = Modifier
