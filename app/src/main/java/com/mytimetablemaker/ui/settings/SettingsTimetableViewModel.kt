@@ -256,11 +256,10 @@ class SettingsTimetableViewModel(
                 }
             }
             
-            // Update cache with only the merged representative calendar types
-            // This ensures that loadAvailableCalendarTypes returns only the merged types
-            val mergedRepresentativeTypes = mergedTimes.keys.toList()
+            // Save calendar types list from ODPT API (all types returned by API)
+            // When this list has types: display all in UI; when empty: display 3 standard types
             val lineCacheKey = "${goorback}line${lineIndex + 1}_calendarTypes"
-            val typeStrings = mergedRepresentativeTypes.map { it.rawValue }
+            val typeStrings = availableCalendarTypes.map { it.rawValue }
             sharedPreferences.edit { putStringSet(lineCacheKey, typeStrings.toSet()) }
             
             // Save operator line list and line stop list to SharedPreferences after timetable generation
@@ -284,10 +283,10 @@ class SettingsTimetableViewModel(
     // MARK: - Available Calendar Types Detection
     // Get available calendar types for the selected line by fetching from timetable API
     private suspend fun getAvailableCalendarTypes(): List<ODPTCalendarType> {
-        val selectedLine = this.selectedLine ?: return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.Holiday)
-        val operatorCode = selectedLine.operatorCode ?: return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.Holiday)
+        val selectedLine = this.selectedLine ?: return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
+        val operatorCode = selectedLine.operatorCode ?: return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
         val selectedOperator = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode }
-            ?: return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.Holiday)
+            ?: return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
         
         // Check cache first
         val cacheKey = "${selectedLine.code}_${selectedLine.kind.name}_calendarTypes"
@@ -312,10 +311,10 @@ class SettingsTimetableViewModel(
         val lineCacheKey = "${goorback}line${lineIndex + 1}_calendarTypes"
         sharedPreferences.edit { putStringSet(lineCacheKey, typeStrings.toSet()) }
         
-        // Ensure we have at least weekday and holiday as fallback
+        // Ensure we have at least weekday and saturdayHoliday as fallback
         if (availableTypes.isEmpty()) {
-            android.util.Log.d("SettingsTimetableViewModel", "No calendar types found, using fallback: [weekday, holiday]")
-            return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.Holiday)
+            android.util.Log.d("SettingsTimetableViewModel", "No calendar types found, using fallback: [weekday, saturdayHoliday]")
+            return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
         }
         
         android.util.Log.d("SettingsTimetableViewModel", "Found calendar types: ${availableTypes.joinToString { it.displayName(getApplication()) }}")
@@ -336,19 +335,19 @@ class SettingsTimetableViewModel(
             
             if (routeId.isEmpty()) {
                 android.util.Log.w("SettingsTimetableViewModel", "GTFS: Missing routeId for calendar type fetch")
-                return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.Holiday)
+                return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
             }
             
             try {
                 // TODO: Implement fetchGTFSCalendarTypes in GTFSDataService
                 // For now, return default calendar types
-                val calendarTypes = listOf(ODPTCalendarType.Weekday, ODPTCalendarType.Holiday)
+                val calendarTypes = listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
                 android.util.Log.d("SettingsTimetableViewModel", "GTFS Calendar Types: ${calendarTypes.joinToString { it.displayName(getApplication()) }}")
                 return calendarTypes
             } catch (e: Exception) {
                 android.util.Log.e("SettingsTimetableViewModel", "Failed to fetch GTFS calendar types: ${e.message}")
                 // Fallback to default calendar types
-                return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.Holiday)
+                return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
             }
         }
         
@@ -1273,7 +1272,7 @@ class SettingsTimetableViewModel(
     suspend fun finalizeTimetableData(weekdayTimes: List<TransportationTime>, weekendTimes: List<TransportationTime>) {
         // Save timetable data using unified TransportationTime format
         saveTimetableToUserDefaults(weekdayTimes, ODPTCalendarType.Weekday)
-        saveTimetableToUserDefaults(weekendTimes, ODPTCalendarType.Holiday)
+        saveTimetableToUserDefaults(weekendTimes, ODPTCalendarType.SaturdayHoliday)
         
         // Save all data after timetable data has been processed and saved
         lineViewModel?.saveAllDataToUserDefaults()
@@ -1321,10 +1320,9 @@ class SettingsTimetableViewModel(
         
         // Clear all hours (4-24) for the specified calendar type, route, and line
         for (hour in 4..25) {
-            val calendarTag = calendarType.calendarTag()
-            val timetableKey = goorback.timetableKey(calendarTag, lineNumber - 1, hour)
-            val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarTag, lineNumber - 1, hour)
-            val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarTag, lineNumber - 1, hour)
+            val timetableKey = goorback.timetableKey(calendarType, lineNumber - 1, hour)
+            val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarType, lineNumber - 1, hour)
+            val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarType, lineNumber - 1, hour)
             
             val hadTimetable = sharedPreferences.contains(timetableKey)
             val hadRideTime = sharedPreferences.contains(timetableRideTimeKey)
@@ -1349,8 +1347,7 @@ class SettingsTimetableViewModel(
         }
         
         // Clear train type list
-        val calendarTag = calendarType.calendarTag()
-        val trainTypeListKey = goorback.trainTypeListKey(calendarTag, lineNumber - 1)
+        val trainTypeListKey = goorback.trainTypeListKey(calendarType, lineNumber - 1)
         sharedPreferences.edit { remove(trainTypeListKey) }
     }
 }

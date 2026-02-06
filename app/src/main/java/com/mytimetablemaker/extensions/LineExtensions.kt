@@ -76,45 +76,21 @@ fun String.transportationKey(num: Int): String = if (num == 0) "${this}transport
 
 fun String.transferTimeKey(num: Int): String = if (num == 0) "${this}transfertimee" else "${this}transfertime${num}"
 
-// TODO: Implement ODPTCalendarType enum and calendarTag() extension
-fun String.timetableKey(calendarType: String, num: Int, hour: Int): String {
-    val calendarTag = when (calendarType) {
-        "weekday" -> "weekday"
-        "holiday" -> "holiday"
-        "saturdayHoliday" -> "weekend"
-        else -> "weekday"
-    }
-    return "${this.lineNameKey(num)}$calendarTag${hour.addZeroTime()}"
+// Calendar tag for UserDefaults keys: weekday, holiday, weekend, sunday, monday, tuesday, wednesday, thursday, friday, saturday
+fun String.timetableKey(calendarType: ODPTCalendarType, num: Int, hour: Int): String {
+    return "${this.lineNameKey(num)}${calendarType.calendarTag()}${hour.addZeroTime()}"
 }
 
-fun String.timetableRideTimeKey(calendarType: String, num: Int, hour: Int): String {
-    val calendarTag = when (calendarType) {
-        "weekday" -> "weekday"
-        "holiday" -> "holiday"
-        "saturdayHoliday" -> "weekend"
-        else -> "weekday"
-    }
-    return "${this.lineNameKey(num)}$calendarTag${hour.addZeroTime()}ridetime"
+fun String.timetableRideTimeKey(calendarType: ODPTCalendarType, num: Int, hour: Int): String {
+    return "${this.lineNameKey(num)}${calendarType.calendarTag()}${hour.addZeroTime()}ridetime"
 }
 
-fun String.timetableTrainTypeKey(calendarType: String, num: Int, hour: Int): String {
-    val calendarTag = when (calendarType) {
-        "weekday" -> "weekday"
-        "holiday" -> "holiday"
-        "saturdayHoliday" -> "weekend"
-        else -> "weekday"
-    }
-    return "${this.lineNameKey(num)}$calendarTag${hour.addZeroTime()}traintype"
+fun String.timetableTrainTypeKey(calendarType: ODPTCalendarType, num: Int, hour: Int): String {
+    return "${this.lineNameKey(num)}${calendarType.calendarTag()}${hour.addZeroTime()}traintype"
 }
 
-fun String.trainTypeListKey(calendarType: String, num: Int): String {
-    val calendarTag = when (calendarType) {
-        "weekday" -> "weekday"
-        "holiday" -> "holiday"
-        "saturdayHoliday" -> "weekend"
-        else -> "weekday"
-    }
-    return "${this.lineNameKey(num)}$calendarTag" + "traintypelist"
+fun String.trainTypeListKey(calendarType: ODPTCalendarType, num: Int): String {
+    return "${this.lineNameKey(num)}${calendarType.calendarTag()}traintypelist"
 }
 
 fun String.operatorLineListKey(num: Int): String = "${this}operatorlinelist${num + 1}"
@@ -270,12 +246,69 @@ fun String.transferTime(sharedPreferences: SharedPreferences, num: Int): Int {
     return this.transferTimeKey(num).userDefaultsInt(sharedPreferences, 0)
 }
 
-fun String.timetableTime(sharedPreferences: SharedPreferences, calendarType: String, num: Int, hour: Int): String {
-    return this.timetableKey(calendarType, num, hour).userDefaultsValue(sharedPreferences, "") ?: ""
+// Alternate calendar tag formats for fallback read (legacy/imported data)
+// When displaying only weekday/saturday/holiday, weekday selection should also read monday-friday data
+private fun alternateCalendarTagsForRead(calendarTag: String): List<String> = when (calendarTag) {
+    "weekday" -> listOf(
+        "odpt.Calendar:Weekday",
+        "monday", "tuesday", "wednesday", "thursday", "friday",
+        "odpt.Calendar:Monday", "odpt.Calendar:Tuesday", "odpt.Calendar:Wednesday",
+        "odpt.Calendar:Thursday", "odpt.Calendar:Friday"
+    )
+    "holiday" -> listOf("odpt.Calendar:Holiday", "sunday", "odpt.Calendar:Sunday")
+    "weekend" -> listOf("odpt.Calendar:SaturdayHoliday", "saturdayHoliday")
+    "sunday" -> listOf("odpt.Calendar:Sunday")
+    "monday" -> listOf("odpt.Calendar:Monday", "weekday", "odpt.Calendar:Weekday")
+    "tuesday" -> listOf("odpt.Calendar:Tuesday", "weekday", "odpt.Calendar:Weekday")
+    "wednesday" -> listOf("odpt.Calendar:Wednesday", "weekday", "odpt.Calendar:Weekday")
+    "thursday" -> listOf("odpt.Calendar:Thursday", "weekday", "odpt.Calendar:Weekday")
+    "friday" -> listOf("odpt.Calendar:Friday", "weekday", "odpt.Calendar:Weekday")
+    "saturday" -> listOf("odpt.Calendar:Saturday", "saturdayHoliday", "odpt.Calendar:SaturdayHoliday")
+    else -> emptyList()
 }
 
-fun String.timetableRideTime(sharedPreferences: SharedPreferences, calendarType: String, num: Int, hour: Int): String {
-    return this.timetableRideTimeKey(calendarType, num, hour).userDefaultsValue(sharedPreferences, "") ?: ""
+fun String.timetableTime(sharedPreferences: SharedPreferences, calendarType: ODPTCalendarType, num: Int, hour: Int): String {
+    val calendarTag = calendarType.calendarTag()
+    val primaryKey = this.timetableKey(calendarType, num, hour)
+    var value = sharedPreferences.getString(primaryKey, null)
+    if (!value.isNullOrEmpty()) return value
+    for (alt in alternateCalendarTagsForRead(calendarTag)) {
+        val altKey = "${this.lineNameKey(num)}$alt${hour.addZeroTime()}"
+        value = sharedPreferences.getString(altKey, null)
+        if (!value.isNullOrEmpty()) return value
+    }
+    return ""
+}
+
+fun String.timetableRideTime(sharedPreferences: SharedPreferences, calendarType: ODPTCalendarType, num: Int, hour: Int): String {
+    val calendarTag = calendarType.calendarTag()
+    val primaryKey = this.timetableRideTimeKey(calendarType, num, hour)
+    var value = sharedPreferences.getString(primaryKey, null)
+    if (!value.isNullOrEmpty()) return value
+    for (alt in alternateCalendarTagsForRead(calendarTag)) {
+        val altKey = "${this.lineNameKey(num)}$alt${hour.addZeroTime()}ridetime"
+        value = sharedPreferences.getString(altKey, null)
+        if (!value.isNullOrEmpty()) return value
+    }
+    return ""
+}
+
+private fun String.timetableTrainTypeWithFallback(
+    sharedPreferences: SharedPreferences,
+    calendarType: ODPTCalendarType,
+    num: Int,
+    hour: Int
+): String {
+    val primaryKey = this.timetableTrainTypeKey(calendarType, num, hour)
+    val calendarTag = calendarType.calendarTag()
+    var value = sharedPreferences.getString(primaryKey, null)
+    if (!value.isNullOrEmpty()) return value
+    for (alt in alternateCalendarTagsForRead(calendarTag)) {
+        val altKey = "${this.lineNameKey(num)}$alt${hour.addZeroTime()}traintype"
+        value = sharedPreferences.getString(altKey, null)
+        if (!value.isNullOrEmpty()) return value
+    }
+    return ""
 }
 
 // MARK: - Array Generation Extensions
@@ -503,6 +536,7 @@ fun String.timetableArray(
     return (0..2).map { num ->
         // Get target calendar type based on date and available calendar types for this line
         val availableTypes = this.loadAvailableCalendarTypes(sharedPreferences, num)
+            .mapNotNull { ODPTCalendarType.fromRawValue(it) }
         val targetCalendarType = date.odptCalendarType(availableTypes)
         
         (4..25).flatMap { hour ->
@@ -528,20 +562,21 @@ fun String.getRideTime(
 ): Int {
     // Get target calendar type based on date and available calendar types
     val availableTypes = this.loadAvailableCalendarTypes(sharedPreferences, num)
-    val calendarTypeString = date.odptCalendarType(availableTypes)
+        .mapNotNull { ODPTCalendarType.fromRawValue(it) }
+    val targetCalendarType = date.odptCalendarType(availableTypes)
     
     val hour = departTime / 100
     val minutesInHour = departTime % 100
     
     // Try to get timetableRideTime for this hour
-    val rideTimeKey = this.timetableRideTimeKey(calendarTypeString, num, hour)
+    val rideTimeKey = this.timetableRideTimeKey(targetCalendarType, num, hour)
     val rideTimeString = sharedPreferences.getString(rideTimeKey, null)
     
     if (!rideTimeString.isNullOrEmpty()) {
         val rideTimes = rideTimeString.split(" ").mapNotNull { it.toIntOrNull() }
         
         // Find corresponding ride time by matching departure time
-        val timetableKey = this.timetableKey(calendarTypeString, num, hour)
+        val timetableKey = this.timetableKey(targetCalendarType, num, hour)
         val timetableString = sharedPreferences.getString(timetableKey, null)
         
         if (!timetableString.isNullOrEmpty()) {
@@ -708,10 +743,9 @@ fun String.saveTransportationTimes(
     hour: Int,
     sharedPreferences: SharedPreferences
 ) {
-    val calendarTag = calendarType.calendarTag()
-    val timetableKey = this.timetableKey(calendarTag, num, hour)
-    val timetableRideTimeKey = this.timetableRideTimeKey(calendarTag, num, hour)
-    val timetableTrainTypeKey = this.timetableTrainTypeKey(calendarTag, num, hour)
+    val timetableKey = this.timetableKey(calendarType, num, hour)
+    val timetableRideTimeKey = this.timetableRideTimeKey(calendarType, num, hour)
+    val timetableTrainTypeKey = this.timetableTrainTypeKey(calendarType, num, hour)
     
     // Clear existing data (always remove to ensure clean state)
     sharedPreferences.edit {
@@ -758,7 +792,9 @@ fun String.saveTransportationTimes(
 }
 
 // MARK: - Time Format Conversion
-// Convert HH:MM format to minutes within the hour
+// Convert HH:MM format or minutes-only format to minutes within the hour
+// - "8:30" or "08:30" -> 30 (extract minutes from HH:MM)
+// - "30" -> 30 (already minutes, used when loading from timetable storage "0 15 30 45")
 private fun convertHHMMToMinutes(timeString: String): Int {
     val components = timeString.split(":")
     if (components.size == 2) {
@@ -767,7 +803,8 @@ private fun convertHHMMToMinutes(timeString: String): Int {
             return minute  // Return only minutes within the hour
         }
     }
-    return 0
+    // If no colon, treat as minutes directly (e.g. "30" from timetable storage)
+    return timeString.toIntOrNull() ?: 0
 }
 
 // MARK: - Save Train Type List
@@ -778,8 +815,7 @@ fun String.saveTrainTypeList(
     num: Int,
     sharedPreferences: SharedPreferences
 ) {
-    val calendarTag = calendarType.calendarTag()
-    val trainTypeListKey = this.trainTypeListKey(calendarTag, num)
+    val trainTypeListKey = this.trainTypeListKey(calendarType, num)
     
     // Extract all train types from all transportation times
     val allTrainTypes = transportationTimes.mapNotNull { transportationTime ->
@@ -835,22 +871,18 @@ fun String.loadTransportationTimes(
     hour: Int,
     sharedPreferences: SharedPreferences
 ): List<TransportationTime> {
-    val calendarTag = calendarType.calendarTag()
-    val timetableKey = this.timetableKey(calendarTag, num, hour)
-    val timetableRideTimeKey = this.timetableRideTimeKey(calendarTag, num, hour)
-    val timetableTrainTypeKey = this.timetableTrainTypeKey(calendarTag, num, hour)
-    
-    val timetableString = sharedPreferences.getString(timetableKey, null) ?: return emptyList()
+    val timetableString = this.timetableTime(sharedPreferences, calendarType, num, hour)
+    if (timetableString.isEmpty()) return emptyList()
     
     val departureTimes = timetableString.split(" ").filter { it.isNotEmpty() }
-    val rideTimeString = this.timetableRideTime(sharedPreferences, calendarTag, num, hour)
+    val rideTimeString = this.timetableRideTime(sharedPreferences, calendarType, num, hour)
     val rideTimes = if (rideTimeString.isNotEmpty()) {
         rideTimeString.split(" ").mapNotNull { it.toIntOrNull() }
     } else {
         emptyList()
     }
-    val trainTypes = sharedPreferences.getString(timetableTrainTypeKey, null)
-        ?.split(" ")?.filter { it.isNotEmpty() } ?: emptyList()
+    val trainTypeString = this.timetableTrainTypeWithFallback(sharedPreferences, calendarType, num, hour)
+    val trainTypes = trainTypeString.split(" ").filter { it.isNotEmpty() }
     
     val routeRideTimeKey = this.rideTimeKey(num)
     val defaultRideTime = routeRideTimeKey.userDefaultsInt(sharedPreferences, 0)
@@ -918,24 +950,16 @@ fun String.hasTimetableDataForType(
     sharedPreferences: SharedPreferences
 ): Boolean {
     val calendarTag = calendarType.calendarTag()
-    android.util.Log.d("LineExtensions", "hasTimetableDataForType: goorback=$this, calendarType=${calendarType.rawValue}, calendarTag=$calendarTag, num=$num")
     
-    // Check all hours (4-25) to see if data exists
-    var foundKeys = mutableListOf<String>()
     for (hour in 4..25) {
-        val key = this.timetableKey(calendarTag, num, hour)
-        if (sharedPreferences.contains(key)) {
-            foundKeys.add(key)
-            android.util.Log.d("LineExtensions", "Found timetable key: $key")
+        val primaryKey = this.timetableKey(calendarType, num, hour)
+        if (sharedPreferences.contains(primaryKey)) return true
+        for (alt in alternateCalendarTagsForRead(calendarTag)) {
+            val altKey = "${this.lineNameKey(num)}$alt${hour.addZeroTime()}"
+            if (sharedPreferences.contains(altKey)) return true
         }
     }
-    
-    if (foundKeys.isEmpty()) {
-        // Log first few expected keys for debugging
-        android.util.Log.d("LineExtensions", "No timetable data found. Expected keys (first 3): ${(4..6).map { this.timetableKey(calendarTag, num, it) }}")
-    }
-    
-    return foundKeys.isNotEmpty()
+    return false
 }
 
 // Get train times count for each hour in the valid range
@@ -960,10 +984,16 @@ fun String.loadTrainTypeList(
     sharedPreferences: SharedPreferences
 ): List<String> {
     val calendarTag = calendarType.calendarTag()
-    val trainTypeListKey = this.trainTypeListKey(calendarTag, num)
     
-    // First, try to load from trainTypeListKey
-    val trainTypeListString = sharedPreferences.getString(trainTypeListKey, null)
+    // First, try to load from trainTypeListKey (with fallback for alternate key formats)
+    var trainTypeListString = sharedPreferences.getString(this.trainTypeListKey(calendarType, num), null)
+    if (trainTypeListString.isNullOrEmpty()) {
+        for (alt in alternateCalendarTagsForRead(calendarTag)) {
+            val altKey = "${this.lineNameKey(num)}$alt" + "traintypelist"
+            trainTypeListString = sharedPreferences.getString(altKey, null)
+            if (!trainTypeListString.isNullOrEmpty()) break
+        }
+    }
     if (!trainTypeListString.isNullOrEmpty()) {
         val trainTypes = trainTypeListString.split(" ").filter { it.isNotEmpty() }.distinct()
         // Sort by color priority
@@ -1003,9 +1033,10 @@ fun String.loadTrainTypeList(
     
     // Save the collected train types to trainTypeListKey for future use
     if (uniqueTrainTypes.isNotEmpty()) {
-        val trainTypeListString = uniqueTrainTypes.joinToString(" ")
+        val listKey = this.trainTypeListKey(calendarType, num)
+        val listString = uniqueTrainTypes.joinToString(" ")
         sharedPreferences.edit {
-            putString(trainTypeListKey, trainTypeListString)
+            putString(listKey, listString)
         }
     }
     
@@ -1020,18 +1051,17 @@ fun String.choiceCopyTimeKeyArray(
     num: Int,
     hour: Int
 ): List<String> {
-    val calendarTag = calendarType.calendarTag()
-    val oppositeCalendarTag = if (calendarTag == "weekday") "holiday" else "weekday"
+    val oppositeCalendarType = if (calendarType.calendarTag() == "weekday") ODPTCalendarType.Holiday else ODPTCalendarType.Weekday
     // Use otherroute extension function
     val otherroute = this.otherRoute
     
     return listOf(
-        "${this.lineNameKey(num)}$calendarTag${(hour - 1).addZeroTime()}",
-        "${this.lineNameKey(num)}$calendarTag${(hour + 1).addZeroTime()}",
-        "${this.lineNameKey(num)}$oppositeCalendarTag${hour.addZeroTime()}",
-        "${otherroute.lineNameKey(0)}$calendarTag${hour.addZeroTime()}",
-        "${otherroute.lineNameKey(1)}$calendarTag${hour.addZeroTime()}",
-        "${otherroute.lineNameKey(2)}$calendarTag${hour.addZeroTime()}"
+        this.timetableKey(calendarType, num, hour - 1),
+        this.timetableKey(calendarType, num, hour + 1),
+        this.timetableKey(oppositeCalendarType, num, hour),
+        otherroute.timetableKey(calendarType, 0, hour),
+        otherroute.timetableKey(calendarType, 1, hour),
+        otherroute.timetableKey(calendarType, 2, hour)
     )
 }
 

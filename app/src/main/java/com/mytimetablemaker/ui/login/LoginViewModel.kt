@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.mytimetablemaker.R
@@ -65,35 +66,42 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     
     // MARK: - Update Functions
     // Update email value
-    fun updateEmail(value: String) {
+    // updateAlert: when false, signUpCheck does not overwrite alert (used when clearing fields on login screen to avoid overwriting logout message)
+    fun updateEmail(value: String, updateAlert: Boolean = true) {
         _email.value = value
-        signUpCheck()
+        signUpCheck(updateAlert = updateAlert)
     }
     
     // Update password value
-    fun updatePassword(value: String) {
+    fun updatePassword(value: String, updateAlert: Boolean = true) {
         _password.value = value
-        signUpCheck()
+        signUpCheck(updateAlert = updateAlert)
     }
     
     // Update password confirm value
-    fun updatePasswordConfirm(value: String) {
+    fun updatePasswordConfirm(value: String, updateAlert: Boolean = true) {
         _passwordConfirm.value = value
-        signUpCheck()
+        signUpCheck(updateAlert = updateAlert)
     }
     
     // MARK: - Logout Function
     // Signs out current user and updates login state
-    fun logOut() {
+    // preserveMessage: when true, does not overwrite alert (used when called after delete() to show delete success message)
+    fun logOut(preserveMessage: Boolean = false) {
         _isShowMessage.value = false
-        _alertTitle.value = context.getString(R.string.logoutError)
-        _alertMessage.value = ""
+        if (!preserveMessage) {
+            _alertTitle.value = context.getString(R.string.logoutError)
+            _alertMessage.value = ""
+        }
         if (_isLoginSuccess.value) {
             _isLoading.value = true
             viewModelScope.launch {
                 try {
                     auth.signOut()
-                    _alertTitle.value = context.getString(R.string.loggedOutSuccessfully)
+                    if (!preserveMessage) {
+                        _alertTitle.value = context.getString(R.string.loggedOutSuccessfully)
+                        _alertMessage.value = ""
+                    }
                     sharedPreferences.edit {
                         putBoolean("Login", false)
                     }
@@ -101,6 +109,10 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                     _isLoading.value = false
                     _isShowMessage.value = true
                 } catch (e: Exception) {
+                    if (!preserveMessage) {
+                        _alertTitle.value = context.getString(R.string.logoutError)
+                        _alertMessage.value = ""
+                    }
                     sharedPreferences.edit {
                         putBoolean("Login", true)
                     }
@@ -116,11 +128,14 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     
     // MARK: - Login Validation
     // Validates login form inputs before authentication
-    fun loginCheck() {
+    // updateAlert: when false, only updates isValidLogin without overwriting alert (used on screen open to avoid overwriting logout message etc.)
+    fun loginCheck(updateAlert: Boolean = true) {
         val validation = ValidationMessages.loginValidationMessage(context, _email.value, _password.value)
-        _alertTitle.value = validation.first
-        _alertMessage.value = validation.second
-        _isValidLogin.value = (_alertTitle.value.isEmpty() && _alertMessage.value.isEmpty())
+        if (updateAlert) {
+            _alertTitle.value = validation.first
+            _alertMessage.value = validation.second
+        }
+        _isValidLogin.value = (validation.first.isEmpty() && validation.second.isEmpty())
     }
     
     // MARK: - Login Authentication
@@ -171,7 +186,8 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     
     // MARK: - Sign Up Validation
     // Validates sign up form inputs including terms agreement
-    fun signUpCheck() {
+    // updateAlert: when false, only updates isValidSignUp without overwriting alert (used on screen open to avoid overwriting logout message etc.)
+    fun signUpCheck(updateAlert: Boolean = true) {
         val validation = ValidationMessages.signUpValidationMessage(
             context,
             _email.value,
@@ -179,9 +195,11 @@ class LoginViewModel(private val context: Context) : ViewModel() {
             _passwordConfirm.value,
             _isTermsAgree.value
         )
-        _alertTitle.value = validation.first
-        _alertMessage.value = validation.second
-        _isValidSignUp.value = (_alertTitle.value.isEmpty() && _alertMessage.value.isEmpty())
+        if (updateAlert) {
+            _alertTitle.value = validation.first
+            _alertMessage.value = validation.second
+        }
+        _isValidSignUp.value = (validation.first.isEmpty() && validation.second.isEmpty())
     }
     
     // MARK: - Sign Up Authentication
@@ -289,19 +307,42 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     }
     
     // MARK: - Account Deletion
-    // Deletes current user account from Firebase Auth
-    fun delete() {
+    // Deletes current user account from Firebase Auth (requires password for re-authentication)
+    fun delete(password: String) {
         _isShowMessage.value = false
+        if (password.isBlank()) {
+            _alertTitle.value = context.getString(R.string.inputError)
+            _alertMessage.value = context.getString(R.string.enterYourPassword)
+            _isShowMessage.value = true
+            return
+        }
         _isLoading.value = true
         _alertTitle.value = context.getString(R.string.deleteAccountError)
         _alertMessage.value = context.getString(R.string.accountCouldNotBeDeleted)
         viewModelScope.launch {
             try {
-                auth.currentUser?.delete()?.await()
+                val user = auth.currentUser
+                if (user == null || user.email.isNullOrEmpty()) {
+                    _alertTitle.value = context.getString(R.string.deleteAccountError)
+                    _alertMessage.value = context.getString(R.string.accountCouldNotBeDeleted)
+                    _isLoading.value = false
+                    _isShowMessage.value = true
+                    return@launch
+                }
+                val credential = EmailAuthProvider.getCredential(user.email!!, password)
+                user.reauthenticate(credential).await()
+                user.delete().await()
                 _alertTitle.value = context.getString(R.string.deleteAccountSuccessfully)
                 _alertMessage.value = context.getString(R.string.accountDeletedSuccessfully)
-                logOut()
+                logOut(preserveMessage = true)
             } catch (e: Exception) {
+                val authException = e as? FirebaseAuthException
+                _alertTitle.value = context.getString(R.string.deleteAccountError)
+                _alertMessage.value = if (authException != null) {
+                    authException.getLocalizedMessage(context)
+                } else {
+                    context.getString(R.string.accountCouldNotBeDeleted)
+                }
                 _isLoading.value = false
                 _isShowMessage.value = true
             }

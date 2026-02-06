@@ -236,6 +236,10 @@ fun Date.odptCalendarType(fallbackTo: List<ODPTCalendarType>): ODPTCalendarType 
     return fallbackTo.firstOrNull() ?: ODPTCalendarType.Weekday
 }
 
+// Helper to check if availableTypes contains a calendar type (supports both short form and rawValue)
+private fun List<String>.hasCalendarType(shortForm: String, rawValueSuffix: String): Boolean =
+    any { it.equals(shortForm, ignoreCase = true) || it.endsWith(":$rawValueSuffix") }
+
 // Legacy version: Returns String (for backward compatibility)
 fun Date.odptCalendarType(availableTypes: List<String>): String {
     val calendar = Calendar.getInstance()
@@ -250,22 +254,23 @@ fun Date.odptCalendarType(availableTypes: List<String>): String {
     if (isWeekday && !isHoliday) {
         // Check for specific weekday types
         when (dayOfWeek) {
-            Calendar.MONDAY -> if (availableTypes.contains("monday")) return "monday"
-            Calendar.TUESDAY -> if (availableTypes.contains("tuesday")) return "tuesday"
-            Calendar.WEDNESDAY -> if (availableTypes.contains("wednesday")) return "wednesday"
-            Calendar.THURSDAY -> if (availableTypes.contains("thursday")) return "thursday"
-            Calendar.FRIDAY -> if (availableTypes.contains("friday")) return "friday"
+            Calendar.MONDAY -> if (availableTypes.hasCalendarType("monday", "Monday")) return "monday"
+            Calendar.TUESDAY -> if (availableTypes.hasCalendarType("tuesday", "Tuesday")) return "tuesday"
+            Calendar.WEDNESDAY -> if (availableTypes.hasCalendarType("wednesday", "Wednesday")) return "wednesday"
+            Calendar.THURSDAY -> if (availableTypes.hasCalendarType("thursday", "Thursday")) return "thursday"
+            Calendar.FRIDAY -> if (availableTypes.hasCalendarType("friday", "Friday")) return "friday"
         }
         // Fallback to weekday
-        if (availableTypes.contains("weekday")) return "weekday"
+        if (availableTypes.hasCalendarType("weekday", "Weekday")) return "weekday"
     }
     
     // Check for holiday/weekend calendar types
-    if (isHoliday && availableTypes.contains("holiday")) return "holiday"
-    if (dayOfWeek == Calendar.SUNDAY && availableTypes.contains("sunday")) return "sunday"
-    if (dayOfWeek == Calendar.SATURDAY && availableTypes.contains("saturday")) return "saturday"
-    if ((isHoliday || dayOfWeek == Calendar.SUNDAY || dayOfWeek == Calendar.SATURDAY) && 
-        availableTypes.contains("saturdayHoliday")) return "saturdayHoliday"
+    // For 2-type fallback (weekday, saturdayHoliday): Saturday/Sunday/holiday -> saturdayHoliday
+    if ((isHoliday || dayOfWeek == Calendar.SUNDAY) && availableTypes.hasCalendarType("holiday", "Holiday")) return "holiday"
+    if (dayOfWeek == Calendar.SUNDAY && availableTypes.hasCalendarType("sunday", "Sunday")) return "sunday"
+    if (dayOfWeek == Calendar.SATURDAY && availableTypes.hasCalendarType("saturday", "Saturday")) return "saturday"
+    if ((isHoliday || dayOfWeek == Calendar.SUNDAY || dayOfWeek == Calendar.SATURDAY) &&
+        availableTypes.hasCalendarType("saturdayHoliday", "SaturdayHoliday")) return "saturdayHoliday"
     
     // Final fallback
     return availableTypes.firstOrNull() ?: "weekday"
@@ -335,8 +340,16 @@ fun String.detectAvailableCalendarTypesFromData(
     return detectedTypes.sortedBy { it.rawValue }
 }
 
+// Fallback when no cache/data: weekday, saturday, holiday (route not selected - no ODPT API fetch)
+private val FALLBACK_CALENDAR_TYPES = listOf(
+    "odpt.Calendar:Weekday",
+    "odpt.Calendar:SaturdayHoliday"
+)
+
 fun String.loadAvailableCalendarTypes(sharedPreferences: SharedPreferences, num: Int): List<String> {
-    // Check line-level cache first
+    // Line-level cache: list of calendar types from ODPT API fetch (saved when API returns types)
+    // When cache has types: display all (verified to have timetable data)
+    // When cache is empty: display 2 standard types (weekday, saturdayHoliday)
     val lineCacheKey = "${this}line${num + 1}_calendarTypes"
     val cachedTypes = sharedPreferences.getStringSet(lineCacheKey, null)
     if (cachedTypes != null && cachedTypes.isNotEmpty()) {
@@ -347,19 +360,14 @@ fun String.loadAvailableCalendarTypes(sharedPreferences: SharedPreferences, num:
                 this.hasTimetableDataForType(it, num, sharedPreferences) 
             }
             if (verifiedTypes.isNotEmpty()) {
+                // Return all types from API (Monday, Tuesday, etc. when API returned them)
                 return verifiedTypes.map { it.rawValue }
             }
         }
     }
     
-    // Try to detect from actual data
-    val detectedTypes = this.detectAvailableCalendarTypesFromData(num, sharedPreferences)
-    if (detectedTypes.isNotEmpty()) {
-        return detectedTypes.map { it.rawValue }
-    }
-    
-    // Final fallback to default calendar types
-    return listOf("odpt.Calendar:Weekday", "odpt.Calendar:SaturdayHoliday")
+    // Cache empty (no ODPT API fetch for this line): display 3 standard types
+    return FALLBACK_CALENDAR_TYPES
 }
 
 // Generate time array for route based on date and current time

@@ -22,9 +22,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.zIndex
 import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.ScreenSize
+import com.mytimetablemaker.services.SharedDataManager
 import com.mytimetablemaker.ui.settings.FirestoreViewModel
 import com.mytimetablemaker.ui.theme.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // MARK: - Splash Content Screen
 // Main screen that manages app navigation and core functionality
@@ -61,14 +66,22 @@ fun SplashContentScreen(
         println("🚀 Splash screen appeared - starting initialization")
         // adBannerView = AdMobBannerView.preloadAds()
         
-        // Initialize data and perform update check when app launches
-        // TODO: Implement SharedDataManager equivalent
-        // await sharedDataManager.performSplashInitialization()
+        // Run initialization in background - DO NOT block navigation (prevents ANR)
+        // Use independent scope so init continues after splash is disposed
+        // Full API fetch can take 10+ seconds; user can use app while data loads
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                val sharedDataManager = SharedDataManager.getInstance(application)
+                sharedDataManager.performSplashInitialization()
+            } catch (e: Exception) {
+                println("⚠️ Splash initialization failed: ${e.message}")
+            }
+        }
         
-        // Simulate initialization delay
-        delay(1000)
+        // Minimum display time for splash (1.5s) - then navigate without waiting for init
+        delay(1500)
         
-        // Navigate to main content after loading completes
+        // Navigate to main content - init continues in background
         isLoading = false
         delay(500) // Small delay to ensure smooth transition
         isFinishSplash = true

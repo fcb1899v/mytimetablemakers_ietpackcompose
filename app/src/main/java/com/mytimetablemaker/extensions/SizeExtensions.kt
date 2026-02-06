@@ -58,9 +58,9 @@ object ScreenSize {
     
     // MARK: - Main Content Layout
     @Composable
-    fun routeSingleWidth(): Dp = customWidth() -  routeSidePadding() * 2f
+    fun routeSingleWidth(): Dp = customWidth() * 0.7f
     @Composable
-    fun routeDoubleWidth(): Dp = customWidth() / 2f - routeSidePadding() * 2f
+    fun routeDoubleWidth(): Dp = customWidth() * 0.45f
     @Composable
     fun routeWidth(isShowRoute2: Boolean): Dp = if (isShowRoute2) routeDoubleWidth() else routeSingleWidth()
     @Composable
@@ -178,19 +178,20 @@ object ScreenSize {
         return screenHeight() * 0.026f + timetableNumberHeight() * addRowCount
     }
     @Composable
-    fun timetableDisplayHeight(): Dp = screenHeight() * 0.06f
+    fun timetableDisplayHeight(): Dp = screenHeight() * 0.07f
+    @Composable
+    fun timetableDisplayBottomSpacing(): Dp = screenHeight() * 0.006f
     @Composable
     fun timetableMaxHeight(): Dp = screenHeight() * 0.64f
     @Composable
     fun timetableVerticalSpacing(): Dp = screenHeight() * 0.012f
+    // Dropdown overlay offset Y (adjust multiplier to move vertically; smaller = higher on screen)
     @Composable
-    fun timetableTypeMenuOffsetY(): Dp = screenHeight() * 0.000f
+    fun timetableCopyMenuOffsetY(): Dp = screenHeight() * 0.18f  // SettingsTimetableSheet: copy time dropdown (発車時刻のコピー)
     @Composable
-    fun timetableCopyMenuOffsetY(): Dp = screenHeight() * 0.13f
+    fun timetableCalendarMenuOffsetY(): Dp = screenHeight() * 0.06f  // SettingsTimetableSheet: calendar type dropdown
     @Composable
-    fun timetableCalendarMenuOffsetY(): Dp = screenHeight() * 0.00f
-    @Composable
-    fun timetableContentViewMenuOffsetY(): Dp = screenHeight() * 0.10f
+    fun timetableContentViewMenuOffsetY(): Dp = screenHeight() * 0.10f  // TimetableContentScreen: calendar type dropdown
     @Composable
     fun timetablePickerTopPadding(): Dp = screenHeight() * 0.000f
     @Composable
@@ -216,6 +217,8 @@ object ScreenSize {
     @Composable
     fun settingsSheetVerticalSpacing(): Dp = screenHeight() * 0.012f
     @Composable
+    fun settingsSheetCompactVerticalSpacing(): Dp = 0.dp  // No gap (Button contentPadding = 0)
+    @Composable
     fun settingsSheetHorizontalPadding(): Dp = customWidth() * 0.06f
     @Composable
     fun settingsSheetHorizontalSpacing(): Dp = customWidth() * 0.02f
@@ -234,7 +237,7 @@ object ScreenSize {
     @Composable
     fun settingsSheetLineTagSize(): Dp = customWidth() * 0.05f
     @Composable
-    fun settingsSheetIconSize(): Dp = customWidth() * 0.045f
+    fun settingsSheetIconSize(): Dp = customWidth() * 0.040f
     @Composable
     fun settingsSheetIconSpacing(): Dp = customWidth() * 0.016f
     @Composable
@@ -246,7 +249,11 @@ object ScreenSize {
     @Composable
     fun settingsSheetPickerSelectWidth(): Dp = customWidth() * 0.08f
     @Composable
+    fun settingsSheetPickerDigitColumnWidth(): Dp = customWidth() * 0.04f 
+    @Composable
     fun settingsSheetPickerSpacing(): Dp = customWidth() * 0.01f
+    @Composable
+    fun settingsSheetPickerDigitSpacing(): Dp = customWidth() * 0.02f  
     @Composable
     fun settingsSheetInputPaddingVertical(): Dp = screenHeight() * 0.002f
     @Composable
@@ -276,11 +283,9 @@ object ScreenSize {
     @Composable
     fun settingsLineSheetSuggestionItemHeight(): Dp = screenHeight() * 0.046f
     @Composable
-    fun settingsLineSheetTagPaddingVertical(): Dp = screenHeight() * 0.001f
-    @Composable
     fun settingsLineSheetDropdownOffsetX(): Dp = customWidth() * 0.16f
     @Composable
-    fun settingsLineSheetDropdownOffsetY(): Dp = screenHeight() * 0.005f
+    fun settingsLineSheetDropdownOffsetY(): Dp = screenHeight() * 0.24f
     @Composable
     fun settingsLineSheetOperatorOffset(): Dp = screenHeight() * 0.13f
     @Composable
@@ -316,13 +321,21 @@ object ScreenSize {
     
     // MARK: - Alert Dialog
     @Composable
-    fun alertDialogContentPadding(): Dp = customWidth() * 0.04f
+    fun alertDialogContentPadding(): Dp = customWidth() * 0.02f
     @Composable
-    fun alertDialogTitleFontSize(): Dp = customWidth() * 0.036f
+    fun alertDialogTitleFontSize(): Dp = customWidth() * 0.045f
     @Composable
-    fun alertDialogTextFontSize(): Dp = customWidth() * 0.033f
+    fun alertDialogTextFontSize(): Dp = customWidth() * 0.036f
     @Composable
     fun alertDialogButtonFontSize(): Dp = customWidth() * 0.033f
+    @Composable
+    fun alertDialogCornerRadius(): Dp = customWidth() * 0.06f
+    @Composable
+    fun alertDialogButtonCornerRadius(): Dp = customWidth() * 0.04f
+    @Composable
+    fun alertDialogTextTopPadding(): Dp = customWidth() * 0.01f
+    @Composable
+    fun alertDialogElevation(): Dp = customWidth() * 0.015f
 
     // MARK: - Custom Component
     @Composable

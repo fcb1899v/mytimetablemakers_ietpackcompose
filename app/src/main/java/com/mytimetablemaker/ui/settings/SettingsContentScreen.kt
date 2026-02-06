@@ -32,6 +32,8 @@ import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.main.MainViewModel
 import com.mytimetablemaker.ui.theme.*
 import android.content.SharedPreferences
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.net.toUri
 import androidx.core.content.edit
@@ -50,7 +52,6 @@ fun SettingsContentScreen(
     onNavigateToLogin: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val application = context.applicationContext as android.app.Application
     // Use the same SharedPreferences instance as MainViewModel to ensure listeners work
     val sharedPreferences = context.getSharedPreferences("MainViewModel", android.content.Context.MODE_PRIVATE)
     
@@ -62,11 +63,17 @@ fun SettingsContentScreen(
     var showRoute2 by remember { mutableStateOf(false) }
     var showLogoutAlert by remember { mutableStateOf(false) }
     var showDeleteAlert by remember { mutableStateOf(false) }
+    var deletePassword by remember { mutableStateOf("") }
     var showGetFirestoreAlert by remember { mutableStateOf(false) }
+    var getFirestorePassword by remember { mutableStateOf("") }
     var showSaveFirestoreAlert by remember { mutableStateOf(false) }
+    var saveFirestorePassword by remember { mutableStateOf("") }
     
-    // Observe login status from LoginViewModel
+    // Observe login status and messages from LoginViewModel
     val isLoginSuccess by loginViewModel.isLoginSuccess.collectAsState()
+    val isShowLoginMessage by loginViewModel.isShowMessage.collectAsState()
+    val loginAlertTitle by loginViewModel.alertTitle.collectAsState()
+    val loginAlertMessage by loginViewModel.alertMessage.collectAsState()
     
     // Set status bar color to Primary
     val view = LocalView.current
@@ -340,218 +347,172 @@ fun SettingsContentScreen(
     }
     
     // MARK: - Alerts
-    // Responsive font sizes for alerts
-    val alertTitleFontSize = ScreenSize.alertDialogTitleFontSize()
-    val alertTextFontSize = ScreenSize.alertDialogTextFontSize()
-    val alertButtonFontSize = ScreenSize.alertDialogButtonFontSize()
-    
     // Logout Alert
     if (showLogoutAlert) {
-        AlertDialog(
+        CommonComponents.CustomAlertDialog(
             onDismissRequest = { showLogoutAlert = false },
-            title = { 
-                Text(
-                    text = stringResource(R.string.logout),
-                    fontSize = alertTitleFontSize.value.sp
-                ) 
+            title = stringResource(R.string.logout),
+            alertMessage = stringResource(R.string.logoutYourAccount),
+            confirmButtonText = stringResource(R.string.ok),
+            onConfirmClick = {
+                showLogoutAlert = false
+                loginViewModel.logOut()
             },
-            text = { 
-                Text(
-                    text = stringResource(R.string.logoutYourAccount),
-                    fontSize = alertTextFontSize.value.sp
-                ) 
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showLogoutAlert = false
-                        loginViewModel.logOut()
-                    }
-                ) {
-                    Text(
-                        text = stringResource(R.string.ok),
-                        fontSize = alertButtonFontSize.value.sp
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showLogoutAlert = false }
-                ) {
-                    Text(
-                        text = stringResource(R.string.cancel),
-                        fontSize = alertButtonFontSize.value.sp
-                    )
-                }
-            },
-            containerColor = White
+            dismissButtonText = stringResource(R.string.cancel),
+            onDismissClick = { showLogoutAlert = false }
         )
     }
     
-    // Delete Account Alert
+    // Delete Account Alert (with password input)
     if (showDeleteAlert) {
-        AlertDialog(
-            onDismissRequest = { showDeleteAlert = false },
-            title = { 
-                Text(
-                    text = stringResource(R.string.deleteAccount),
-                    fontSize = alertTitleFontSize.value.sp
-                ) 
+        CommonComponents.CustomAlertDialog(
+            onDismissRequest = {
+                showDeleteAlert = false
+                deletePassword = ""
             },
-            text = { 
-                Text(
-                    text = "⚠️ ${stringResource(R.string.deleteYourAccount)}",
-                    fontSize = alertTextFontSize.value.sp
-                ) 
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteAlert = false
-                        loginViewModel.delete()
-                    }
-                ) {
+            title = stringResource(R.string.deleteAccount),
+            confirmButtonText = stringResource(R.string.delete),
+            textContent = {
+                Column {
                     Text(
-                        text = stringResource(R.string.ok),
-                        fontSize = alertButtonFontSize.value.sp
+                        text = stringResource(R.string.deleteYourAccount),
+                        fontSize = ScreenSize.alertDialogTextFontSize().value.sp,
+                        color = Black
+                    )
+                    Spacer(modifier = Modifier.height(ScreenSize.loginSpacingSmall()))
+                    CommonComponents.CustomLoginTextField(
+                        value = deletePassword,
+                        onValueChange = { deletePassword = it },
+                        placeholder = stringResource(R.string.deleteAccountPasswordPlaceholder),
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardType = KeyboardType.Password,
+                        isPassword = true
                     )
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDeleteAlert = false }
-                ) {
-                    Text(
-                        text = stringResource(R.string.cancel),
-                        fontSize = alertButtonFontSize.value.sp
-                    )
-                }
+            onConfirmClick = {
+                loginViewModel.delete(deletePassword)
+                showDeleteAlert = false
+                deletePassword = ""
             },
-            containerColor = White
+            dismissButtonText = stringResource(R.string.cancel),
+            onDismissClick = {
+                showDeleteAlert = false
+                deletePassword = ""
+            },
+            icon = Icons.Default.Warning,
+            isDestructive = true
         )
     }
     
-    // Get Firestore Alert
+    // Get Firestore Alert (with password input)
     if (showGetFirestoreAlert) {
-        AlertDialog(
-            onDismissRequest = { showGetFirestoreAlert = false },
-            title = { 
-                Text(
-                    text = stringResource(R.string.getSavedData),
-                    fontSize = alertTitleFontSize.value.sp
-                ) 
+        CommonComponents.CustomAlertDialog(
+            onDismissRequest = {
+                showGetFirestoreAlert = false
+                getFirestorePassword = ""
             },
-            text = { 
-                Text(
-                    text = "⚠️ ${stringResource(R.string.overwrittenCurrentData)}",
-                    fontSize = alertTextFontSize.value.sp
-                ) 
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showGetFirestoreAlert = false
-                        firestoreViewModel.getFirestore()
-                    }
-                ) {
+            title = stringResource(R.string.getSavedData),
+            confirmButtonText = stringResource(R.string.ok),
+            textContent = {
+                Column {
                     Text(
-                        text = stringResource(R.string.ok),
-                        fontSize = alertButtonFontSize.value.sp
+                        text = stringResource(R.string.overwrittenCurrentData),
+                        fontSize = ScreenSize.alertDialogTextFontSize().value.sp,
+                        color = Black
+                    )
+                    Spacer(modifier = Modifier.height(ScreenSize.loginSpacingSmall()))
+                    CommonComponents.CustomLoginTextField(
+                        value = getFirestorePassword,
+                        onValueChange = { getFirestorePassword = it },
+                        placeholder = stringResource(R.string.deleteAccountPasswordPlaceholder),
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardType = KeyboardType.Password,
+                        isPassword = true
                     )
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = { showGetFirestoreAlert = false }
-                ) {
-                    Text(
-                        text = stringResource(R.string.cancel),
-                        fontSize = alertButtonFontSize.value.sp
-                    )
-                }
+            onConfirmClick = {
+                firestoreViewModel.getFirestore(getFirestorePassword)
+                showGetFirestoreAlert = false
+                getFirestorePassword = ""
             },
-            containerColor = White
+            dismissButtonText = stringResource(R.string.cancel),
+            onDismissClick = {
+                showGetFirestoreAlert = false
+                getFirestorePassword = ""
+            },
+            icon = Icons.Default.Warning
         )
     }
     
-    // Save Firestore Alert
+    // Save Firestore Alert (with password input)
     if (showSaveFirestoreAlert) {
-        AlertDialog(
-            onDismissRequest = { showSaveFirestoreAlert = false },
-            title = { 
-                Text(
-                    text = stringResource(R.string.saveCurrentData),
-                    fontSize = alertTitleFontSize.value.sp
-                ) 
+        CommonComponents.CustomAlertDialog(
+            onDismissRequest = {
+                showSaveFirestoreAlert = false
+                saveFirestorePassword = ""
             },
-            text = { 
-                Text(
-                    text = "⚠️ ${stringResource(R.string.overwrittenSavedData)}",
-                    fontSize = alertTextFontSize.value.sp
-                ) 
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showSaveFirestoreAlert = false
-                        firestoreViewModel.setFirestore()
-                    }
-                ) {
+            title = stringResource(R.string.saveCurrentData),
+            confirmButtonText = stringResource(R.string.ok),
+            textContent = {
+                Column {
                     Text(
-                        text = stringResource(R.string.ok),
-                        fontSize = alertButtonFontSize.value.sp
+                        text = stringResource(R.string.overwrittenSavedData),
+                        fontSize = ScreenSize.alertDialogTextFontSize().value.sp,
+                        color = Black
+                    )
+                    Spacer(modifier = Modifier.height(ScreenSize.loginSpacingSmall()))
+                    CommonComponents.CustomLoginTextField(
+                        value = saveFirestorePassword,
+                        onValueChange = { saveFirestorePassword = it },
+                        placeholder = stringResource(R.string.deleteAccountPasswordPlaceholder),
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardType = KeyboardType.Password,
+                        isPassword = true
                     )
                 }
             },
-            dismissButton = {
-                TextButton(
-                    onClick = { showSaveFirestoreAlert = false }
-                ) {
-                    Text(
-                        text = stringResource(R.string.cancel),
-                        fontSize = alertButtonFontSize.value.sp
-                    )
-                }
+            onConfirmClick = {
+                firestoreViewModel.setFirestore(saveFirestorePassword)
+                showSaveFirestoreAlert = false
+                saveFirestorePassword = ""
             },
-            containerColor = White
+            dismissButtonText = stringResource(R.string.cancel),
+            onDismissClick = {
+                showSaveFirestoreAlert = false
+                saveFirestorePassword = ""
+            },
+            icon = Icons.Default.Warning
+        )
+    }
+    
+    // MARK: - Logout Result Alert (show on Settings when user logs out, consume here so it doesn't show again on LoginContentScreen)
+    if (isShowLoginMessage) {
+        CommonComponents.CustomAlertDialog(
+            onDismissRequest = { loginViewModel.dismissMessage() },
+            title = loginAlertTitle,
+            alertMessage = loginAlertMessage,
+            confirmButtonText = stringResource(R.string.ok),
+            onConfirmClick = { loginViewModel.dismissMessage() }
         )
     }
     
     // MARK: - Firestore Result Alert
     if (firestoreViewModel.isShowMessage) {
-        AlertDialog(
+        CommonComponents.CustomAlertDialog(
             onDismissRequest = { firestoreViewModel.dismissMessage() },
-            title = {
-                Text(
-                    text = firestoreViewModel.title,
-                    fontSize = alertTitleFontSize.value.sp
-                )
-            },
-            text = {
-                Text(
-                    text = firestoreViewModel.message,
-                    fontSize = alertTextFontSize.value.sp
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val success = firestoreViewModel.isFirestoreSuccess
-                        firestoreViewModel.dismissMessage()
-                        if (success) {
-                            // Update transfer data for GetFirestore operation
-                            mainViewModel.updateAllDataFromUserDefaults()
-                            onNavigateToMain()
-                        }
-                    }
-                ) {
-                    Text(
-                        text = stringResource(R.string.ok),
-                        fontSize = alertButtonFontSize.value.sp
-                    )
+            title = firestoreViewModel.title,
+            alertMessage = firestoreViewModel.message,
+            confirmButtonText = stringResource(R.string.ok),
+            onConfirmClick = {
+                val success = firestoreViewModel.isFirestoreSuccess
+                firestoreViewModel.dismissMessage()
+                if (success) {
+                    mainViewModel.updateAllDataFromUserDefaults()
+                    onNavigateToMain()
                 }
-            },
-            containerColor = White
+            }
         )
     }
     

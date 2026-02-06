@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -16,11 +17,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.MobileAds
 import com.mytimetablemaker.extensions.ScreenSize
 import com.mytimetablemaker.R
-import java.util.Properties
+import kotlinx.coroutines.delay
 import java.io.File
+import java.util.Properties
 
 // MARK: - AdMob Banner View
 // Jetpack Compose wrapper for Google Mobile Ads banner view
@@ -30,19 +31,17 @@ fun AdMobBannerView(
 ) {
     val context = LocalContext.current
     var lastLoadTime by remember { mutableLongStateOf(0L) }
+    var isReadyToLoad by remember { mutableStateOf(false) }
     val minimumLoadInterval = 60_000L // 60 seconds in milliseconds
     
     // Get AdMob Banner Unit ID from resources or local.properties
-    val adUnitID = remember {
-        getAdUnitID(context)
-    }
-    
-    // Get banner height
+    val adUnitID = remember { getAdUnitID(context) }
     val bannerHeight = ScreenSize.admobBannerHeight()
     
-    // Initialize MobileAds if not already initialized
+    // Defer first ad load to avoid blocking main thread during initial composition
     LaunchedEffect(Unit) {
-        MobileAds.initialize(context) {}
+        delay(500)
+        isReadyToLoad = true
     }
     
     Box(
@@ -57,6 +56,7 @@ fun AdMobBannerView(
                 adView
             },
             update = { adView ->
+                if (!isReadyToLoad) return@AndroidView
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastLoadTime >= minimumLoadInterval) {
                     val request = AdRequest.Builder().build()

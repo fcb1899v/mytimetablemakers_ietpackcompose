@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -21,8 +24,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,6 +41,7 @@ import com.mytimetablemaker.models.*
 import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.theme.*
 import androidx.core.content.edit
+import androidx.core.view.WindowCompat
 import com.mytimetablemaker.models.getTrainTypeDisplayName
 
 // MARK: - Settings Timetable Sheet Screen
@@ -55,13 +63,29 @@ fun SettingsTimetableSheetScreen(
     var displayDepartureTime by remember { mutableStateOf<Int?>(null) }
     var rideTime by remember { mutableStateOf<Int?>(null) }
     var selectedTrainType by remember { mutableStateOf<String?>(null) }
-    var isTrainTypeDropdownOpen by remember { mutableStateOf(false) }
     var isCalendarTypeDropdownOpen by remember { mutableStateOf(false) }
     var isCopyTimeDropdownOpen by remember { mutableStateOf(false) }
     var currentHour by remember { mutableIntStateOf(hour) }
     var currentCalendarType by remember { mutableStateOf(selectedCalendarType) }
     var transportationTimes by remember { mutableStateOf<List<TransportationTime>>(emptyList()) }
     var availableOdptCalendar by remember { mutableStateOf<List<ODPTCalendarType>>(emptyList()) }
+    
+    val horizontalPadding = ScreenSize.settingsSheetHorizontalPadding()
+    val verticalSpacing = ScreenSize.settingsSheetVerticalSpacing()
+    val titleFontSize = ScreenSize.settingsTitleFontSize()
+    
+    // Status bar setup (align with SettingsLineSheet / SettingsTransferSheet)
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        val window = (context as? android.app.Activity)?.window
+        window?.let {
+            WindowCompat.setDecorFitsSystemWindows(it, false)
+            WindowCompat.getInsetsController(it, view).apply {
+                isAppearanceLightStatusBars = false
+            }
+        }
+        onDispose { }
+    }
     
     // Initialize state
     LaunchedEffect(Unit) {
@@ -70,10 +94,10 @@ fun SettingsTimetableSheetScreen(
         val savedRideTime = rideTimeKey.userDefaultsInt(sharedPreferences, 0)
         rideTime = if (savedRideTime == 0) null else savedRideTime
         
-        // Load available calendar types
+        // Load available calendar types (loadAvailableCalendarTypes returns full rawValue e.g. "odpt.Calendar:Weekday")
         val loadedTypesString = goorback.loadAvailableCalendarTypes(sharedPreferences, num)
         availableOdptCalendar = loadedTypesString.mapNotNull { typeString ->
-            ODPTCalendarType.fromRawValue("odpt.Calendar:$typeString")
+            ODPTCalendarType.fromRawValue(typeString)
         }
         
         // Load transportation times
@@ -99,8 +123,7 @@ fun SettingsTimetableSheetScreen(
     // Check if the selected departure time exists in the timetable (for deletion)
     fun isTimeExistsForDeletion(): Boolean {
         val departureTimeValue = departureTime ?: return false
-        val calendarTag = currentCalendarType.calendarTag()
-        val timetableKey = goorback.timetableKey(calendarTag, num, currentHour)
+        val timetableKey = goorback.timetableKey(currentCalendarType, num, currentHour)
         val timetableString = sharedPreferences.getString(timetableKey, null) ?: return false
         return timetableString.containsTimeInAnyFormat(departureTimeValue)
     }
@@ -110,10 +133,9 @@ fun SettingsTimetableSheetScreen(
         val departureTimeValue = departureTime ?: return false
         val rideTimeValue = rideTime ?: return false
         
-        val calendarTag = currentCalendarType.calendarTag()
-        val timetableKey = goorback.timetableKey(calendarTag, num, currentHour)
-        val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarTag, num, currentHour)
-        val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarTag, num, currentHour)
+        val timetableKey = goorback.timetableKey(currentCalendarType, num, currentHour)
+        val timetableTrainTypeKey = goorback.timetableTrainTypeKey(currentCalendarType, num, currentHour)
+        val timetableRideTimeKey = goorback.timetableRideTimeKey(currentCalendarType, num, currentHour)
         
         val currentTimetableString = sharedPreferences.getString(timetableKey, null) ?: ""
         val currentTrainTypeString = sharedPreferences.getString(timetableTrainTypeKey, null) ?: ""
@@ -181,8 +203,7 @@ fun SettingsTimetableSheetScreen(
     
     // Update train type list
     fun updateTrainTypeList(trainType: String) {
-        val calendarTag = currentCalendarType.calendarTag()
-        val trainTypeListKey = goorback.trainTypeListKey(calendarTag, num)
+        val trainTypeListKey = goorback.trainTypeListKey(currentCalendarType, num)
         val existingListString = sharedPreferences.getString(trainTypeListKey, null) ?: ""
         val existingList = existingListString.timetableComponents.toMutableList()
         
@@ -222,10 +243,9 @@ fun SettingsTimetableSheetScreen(
     
     // Add time and train type pair
     fun addTimeAndTrainTypePair(departureTime: Int, trainType: String?, rideTime: Int) {
-        val calendarTag = currentCalendarType.calendarTag()
-        val timetableKey = goorback.timetableKey(calendarTag, num, currentHour)
-        val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarTag, num, currentHour)
-        val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarTag, num, currentHour)
+        val timetableKey = goorback.timetableKey(currentCalendarType, num, currentHour)
+        val timetableTrainTypeKey = goorback.timetableTrainTypeKey(currentCalendarType, num, currentHour)
+        val timetableRideTimeKey = goorback.timetableRideTimeKey(currentCalendarType, num, currentHour)
         val routeRideTimeKey = goorback.rideTimeKey(num)
         
         // Get current data
@@ -255,16 +275,16 @@ fun SettingsTimetableSheetScreen(
         if (existingIndex != null) {
             // Overwrite existing time with new train type and ride time
             val index = existingIndex
-            if (index < trainTypes.size) {
-                trainTypes[index] = newTrainType
-            } else {
-                trainTypes.add(newTrainType)
+            // Pad trainTypes/rideTimes to match departureTimes size when they're shorter
+            // (e.g. when timetableTrainTypeKey/timetableRideTimeKey was empty)
+            while (trainTypes.size <= index) {
+                trainTypes.add("defaultLocal")
             }
-            if (index < rideTimes.size) {
-                rideTimes[index] = newRideTimeString
-            } else {
-                rideTimes.add(newRideTimeString)
+            while (rideTimes.size <= index) {
+                rideTimes.add(defaultRideTime.addZeroTime())
             }
+            trainTypes[index] = newTrainType
+            rideTimes[index] = newRideTimeString
         } else {
             // Add new time, train type, and ride time
             departureTimes.add(newTimeString)
@@ -305,10 +325,9 @@ fun SettingsTimetableSheetScreen(
     
     // Delete time and train type pair
     fun deleteTimeAndTrainTypePair(departureTime: Int) {
-        val calendarTag = currentCalendarType.calendarTag()
-        val timetableKey = goorback.timetableKey(calendarTag, num, currentHour)
-        val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarTag, num, currentHour)
-        val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarTag, num, currentHour)
+        val timetableKey = goorback.timetableKey(currentCalendarType, num, currentHour)
+        val timetableTrainTypeKey = goorback.timetableTrainTypeKey(currentCalendarType, num, currentHour)
+        val timetableRideTimeKey = goorback.timetableRideTimeKey(currentCalendarType, num, currentHour)
         val routeRideTimeKey = goorback.rideTimeKey(num)
         
         // Get current data
@@ -422,18 +441,25 @@ fun SettingsTimetableSheetScreen(
     
     // Copy timetable times from another hour or route
     fun copyTime(index: Int) {
-        val calendarTag = currentCalendarType.calendarTag()
-        val timetableKey = goorback.timetableKey(calendarTag, num, currentHour)
-        val copiedTime = goorback.choiceCopyTime(
-            currentCalendarType,
-            num,
-            currentHour,
-            index,
-            sharedPreferences
-        )
+        val keyArray = goorback.choiceCopyTimeKeyArray(currentCalendarType, num, currentHour)
+        if (index < 0 || index >= keyArray.size) return
+        
+        val sourceTimetableKey = keyArray[index]
+        val sourceTrainTypeKey = "${sourceTimetableKey}traintype"
+        val sourceRideTimeKey = "${sourceTimetableKey}ridetime"
+        
+        val timetableKey = goorback.timetableKey(currentCalendarType, num, currentHour)
+        val timetableTrainTypeKey = goorback.timetableTrainTypeKey(currentCalendarType, num, currentHour)
+        val timetableRideTimeKey = goorback.timetableRideTimeKey(currentCalendarType, num, currentHour)
+        
+        val copiedTime = sharedPreferences.getString(sourceTimetableKey, null) ?: ""
+        val copiedTrainTypes = sharedPreferences.getString(sourceTrainTypeKey, null) ?: ""
+        val copiedRideTimes = sharedPreferences.getString(sourceRideTimeKey, null) ?: ""
         
         sharedPreferences.edit {
             putString(timetableKey, copiedTime)
+                .putString(timetableTrainTypeKey, copiedTrainTypes)
+                .putString(timetableRideTimeKey, copiedRideTimes)
         }
         
         // Update transportationTimes when time is copied
@@ -456,30 +482,36 @@ fun SettingsTimetableSheetScreen(
             decorFitsSystemWindows = false
         )
     ) {
-        // Set dialog height for sheet
+        // Set dialog height for sheet; top bar matches SettingsLineSheet / SettingsTransferSheet
         Scaffold(
             modifier = Modifier.height(ScreenSize.settingsTimetableSheetHeight()),
             topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = stringResource(R.string.editTimetable),
-                            fontSize = ScreenSize.settingsTitleFontSize().value.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            color = Black
-                        )
-                    },
-                    navigationIcon = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .height(ScreenSize.settingsSheetTopBarHeight())
+                        .background(White)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = ScreenSize.settingsSheetBackButtonPadding())
+                    ) {
                         CommonComponents.CustomBackButton(
                             foregroundColor = Black,
                             onClick = onDismiss
                         )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = White
+                    }
+                    Text(
+                        text = stringResource(R.string.editTimetable),
+                        fontSize = titleFontSize.value.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Black,
+                        modifier = Modifier.align(Alignment.Center),
+                        textAlign = TextAlign.Center
                     )
-                )
+                }
             }
         ) { paddingValues ->
             Box(
@@ -492,53 +524,45 @@ fun SettingsTimetableSheetScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = ScreenSize.settingsSheetHorizontalPadding()),
-                    verticalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetVerticalSpacing())
+                        .padding(horizontal = horizontalPadding),
+                    verticalArrangement = Arrangement.spacedBy(verticalSpacing)
                 ) {
-                    // Calendar type dropdown section
-                    CalendarDropDownSection(
-                        selectedCalendarType = currentCalendarType,
-                        availableOdptCalendar = availableOdptCalendar,
-                        isCalendarTypeDropdownOpen = isCalendarTypeDropdownOpen,
-                        onCalendarTypeSelected = { calendarType ->
-                            currentCalendarType = calendarType
-                            isCalendarTypeDropdownOpen = false
-                            transportationTimes = goorback.loadTransportationTimes(
-                                calendarType,
-                                num,
-                                currentHour,
-                                sharedPreferences
-                            )
-                        },
-                        onToggleDropdown = { isCalendarTypeDropdownOpen = !isCalendarTypeDropdownOpen }
-                    )
-                    
-                    // Hour control section
-                    HourControlSection(
-                        hour = currentHour,
-                        onDecreaseHour = {
-                            if (currentHour > 4) {
-                                currentHour -= 1
-                                transportationTimes = goorback.loadTransportationTimes(
-                                    currentCalendarType,
-                                    num,
-                                    currentHour,
-                                    sharedPreferences
-                                )
+                    // Calendar type dropdown and hour control (reduced spacing between them)
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetCompactVerticalSpacing())
+                    ) {
+                        CalendarDropDownSection(
+                            selectedCalendarType = currentCalendarType,
+                            isCalendarTypeDropdownOpen = isCalendarTypeDropdownOpen,
+                            onToggleDropdown = { isCalendarTypeDropdownOpen = !isCalendarTypeDropdownOpen }
+                        )
+                        HourControlSection(
+                            hour = currentHour,
+                            onDecreaseHour = {
+                                if (currentHour > 4) {
+                                    currentHour -= 1
+                                    transportationTimes = goorback.loadTransportationTimes(
+                                        currentCalendarType,
+                                        num,
+                                        currentHour,
+                                        sharedPreferences
+                                    )
+                                }
+                            },
+                            onIncreaseHour = {
+                                if (currentHour < 24) {
+                                    currentHour += 1
+                                    transportationTimes = goorback.loadTransportationTimes(
+                                        currentCalendarType,
+                                        num,
+                                        currentHour,
+                                        sharedPreferences
+                                    )
+                                }
                             }
-                        },
-                        onIncreaseHour = {
-                            if (currentHour < 24) {
-                                currentHour += 1
-                                transportationTimes = goorback.loadTransportationTimes(
-                                    currentCalendarType,
-                                    num,
-                                    currentHour,
-                                    sharedPreferences
-                                )
-                            }
-                        }
-                    )
+                        )
+                    }
                     
                     // Timetable display section
                     TimetableDisplaySection(
@@ -558,7 +582,6 @@ fun SettingsTimetableSheetScreen(
                             onDepartureTimeChange = { time ->
                                 departureTime = time
                                 displayDepartureTime = time
-                                isTrainTypeDropdownOpen = false
                             },
                             isTimeExistsForDeletion = isTimeExistsForDeletion(),
                             selectedTrainType = selectedTrainType,
@@ -573,23 +596,19 @@ fun SettingsTimetableSheetScreen(
                             rideTime = rideTime,
                             onRideTimeChange = { time ->
                                 rideTime = if (time == 0) null else time
-                                isTrainTypeDropdownOpen = false
                             },
                             isTimeExistsForDeletion = isTimeExistsForDeletion()
                         )
                     }
+                    
+                    Spacer(modifier = Modifier.height(verticalSpacing))
                     
                     // Train type selection section (only for railway lines)
                     if (goorback.lineKind(sharedPreferences, num) == TransportationLineKind.RAILWAY) {
                         TrainTypeSelectSection(
                             selectedTrainType = selectedTrainType,
                             availableTrainTypes = getAvailableTrainTypes(),
-                            isTrainTypeDropdownOpen = isTrainTypeDropdownOpen,
-                            onTrainTypeSelected = { trainType ->
-                                selectedTrainType = trainType
-                                isTrainTypeDropdownOpen = false
-                            },
-                            onToggleDropdown = { isTrainTypeDropdownOpen = !isTrainTypeDropdownOpen },
+                            onTrainTypeSelected = { trainType -> selectedTrainType = trainType },
                             isTimeExistsForDeletion = isTimeExistsForDeletion()
                         )
                     }
@@ -612,7 +631,6 @@ fun SettingsTimetableSheetScreen(
                     CopyTimeButtonSection(
                         isCopyTimeDropdownOpen = isCopyTimeDropdownOpen,
                         onToggleDropdown = {
-                            isTrainTypeDropdownOpen = false
                             isCalendarTypeDropdownOpen = false
                             isCopyTimeDropdownOpen = !isCopyTimeDropdownOpen
                         },
@@ -623,7 +641,7 @@ fun SettingsTimetableSheetScreen(
                     Spacer(modifier = Modifier.weight(1f))
                 }
                 
-                // Dropdown options overlay
+                // Dropdown options overlay (same as TimetableContentScreen: TopStart + offset)
                 if (isCalendarTypeDropdownOpen) {
                     CalendarTypeDropdownView(
                         availableCalendarTypes = availableOdptCalendar,
@@ -639,33 +657,11 @@ fun SettingsTimetableSheetScreen(
                         },
                         onDismiss = { isCalendarTypeDropdownOpen = false },
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .offset(
-                                x = ScreenSize.timetableTypeMenuOffsetX(),
-                                y = ScreenSize.timetableCalendarMenuOffsetY()
-                            )
+                            .align(Alignment.TopCenter)
+                            .offset(y = ScreenSize.timetableCalendarMenuOffsetY())
                             .zIndex(1f)
                     )
                 }
-                
-                if (isTrainTypeDropdownOpen) {
-                    TrainTypeDropdownView(
-                        availableTrainTypes = getAvailableTrainTypes(),
-                        onTrainTypeSelected = { trainType ->
-                            selectedTrainType = trainType
-                            isTrainTypeDropdownOpen = false
-                        },
-                        onDismiss = { isTrainTypeDropdownOpen = false },
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .offset(
-                                x = ScreenSize.timetableTypeMenuOffsetX(),
-                                y = ScreenSize.timetableTypeMenuOffsetY()
-                            )
-                            .zIndex(1f)
-                    )
-                }
-                
                 if (isCopyTimeDropdownOpen) {
                     CopyTimeDropdownView(
                         hour = currentHour,
@@ -675,11 +671,8 @@ fun SettingsTimetableSheetScreen(
                         },
                         onDismiss = { isCopyTimeDropdownOpen = false },
                         modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .offset(
-                                x = ScreenSize.timetableTypeMenuOffsetX(),
-                                y = ScreenSize.timetableCopyMenuOffsetY()
-                            )
+                            .align(Alignment.TopCenter)
+                            .offset(y = ScreenSize.timetableCopyMenuOffsetY())
                             .zIndex(1f)
                     )
                 }
@@ -689,12 +682,11 @@ fun SettingsTimetableSheetScreen(
 }
 
 // MARK: - Calendar Dropdown Section
+// Dropdown list is rendered as overlay in parent Box (same as TimetableContentScreen)
 @Composable
 private fun CalendarDropDownSection(
     selectedCalendarType: ODPTCalendarType,
-    availableOdptCalendar: List<ODPTCalendarType>,
     isCalendarTypeDropdownOpen: Boolean,
-    onCalendarTypeSelected: (ODPTCalendarType) -> Unit,
     onToggleDropdown: () -> Unit
 ) {
     val context = LocalContext.current
@@ -706,21 +698,13 @@ private fun CalendarDropDownSection(
         Button(
             onClick = onToggleDropdown,
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent,
-                contentColor = Color.Unspecified
+                containerColor = LightGray,
+                contentColor = LightGray
             ),
-            modifier = Modifier.wrapContentSize()
+            modifier = Modifier
+                .wrapContentSize()
         ) {
             Row(
-                modifier = Modifier
-                    .padding(
-                        horizontal = ScreenSize.settingsSheetInputPaddingHorizontal(),
-                        vertical = ScreenSize.settingsSheetInputPaddingVertical()
-                    )
-                    .background(
-                        color = Gray.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                    ),
                 horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -755,9 +739,7 @@ private fun HourControlSection(
     val context = LocalContext.current
     
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = ScreenSize.settingsSheetVerticalSpacing()),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -778,6 +760,7 @@ private fun HourControlSection(
             fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
             fontWeight = FontWeight.Bold,
             color = Primary,
+            textAlign = TextAlign.Center,
             modifier = Modifier.width(ScreenSize.timetableEditButtonWidth())
         )
         
@@ -811,17 +794,20 @@ private fun TimetableDisplaySection(
                 .width(ScreenSize.timetableDisplayWidth())
                 .height(ScreenSize.timetableDisplayHeight())
                 .background(Primary)
-                .padding(horizontal = ScreenSize.timetableMinuteSpacing()),
-            horizontalArrangement = Arrangement.spacedBy(0.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+                .padding(
+                    horizontal = ScreenSize.timetableMinuteSpacing(),
+                )
+                .padding(
+                    bottom = ScreenSize.timetableDisplayBottomSpacing(),
+                ),
+            horizontalArrangement = Arrangement.Center,
+            verticalArrangement = Arrangement.Center,
         ) {
             itemsIndexed(transportationTimes) { index, transportationTime ->
                 Row(
                     modifier = Modifier
                         .width(itemWidth.dp)
                         .height(ScreenSize.timetableNumberHeight()),
-                    horizontalArrangement = Arrangement.spacedBy(0.dp),
-                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     val trainType = (transportationTime as? TrainTime)?.trainType
                     Text(
@@ -829,6 +815,7 @@ private fun TimetableDisplaySection(
                         fontSize = ScreenSize.timetableMinuteFontSize().value.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = colorForTrainType(trainType),
+                        textAlign = TextAlign.Center,
                         maxLines = 1
                     )
                     Text(
@@ -836,6 +823,7 @@ private fun TimetableDisplaySection(
                         fontSize = ScreenSize.timetableRideTimeFontSize().value.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = White,
+                        textAlign = TextAlign.Center,
                         maxLines = 1
                     )
                 }
@@ -885,13 +873,28 @@ private fun DepartureTimeSelectSection(
                 text = stringResource(R.string.departureTime),
                 fontSize = ScreenSize.settingsSheetHeadlineFontSize().value.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Primary
+                color = Primary,
+                modifier = Modifier.wrapContentWidth()
             )
-            
+            Text(
+                text = if ((departureTime ?: displayDepartureTime) == null) "-" else "${departureTime ?: displayDepartureTime} ${stringResource(R.string.min)}",
+                fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Black
+            )
+    
+            Spacer(modifier = Modifier.weight(1f))    
+
+            CommonComponents.Custom2DigitPicker(
+                value = departureTime ?: displayDepartureTime ?: 0,
+                onValueChange = onDepartureTimeChange,
+                isZeroToFive = true
+            )
+
             Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
-                modifier = Modifier.size(ScreenSize.settingsSheetHeadlineFontSize()),
+                modifier = Modifier.size(ScreenSize.settingsSheetIconSize()),
                 tint = when {
                     departureTime == null -> Gray
                     !isRailway && !isTimeExistsForDeletion -> Accent
@@ -902,50 +905,6 @@ private fun DepartureTimeSelectSection(
                     else -> Gray
                 }
             )
-        }
-        
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(ScreenSize.settingsSheetPickerDisplayHeight())
-                    .padding(
-                        vertical = ScreenSize.settingsSheetInputPaddingVertical(),
-                        horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
-                    )
-                    .background(
-                        color = White,
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                    )
-                    .border(
-                        width = ScreenSize.borderWidth(),
-                        color = Gray,
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                    ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if ((departureTime ?: displayDepartureTime) == null) {
-                        "-"
-                    } else {
-                        "${departureTime ?: displayDepartureTime}${stringResource(R.string.min)}"
-                    },
-                    fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
-                    color = Black
-                )
-            }
-            
-            Row(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = ScreenSize.settingsSheetInputPaddingHorizontal())
-            ) {
-                CommonComponents.Custom2DigitPicker(
-                    value = departureTime ?: displayDepartureTime ?: 0,
-                    onValueChange = onDepartureTimeChange,
-                    isZeroToFive = true
-                )
-            }
         }
     }
 }
@@ -958,8 +917,6 @@ private fun RideTimeSelectSection(
     isTimeExistsForDeletion: Boolean
 ) {
     val context = LocalContext.current
-    
-    //                  .padding(.bottom, screen.timetablePickerBottomPadding)
     Column(
         modifier = Modifier
             .width(ScreenSize.timetablePickerWidth())
@@ -977,13 +934,29 @@ private fun RideTimeSelectSection(
                 text = stringResource(R.string.rideTime),
                 fontSize = ScreenSize.settingsSheetHeadlineFontSize().value.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Primary
+                color = Primary,
+                modifier = Modifier.wrapContentWidth()
             )
             
+            Text(
+                text = if (rideTime == null) "-" else "$rideTime ${stringResource(R.string.min)}",
+                fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Black
+            )
+                
+            Spacer(modifier = Modifier.weight(1f))    
+
+            CommonComponents.Custom2DigitPicker(
+                value = rideTime ?: 0,
+                onValueChange = onRideTimeChange,
+                isZeroToFive = false
+            )
+
             Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = null,
-                modifier = Modifier.size(ScreenSize.settingsSheetHeadlineFontSize()),
+                modifier = Modifier.size(ScreenSize.settingsSheetIconSize()),
                 tint = when {
                     rideTime != null && !isTimeExistsForDeletion -> Accent
                     rideTime != null && isTimeExistsForDeletion -> Primary
@@ -991,65 +964,23 @@ private fun RideTimeSelectSection(
                 }
             )
         }
-        
-        Box {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(ScreenSize.settingsSheetPickerDisplayHeight())
-                    .padding(
-                        vertical = ScreenSize.settingsSheetInputPaddingVertical(),
-                        horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
-                    )
-                    .background(
-                        color = White,
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                    )
-                    .border(
-                        width = ScreenSize.borderWidth(),
-                        color = Gray,
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                    ),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = if (rideTime == null) {
-                        "-"
-                    } else {
-                        "$rideTime${stringResource(R.string.min)}"
-                    },
-                    fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
-                    color = Black
-                )
-            }
-            
-            Row(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = ScreenSize.settingsSheetInputPaddingHorizontal())
-            ) {
-                CommonComponents.Custom2DigitPicker(
-                    value = rideTime ?: 0,
-                    onValueChange = onRideTimeChange,
-                    isZeroToFive = false
-                )
-            }
-        }
     }
 }
 
 // MARK: - Train Type Select Section
+// Design matches TransportationSettingsSection (ExposedDropdownMenuBox); colors kept (Primary, White, colorForTrainType)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TrainTypeSelectSection(
     selectedTrainType: String?,
     availableTrainTypes: List<String>,
-    isTrainTypeDropdownOpen: Boolean,
     onTrainTypeSelected: (String) -> Unit,
-    onToggleDropdown: () -> Unit,
     isTimeExistsForDeletion: Boolean
 ) {
     val context = LocalContext.current
-    
+    val displayText = selectedTrainType?.let { getTrainTypeDisplayName(it, context) } ?: stringResource(R.string.dash)
+    var expanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
@@ -1059,77 +990,129 @@ private fun TrainTypeSelectSection(
             text = stringResource(R.string.selectType),
             fontSize = ScreenSize.settingsSheetHeadlineFontSize().value.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Primary
+            color = Primary,
+            modifier = Modifier.wrapContentWidth()
         )
-        
-        Button(
-            onClick = onToggleDropdown,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent,
-                contentColor = Color.Unspecified
-            ),
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
             modifier = Modifier.weight(1f)
         ) {
-            Row(
+            val interactionSource = remember { MutableInteractionSource() }
+            val verticalPadding = ScreenSize.customTextFieldPaddingVertical()
+            val inputFontSize = ScreenSize.settingsSheetInputFontSize()
+            val textStyle = TextStyle(
+                fontSize = inputFontSize.value.sp,
+                color = White
+            )
+
+            BasicTextField(
+                value = displayText,
+                onValueChange = { },
+                enabled = false,
+                singleLine = true,
+                textStyle = textStyle,
+                interactionSource = interactionSource,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    autoCorrectEnabled = false
+                ),
                 modifier = Modifier
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
                     .fillMaxWidth()
-                    .height(ScreenSize.settingsSheetPickerDisplayHeight())
-                    .padding(
-                        vertical = ScreenSize.settingsSheetInputPaddingVertical(),
-                        horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
-                    )
-                    .background(
-                        color = Primary,
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                    )
-                    .border(
-                        width = ScreenSize.borderWidth(),
-                        color = Gray,
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                    ),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (selectedTrainType != null) {
+                    .heightIn(max = inputFontSize * 2.5f)
+            ) { innerTextField ->
+                TextFieldDefaults.DecorationBox(
+                    value = displayText,
+                    innerTextField = innerTextField,
+                    enabled = true,
+                    singleLine = true,
+                    visualTransformation = VisualTransformation.None,
+                    interactionSource = interactionSource,
+                    placeholder = {
+                        Text(
+                            text = "",
+                            fontSize = inputFontSize.value.sp,
+                            color = Gray
+                        )
+                    },
+                    leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Train,
                             contentDescription = null,
-                            modifier = Modifier.size(ScreenSize.settingsSheetIconSize()),
-                            tint = colorForTrainType(selectedTrainType)
+                            tint = selectedTrainType?.let { colorForTrainType(it) } ?: White,
+                            modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
                         )
-                    }
-                    Text(
-                        text = selectedTrainType?.let { trainType ->
-                            getTrainTypeDisplayName(trainType, context)
-                        } ?: stringResource(R.string.dash),
-                        fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = White,
-                        maxLines = 1
+                    },
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Primary,
+                        unfocusedContainerColor = Primary,
+                        focusedTextColor = White,
+                        unfocusedTextColor = White,
+                        focusedPlaceholderColor = Gray,
+                        unfocusedPlaceholderColor = Gray,
+                        focusedTrailingIconColor = White,
+                        unfocusedTrailingIconColor = White
+                    ),
+                    contentPadding = PaddingValues(vertical = verticalPadding),
+                ) {
+                    TextFieldDefaults.Container(
+                        enabled = true,
+                        isError = false,
+                        interactionSource = interactionSource,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Primary,
+                            unfocusedContainerColor = Primary
+                        ),
+                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
                     )
                 }
-                
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(ScreenSize.settingsSheetInputFontSize())
-                        .graphicsLayer {
-                            rotationZ = if (isTrainTypeDropdownOpen) 180f else 0f
+            }
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .background(color = Primary.copy(alpha = 0.85f))
+                    .offset(y = ScreenSize.settingsLineSheetTransportationDropdownOffsetY())
+            ) {
+                availableTrainTypes.forEach { trainType ->
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing())
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Train,
+                                    contentDescription = null,
+                                    tint = colorForTrainType(trainType),
+                                    modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
+                                )
+                                Text(
+                                    text = getTrainTypeDisplayName(trainType, context),
+                                    fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = White
+                                )
+                            }
                         },
-                    tint = White
-                )
+                        onClick = {
+                            onTrainTypeSelected(trainType)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
-        
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
-            modifier = Modifier.size(ScreenSize.settingsSheetHeadlineFontSize()),
+            modifier = Modifier.size(ScreenSize.settingsSheetIconSize()),
             tint = when {
                 selectedTrainType != null && !isTimeExistsForDeletion -> Accent
                 selectedTrainType != null && isTimeExistsForDeletion -> Primary
@@ -1203,16 +1186,18 @@ private fun CopyTimeButtonSection(
     hour: Int,
     onCopyTime: (Int) -> Unit
 ) {
-    Button(
-        onClick = onToggleDropdown,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent,
-            contentColor = Color.Unspecified
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = ScreenSize.settingsSheetVerticalSpacing())
-    ) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = onToggleDropdown,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent,
+                contentColor = Color.Unspecified
+            ),
+            contentPadding = PaddingValues(0.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = ScreenSize.settingsSheetVerticalSpacing())
+        ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1222,7 +1207,7 @@ private fun CopyTimeButtonSection(
                     shape = RoundedCornerShape(ScreenSize.settingsSheetButtonCornerRadius())
                 )
                 .padding(horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()),
-            horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetIconSpacing()),
+            horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -1235,7 +1220,11 @@ private fun CopyTimeButtonSection(
                 text = stringResource(R.string.copyingYourTimetable),
                 fontSize = ScreenSize.settingsSheetButtonFontSize().value.sp,
                 fontWeight = FontWeight.Bold,
-                color = White
+                color = White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = ScreenSize.settingsSheetIconSpacing())
             )
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
@@ -1248,6 +1237,7 @@ private fun CopyTimeButtonSection(
                 tint = White
             )
         }
+    }
     }
 }
 

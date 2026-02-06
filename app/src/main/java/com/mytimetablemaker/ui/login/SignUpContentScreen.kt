@@ -56,10 +56,10 @@ fun SignUpContentScreen(
     
     // Note: Dismiss is handled in the alert's OK button click handler
     
-    // Clear fields on appear
+    // Clear fields on appear (signUpCheck with updateAlert=false to set isValidSignUp without overwriting alert)
     LaunchedEffect(Unit) {
         loginViewModel.clearFields()
-        loginViewModel.signUpCheck()
+        loginViewModel.signUpCheck(updateAlert = false)
     }
     
     Dialog(
@@ -276,25 +276,18 @@ fun SignUpContentScreen(
         }
         
         // MARK: - Sign Up Result Alert
-        // Alert for displaying sign up result messages
         if (isShowMessage) {
-            AlertDialog(
+            CommonComponents.CustomAlertDialog(
                 onDismissRequest = { loginViewModel.dismissMessage() },
-                title = { Text(alertTitle) },
-                text = { Text(alertMessage) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            loginViewModel.dismissMessage()
-                            if (isSignUpSuccess) {
-                                onDismiss()
-                            }
-                        }
-                    ) {
-                        Text(stringResource(R.string.ok))
+                title = alertTitle,
+                alertMessage = alertMessage,
+                confirmButtonText = stringResource(R.string.ok),
+                onConfirmClick = {
+                    loginViewModel.dismissMessage()
+                    if (isSignUpSuccess) {
+                        onDismiss()
                     }
-                },
-                containerColor = White
+                }
             )
         }
     }

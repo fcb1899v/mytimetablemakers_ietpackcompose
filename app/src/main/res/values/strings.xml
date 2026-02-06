@@ -105,6 +105,7 @@
     <string name="deleteAccountSuccessfully">Delete account successfully</string>
     <string name="accountDeletedSuccessfully">Account deleted successfully</string>
     <string name="accountCouldNotBeDeleted">Account could not be deleted</string>
+    <string name="deleteAccountPasswordPlaceholder">Enter password</string>
 
     <!-- MARK: - Timetable Content View -->
     <!-- Timetable editing and calendar type selection -->

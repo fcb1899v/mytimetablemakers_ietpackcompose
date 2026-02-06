@@ -1,3 +1,6 @@
+# Keep Application class - prevents ClassNotFoundException at startup
+-keep class com.mytimetablemaker.MyTransitMakersApplication { *; }
+
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.

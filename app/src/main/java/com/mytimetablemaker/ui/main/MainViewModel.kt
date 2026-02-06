@@ -2,6 +2,8 @@ package com.mytimetablemaker.ui.main
 
 import android.app.Application
 import android.content.SharedPreferences
+import android.os.Handler
+import android.os.Looper
 import androidx.core.content.edit
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -107,18 +109,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // MARK: - Initialization
     init {
         isBack = true
-        isShowBackRoute2 = "back2".isShowRoute2(sharedPreferences)
-        isShowGoRoute2 = "go2".isShowRoute2(sharedPreferences)
-        changeLine1 = "back1".changeLineInt(sharedPreferences)
-        changeLine2 = "back2".changeLineInt(sharedPreferences)
         goOrBack1 = "back1"
         goOrBack2 = "back2"
         isTimeStop = false
         selectDate = Date()
         displayDate = null
+        Handler(Looper.getMainLooper()).post { loadInitialDataFromPreferences() }
+    }
+
+    private fun loadInitialDataFromPreferences() {
+        val appContext = getApplication<Application>()
+        isShowBackRoute2 = "back2".isShowRoute2(sharedPreferences)
+        isShowGoRoute2 = "go2".isShowRoute2(sharedPreferences)
+        changeLine1 = "back1".changeLineInt(sharedPreferences)
+        changeLine2 = "back2".changeLineInt(sharedPreferences)
         dateLabel = selectDate.formatDate(getApplication())
         timeLabel = selectDate.setTime
-        val appContext = getApplication<Application>()
         home = "back1".departurePoint(sharedPreferences, appContext)
         office = "back1".destination(sharedPreferences, appContext)
         stationArray1 = "back1".stationArray(sharedPreferences, appContext)
@@ -310,9 +316,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             availableTypes = route.loadAvailableCalendarTypes(sharedPreferences, lineNumber - 1).toMutableList()
         }
         
-        // Fallback to default types if no cache or data found
+        // Fallback when no cache/data: weekday, saturdayHoliday (route not selected)
         if (availableTypes.isEmpty()) {
-            availableTypes = mutableListOf("weekday", "holiday", "saturdayHoliday")
+            availableTypes = mutableListOf("weekday", "saturdayHoliday")
         }
         
         // Determine calendar type from current date

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
@@ -20,9 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,7 +48,6 @@ fun TimetableContentScreen(
 ) {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
-    val density = LocalDensity.current
     
     // Selected calendar type for filtering timetable data
     var selectedCalendarType by remember { mutableStateOf<ODPTCalendarType>(ODPTCalendarType.Weekday) }
@@ -67,8 +65,8 @@ fun TimetableContentScreen(
     // Valid hours for current calendar type
     var validHours by remember { mutableStateOf<List<Int>>(emptyList()) }
     
-    // Scroll view height for dynamic sizing
-    var scrollViewHeight by remember { mutableStateOf(0.dp) }
+    // Increment when sheet is dismissed to force grid refresh (sheet changes don't trigger recomposition)
+    var timetableRefreshTrigger by remember { mutableIntStateOf(0) }
 
     // MARK: - Helper Functions
     
@@ -257,7 +255,12 @@ fun TimetableContentScreen(
                         modifier = Modifier
                             .width(ScreenSize.customWidth())
                             .height(ScreenSize.timetableGridHeaderHeight())
-                            .background(Black.copy(alpha = 0.5f)),
+                            .background(Black.copy(alpha = 0.5f))
+                            .clickable(
+                                role = androidx.compose.ui.semantics.Role.Button,
+                                onClick = { isCalendarTypeDropdownOpen = !isCalendarTypeDropdownOpen }
+                            ),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
@@ -265,49 +268,26 @@ fun TimetableContentScreen(
                                 .fillMaxHeight()
                                 .background(White)
                         )
-                        
+
                         Spacer(modifier = Modifier.weight(1f))
 
-                        Row(
+                        Text(
+                            text = selectedCalendarType.displayName(context),
+                            fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = selectedCalendarType.calendarColor
+                        )
+
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clickable(
-                                    role = androidx.compose.ui.semantics.Role.Button,
-                                    onClick = { isCalendarTypeDropdownOpen = !isCalendarTypeDropdownOpen }
-                                ),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .padding(
-                                        vertical = ScreenSize.settingsSheetInputPaddingVertical(),
-                                        horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
-                                    )
-                                    .background(
-                                        color = Gray.copy(alpha = 0.1f),
-                                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                                    ),
-                            ) {
-                                Text(
-                                    text = selectedCalendarType.displayName(context),
-                                    fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = selectedCalendarType.calendarColor
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(ScreenSize.settingsSheetTitleFontSize())
-                                        .graphicsLayer {
-                                            rotationZ = if (isCalendarTypeDropdownOpen) 180f else 0f
-                                        },
-                                    tint = selectedCalendarType.calendarColor
-                                )
-                            }
-                        }
+                                .size(ScreenSize.settingsSheetTitleFontSize())
+                                .graphicsLayer {
+                                    rotationZ = if (isCalendarTypeDropdownOpen) 180f else 0f
+                                },
+                            tint = selectedCalendarType.calendarColor
+                        )
 
                         Spacer(modifier = Modifier.weight(1f))
 
@@ -327,23 +307,14 @@ fun TimetableContentScreen(
                             .background(White)
                     )
                     
-                    // Timetable grid scroll view
-                    key(selectedCalendarType.rawValue) {
+                    // Timetable grid scroll view (timetableRefreshTrigger forces refresh when sheet is dismissed)
+                    key(selectedCalendarType.rawValue, timetableRefreshTrigger) {
                         Column(
                             modifier = Modifier
                                 .width(ScreenSize.customWidth())
-                                .height(
-                                    if (scrollViewHeight > 0.dp) {
-                                        minOf(scrollViewHeight, ScreenSize.timetableMaxHeight())
-                                    } else {
-                                        ScreenSize.timetableMaxHeight()
-                                    }
-                                )
+                                .heightIn(max = ScreenSize.timetableMaxHeight())
                                 .verticalScroll(rememberScrollState())
-                                .background(Black.copy(alpha = 0.25f))
-                                .onGloballyPositioned { coordinates ->
-                                    scrollViewHeight = with(density) { coordinates.size.height.toDp() }
-                                },
+                                .background(Black.copy(alpha = 0.25f)),
                             verticalArrangement = Arrangement.spacedBy(0.dp)
                         ) {
                             validHours.forEach { hour ->
@@ -405,11 +376,8 @@ fun TimetableContentScreen(
                     },
                     onDismiss = { isCalendarTypeDropdownOpen = false },
                     modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .offset(
-                            x = ScreenSize.timetableTypeMenuOffsetX(),
-                            y = ScreenSize.timetableContentViewMenuOffsetY()
-                        )
+                        .align(Alignment.TopCenter)
+                        .offset(y = ScreenSize.timetableContentViewMenuOffsetY())
                         .zIndex(1f)
                 )
             }
@@ -425,6 +393,8 @@ fun TimetableContentScreen(
             hour = hour,
             onDismiss = {
                 showingTimetableSheetHour = null
+                updateValidHours()
+                timetableRefreshTrigger++
             }
         )
     }
@@ -637,12 +607,13 @@ private fun CalendarTypeDropdownView(
 }
 
 // MARK: - Color Legend View Function
-// Displays color legend for train types based on saved train type list
+// Displays color legend for train types based on saved train type list (horizontal flow, wraps when exceeding customWidth)
 @Composable
 private fun ColorLegendView(
     trainTypes: List<String>,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     // Filter out empty train types
     val validTrainTypes = trainTypes.filter { it.isNotEmpty() }
     
@@ -658,43 +629,47 @@ private fun ColorLegendView(
         color.priorityValue
     }
     
-    // TODO: Implement row-based layout for color legend
-    // For now, display in a simple column
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = ScreenSize.timetableHorizontalSpacing()),
-        verticalArrangement = Arrangement.spacedBy(ScreenSize.timetableVerticalSpacing()),
-        horizontalAlignment = Alignment.CenterHorizontally
+        contentAlignment = Alignment.Center
     ) {
-        colorGroups.forEach { (color, types) ->
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(ScreenSize.timetableHorizontalSpacing()),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Circle,
-                    contentDescription = null,
-                    modifier = Modifier.size(ScreenSize.settingsSheetInputFontSize()),
-                    tint = color
-                )
-                
-                // Create combined display text
-                val displayTexts = types.map { trainType ->
-                    val components = trainType.split(".")
-                    components.lastOrNull() ?: trainType
+        // FlowRow: each color group (bullet + label) is one block; wrap by block when width is exceeded
+        FlowRow(
+            modifier = Modifier.widthIn(max = ScreenSize.customWidth()),
+            horizontalArrangement = Arrangement.spacedBy(ScreenSize.timetableHorizontalSpacing(), Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(ScreenSize.timetableVerticalSpacing(), Alignment.CenterVertically),
+            maxItemsInEachRow = Int.MAX_VALUE
+        ) {
+            colorGroups.forEach { (color, types) ->
+                Row(
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .wrapContentHeight(),
+                    horizontalArrangement = Arrangement.spacedBy(ScreenSize.timetableHorizontalSpacing()),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Circle,
+                        contentDescription = null,
+                        modifier = Modifier.size(ScreenSize.settingsSheetInputFontSize()),
+                        tint = color
+                    )
+                    val displayTexts = types.map { trainType ->
+                        getTrainTypeDisplayName(trainType, context)
+                    }.distinct()
+                    val separator = if (Locale.getDefault().language == "ja") "・" else ", "
+                    val combinedText = displayTexts.joinToString(separator)
+                    Text(
+                        text = combinedText,
+                        fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = color,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
-                
-                val separator = if (Locale.getDefault().language == "ja") "・" else ", "
-                val combinedText = displayTexts.joinToString(separator)
-                
-                Text(
-                    text = combinedText,
-                    fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = color,
-                    maxLines = 1
-                )
             }
         }
     }

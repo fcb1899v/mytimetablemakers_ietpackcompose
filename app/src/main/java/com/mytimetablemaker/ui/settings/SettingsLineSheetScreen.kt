@@ -4,7 +4,6 @@ import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -12,12 +11,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
@@ -29,7 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import com.mytimetablemaker.R
 import com.mytimetablemaker.models.*
@@ -335,7 +330,7 @@ fun SettingsLineSheetScreen(
                             viewModel.isLineFieldFocused.value = true
                             
                             // For GTFS operators, fetch lines from ZIP cache
-                            if (dataSource.apiType() == com.mytimetablemaker.models.ODPTAPIType.GTFS) {
+                            if (dataSource.apiType() == ODPTAPIType.GTFS) {
                                 android.util.Log.d("SettingsLineSheetScreen", "onOperatorSelected: GTFS operator detected, calling fetchGTFSLinesForOperator for ${dataSource.name}, operatorCode=$operatorCode")
                                 // Fetch GTFS lines asynchronously
                                 // fetchGTFSLinesForOperator will update lineSuggestions when complete
@@ -688,7 +683,7 @@ fun SettingsLineSheetScreen(
                             viewModel.isLineFieldFocused.value = true
                             
                             // For GTFS operators, fetch lines from ZIP cache
-                            if (dataSource.apiType() == com.mytimetablemaker.models.ODPTAPIType.GTFS) {
+                            if (dataSource.apiType() == ODPTAPIType.GTFS) {
                                 android.util.Log.d("SettingsLineSheetScreen", "OperatorSuggestionsView onOperatorSelected: GTFS operator detected, calling fetchGTFSLinesForOperator for ${dataSource.name}, operatorCode=$operatorCode")
                                 // Fetch GTFS lines asynchronously
                                 // fetchGTFSLinesForOperator will update lineSuggestions when complete
@@ -1129,11 +1124,7 @@ private fun LineInputSection(
     CommonComponents.CustomTextField(
         value = lineInput,
         onValueChange = onLineInputChanged,
-        placeholder = if (selectedTransportationKind == TransportationLineKind.RAILWAY) {
-            stringResource(R.string.enterLineName)
-        } else {
-            stringResource(R.string.enterBusRouteName)
-        },
+        placeholder =  stringResource(if (selectedTransportationKind == TransportationLineKind.RAILWAY)  R.string.enterLineName else R.string.enterBusRouteName),
         modifier = Modifier.fillMaxWidth(),
         focusRequester = focusRequester,
         title = stringResource(R.string.lineName),
@@ -1370,15 +1361,10 @@ private fun RideTimeSection(
     val pickerPadding = ScreenSize.settingsLineSheetPickerPadding()
     val horizontalSpacing = ScreenSize.settingsSheetHorizontalSpacing()
     val headlineFontSize = ScreenSize.settingsSheetHeadlineFontSize()
-    val pickerDisplayHeight = ScreenSize.settingsSheetPickerDisplayHeight()
-    val paddingVertical = ScreenSize.settingsSheetInputPaddingVertical()
-    val paddingHorizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
-    val strokeLineWidth = ScreenSize.settingsSheetStrokeLineWidth()
-    
+
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = pickerPadding),
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1389,7 +1375,6 @@ private fun RideTimeSection(
             color = Primary,
             modifier = Modifier.wrapContentWidth()
         )
-
         // Display current ride time
         Text(
             text = if (selectedRideTime == 0) "-" else "$selectedRideTime ${stringResource(R.string.min)}",
@@ -1397,32 +1382,20 @@ private fun RideTimeSection(
             fontWeight = FontWeight.SemiBold,
             color = Black
         )
-
-        Box(
-            modifier = Modifier.weight(1f)
-        ) {
-
-            // Custom2DigitPicker overlay
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.CenterEnd)
-                    .padding(end = paddingHorizontal),
-                horizontalArrangement = Arrangement.End
-            ) {
-                CommonComponents.Custom2DigitPicker(
-                    value = selectedRideTime,
-                    onValueChange = onRideTimeChanged,
-                    isZeroToFive = false
-                )
-            }
-        }
         
+        Spacer(modifier = Modifier.weight(1f))
+        
+        CommonComponents.Custom2DigitPicker(
+            value = selectedRideTime,
+            onValueChange = onRideTimeChanged,
+            isZeroToFive = false
+        )
+                
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
             tint = if (selectedRideTime == 0 && !hasTimetableSupport) rideTimeColor else Accent,
-            modifier = Modifier.size(ScreenSize.settingsSheetInputFontSize() * 1.2f)
+            modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
         )
     }
 }
@@ -1474,77 +1447,39 @@ private fun TransportationSettingsSection(
         ExposedDropdownMenuBox(
             expanded = expanded,
             onExpandedChange = { expanded = !expanded },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(2f)
         ) {
-            val interactionSource = remember { MutableInteractionSource() }
-            val verticalPadding = ScreenSize.customTextFieldPaddingVertical()
-            val inputFontSize = ScreenSize.settingsSheetInputFontSize()
-            val textStyle = androidx.compose.ui.text.TextStyle(
-                fontSize = inputFontSize.value.sp,
-                color = Black
-            )
-            
-            BasicTextField(
-                value = transferTypeDisplayName,
-                onValueChange = { },
-                enabled = false,
-                singleLine = true,
-                textStyle = textStyle,
-                interactionSource = interactionSource,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text,
-                    autoCorrectEnabled = false
-                ),
+            Box(
                 modifier = Modifier
                     .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true)
                     .fillMaxWidth()
-                    .heightIn(max = inputFontSize * 2.5f)
-            ) { innerTextField ->
-                TextFieldDefaults.DecorationBox(
-                    value = transferTypeDisplayName,
-                    innerTextField = innerTextField,
-                    enabled = true,
-                    singleLine = true,
-                    visualTransformation = VisualTransformation.None,
-                    interactionSource = interactionSource,
-                    placeholder = {
-                        Text(
-                            text = "",
-                            fontSize = inputFontSize.value.sp,
-                            color = Gray,
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = transferType.icon,
-                            contentDescription = null,
-                            tint = Black,
-                            modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
-                        )
-                    },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                    },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = LightGray,
-                        unfocusedContainerColor = LightGray,
-                        focusedTextColor = Primary,
-                        unfocusedTextColor = Primary,
-                        focusedPlaceholderColor = Gray,
-                        unfocusedPlaceholderColor = Gray
-                    ),
-                    contentPadding = PaddingValues(vertical = verticalPadding),
-                ) {
-                    TextFieldDefaults.Container(
-                        enabled = true,
-                        isError = false,
-                        interactionSource = interactionSource,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = LightGray,
-                            unfocusedContainerColor = LightGray,
-                        ),
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius()),
+                    .clip(RoundedCornerShape(ScreenSize.settingsSheetCornerRadius()))
+                    .background(LightGray)
+                    .padding(
+                        vertical = ScreenSize.customTextFieldPaddingVertical(),
+                        horizontal = ScreenSize.settingsSheetHorizontalSpacing()
                     )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing())
+                ) {
+                    Icon(
+                        imageVector = transferType.icon,
+                        contentDescription = null,
+                        tint = Black,
+                        modifier = Modifier.size(ScreenSize.settingsSheetIconSize() * 1.1f)
+                    )
+                    Text(
+                        text = transferTypeDisplayName,
+                        fontSize =  ScreenSize.settingsSheetInputFontSize().value.sp,
+                        color = Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 }
             }
             
@@ -1552,7 +1487,7 @@ private fun TransportationSettingsSection(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
                 modifier = Modifier
-                    .background(color = LightGray)
+                    .background(color = LightGray.copy(alpha = 0.85f))
                     .offset(
                         y = ScreenSize.settingsLineSheetTransportationDropdownOffsetY(),
                     )
@@ -1585,7 +1520,6 @@ private fun TransportationSettingsSection(
                 }
             }
         }
-        
         Spacer(modifier = Modifier.weight(1f))
     }
 }
@@ -1606,19 +1540,14 @@ private fun TransferTimeSettingsSection(
     // Use settingsTransferTime function for display text
     val currentLineIndex = selectedLineNumber - 1
     val transferTimeText = selectedGoorback.settingsTransferTime(sharedPreferences, currentLineIndex + 2, context)
-    
+
     val pickerPadding = ScreenSize.settingsLineSheetPickerPadding()
     val horizontalSpacing = ScreenSize.settingsSheetHorizontalSpacing()
     val headlineFontSize = ScreenSize.settingsSheetHeadlineFontSize()
-    val pickerDisplayHeight = ScreenSize.settingsSheetPickerDisplayHeight()
-    val paddingVertical = ScreenSize.settingsSheetInputPaddingVertical()
-    val paddingHorizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
-    val strokeLineWidth = ScreenSize.settingsSheetStrokeLineWidth()
-    
+
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = pickerPadding),
+            .fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1637,31 +1566,19 @@ private fun TransferTimeSettingsSection(
             color = Black
         )
 
-        Box(
-            modifier = Modifier.weight(1f)
-        ) {
+        Spacer(modifier = Modifier.weight(1f))
 
-            // Custom2DigitPicker overlay
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.CenterEnd)
-                    .padding(end = paddingHorizontal),
-                horizontalArrangement = Arrangement.End
-            ) {
-                CommonComponents.Custom2DigitPicker(
-                    value = selectedTransferTime,
-                    onValueChange = onTransferTimeChanged,
-                    isZeroToFive = false
-                )
-            }
-        }
+        CommonComponents.Custom2DigitPicker(
+            value = selectedTransferTime,
+            onValueChange = onTransferTimeChanged,
+            isZeroToFive = false
+        )
         
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
             tint = Accent,
-            modifier = Modifier.size(ScreenSize.settingsSheetInputFontSize() * 1.2f)
+            modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
         )
     }
 }
@@ -1828,10 +1745,7 @@ private fun ColorSelectionSection(
             modifier = Modifier
                 .width(ScreenSize.settingsLineSheetColorSettingWidth())
                 .align(Alignment.Center)
-                .offset(
-                    x = ScreenSize.settingsLineSheetDropdownOffsetX(),
-                    y = ScreenSize.settingsLineSheetDropdownOffsetY(),
-                )
+                .offset(y = ScreenSize.settingsLineSheetDropdownOffsetY())
                 .padding(horizontal = ScreenSize.settingsLineSheetColorHorizontalPadding())
                 .background(
                     color = LightGray,

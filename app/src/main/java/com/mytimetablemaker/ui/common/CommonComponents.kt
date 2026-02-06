@@ -3,6 +3,7 @@ package com.mytimetablemaker.ui.common
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -298,12 +299,10 @@ object CommonComponents {
         val onesListState = rememberLazyListState(initialFirstVisibleItemIndex = onesSelectedIndex.coerceIn(0, onesList.size - 1))
         val coroutineScope = rememberCoroutineScope()
         
-        val pickerItemPaddingVertical = ScreenSize.settingsSheetPickerItemPaddingVertical()
         val pickerHeight = ScreenSize.settingsSheetPickerSelectHeight()
         val itemHeight = pickerHeight / 3f
         val centerPadding = (pickerHeight - itemHeight) / 2f
-        val textPadding = pickerItemPaddingVertical * 0.5f
-        
+
         var tensLastSelectedIndex by remember { mutableIntStateOf(tensSelectedIndex) }
         var onesLastSelectedIndex by remember { mutableIntStateOf(onesSelectedIndex) }
         var tensIsProgrammaticScroll by remember { mutableStateOf(false) }
@@ -396,13 +395,13 @@ object CommonComponents {
         }
         
         Row(
-            horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetPickerSpacing()),
+            horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetPickerDigitSpacing()),
             modifier = Modifier.height(ScreenSize.settingsSheetPickerSelectHeight())
         ) {
             // Tens digit picker
             Box(
                 modifier = Modifier
-                    .width(ScreenSize.settingsSheetPickerSelectWidth())
+                    .width(ScreenSize.settingsSheetPickerDigitColumnWidth())
                     .height(ScreenSize.settingsSheetPickerSelectHeight())
             ) {
                 LazyColumn(
@@ -448,7 +447,7 @@ object CommonComponents {
             // Ones digit picker
             Box(
                 modifier = Modifier
-                    .width(ScreenSize.settingsSheetPickerSelectWidth())
+                    .width(ScreenSize.settingsSheetPickerDigitColumnWidth())
                     .height(ScreenSize.settingsSheetPickerSelectHeight())
             ) {
                 LazyColumn(
@@ -531,7 +530,7 @@ object CommonComponents {
         itemContent: @Composable (T) -> Unit,
         modifier: Modifier = Modifier,
         maxHeight: androidx.compose.ui.unit.Dp = ScreenSize.settingsLineSheetSuggestionItemHeight() * 7f,
-        backgroundColor: Color = LightGray,
+        backgroundColor: Color = LightGray.copy(alpha = 0.85f),
         offsetX: androidx.compose.ui.unit.Dp = ScreenSize.settingsLineSheetDropdownOffsetX(),
         offsetY: androidx.compose.ui.unit.Dp = 0.dp, // Position directly below the text field
         itemHeight: androidx.compose.ui.unit.Dp = ScreenSize.settingsLineSheetSuggestionItemHeight()
@@ -820,6 +819,104 @@ object CommonComponents {
                 unfocusedBorderColor = Color.Transparent,
             ),
             shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius()),
+        )
+    }
+    
+    // MARK: - Custom Alert Dialog
+    // Styled alert dialog with consistent design (responsive font/size, Primary accent, proper button hierarchy)
+    @Composable
+    fun CustomAlertDialog(
+        onDismissRequest: () -> Unit,
+        title: String,
+        alertMessage: String? = null,
+        confirmButtonText: String,
+        onConfirmClick: () -> Unit,
+        dismissButtonText: String? = null,
+        onDismissClick: (() -> Unit)? = null,
+        icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+        isDestructive: Boolean = false,
+        textContent: (@Composable () -> Unit)? = null
+    ) {
+        val titleFontSize = ScreenSize.alertDialogTitleFontSize()
+        val textFontSize = ScreenSize.alertDialogTextFontSize()
+        val buttonFontSize = ScreenSize.alertDialogButtonFontSize()
+        val dialogCornerRadius = ScreenSize.alertDialogCornerRadius()
+        val buttonCornerRadius = ScreenSize.alertDialogButtonCornerRadius()
+        val elevation = ScreenSize.alertDialogElevation()
+        
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing())
+                ) {
+                    if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (isDestructive) Red else Primary,
+                            modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
+                        )
+                    }
+                    Text(
+                        text = title,
+                        fontSize = titleFontSize.value.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isDestructive) Red else Primary
+                    )
+                }
+            },
+            text = if (textContent != null || alertMessage != null) {
+                {
+                    if (textContent != null) {
+                        textContent()
+                    } else if (alertMessage != null) {
+                        Text(
+                            text = alertMessage,
+                            fontSize = textFontSize.value.sp,
+                            color = Black
+                        )
+                    }
+                }
+            } else null,
+            confirmButton = {
+                FilledTonalButton(
+                    onClick = onConfirmClick,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = if (isDestructive) Red else Primary,
+                        contentColor = White
+                    ),
+                    shape = RoundedCornerShape(buttonCornerRadius)
+                ) {
+                    Text(
+                        text = confirmButtonText,
+                        fontSize = buttonFontSize.value.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            },
+            dismissButton = if (dismissButtonText != null && onDismissClick != null) {
+                {
+                    OutlinedButton(
+                        onClick = onDismissClick,
+                        shape = RoundedCornerShape(buttonCornerRadius),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Primary
+                        ),
+                        border = BorderStroke(1.dp, Primary.copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = dismissButtonText,
+                            fontSize = buttonFontSize.value.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            } else null,
+            containerColor = White.copy(alpha = 0.8f),
+            shape = RoundedCornerShape(dialogCornerRadius),
+            tonalElevation = elevation
         )
     }
 }

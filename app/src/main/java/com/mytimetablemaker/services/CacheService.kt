@@ -2,6 +2,7 @@ package com.mytimetablemaker.services
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.mytimetablemaker.BuildConfig
 import com.mytimetablemaker.models.*
 import com.mytimetablemaker.models.APIDataType
 import kotlinx.coroutines.*
@@ -154,7 +155,7 @@ class SharedDataManager private constructor(private val context: Context) {
     private val odptService = ODPTDataService(context)
     private val gtfsService = GTFSDataService(context)
     private val sharedPreferences: SharedPreferences = context.getSharedPreferences("SharedDataManager", Context.MODE_PRIVATE)
-    private val consumerKey: String = "" // TODO: Get from BuildConfig or secure storage
+    private val consumerKey: String = BuildConfig.ODPT_ACCESS_TOKEN
     
     // MARK: - Data Access
     // Get lines for a specific transportation kind
@@ -269,11 +270,9 @@ class SharedDataManager private constructor(private val context: Context) {
                     
                     val data = odptService.fetchIndividualOperatorData(transportOperator, consumerKey)
                     
-                    // Write to file
+                    // Save to both cache and LineData for future use
+                    cache.saveData(data, cacheKey)
                     odptService.writeIndividualOperatorDataToFile(data, transportOperator)
-                    
-                    // Don't save to cache here - only load from cache
-                    // Cache will be saved when user presses save button
                     
                     android.util.Log.d("SharedDataManager", "✅ Fetched: ${transportOperator.operatorDisplayName(context)}")
                 }
@@ -322,13 +321,23 @@ class SharedDataManager private constructor(private val context: Context) {
         val hasAnyCache = checkCacheAvailability()
         
         if (!hasAnyCache) {
-            // No cache exists: fetch all operators' data
+            // No cache exists: fetch all operators' data from API
             android.util.Log.d("SharedDataManager", "📥 No cache found - fetching all operators' data")
-            // TODO: Implement performInitialFetch()
+            try {
+                performInitialFetch(TransportationLineKind.RAILWAY)
+                performInitialFetch(TransportationLineKind.BUS)
+            } catch (e: Exception) {
+                android.util.Log.e("SharedDataManager", "❌ Initial fetch failed: ${e.message}", e)
+            }
         } else {
-            // Cache exists: load from cache (data already fetched)
+            // Cache exists: preload into memory for faster access
             android.util.Log.d("SharedDataManager", "📂 Cache found - loading from cache")
-            // TODO: Implement loadFromCache()
+            try {
+                getLines(TransportationLineKind.RAILWAY, allowFetch = false)
+                getLines(TransportationLineKind.BUS, allowFetch = false)
+            } catch (e: Exception) {
+                android.util.Log.e("SharedDataManager", "❌ Cache load failed: ${e.message}", e)
+            }
         }
         
         // Ensure isLoading is false after all operations complete

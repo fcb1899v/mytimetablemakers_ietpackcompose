@@ -263,6 +263,7 @@ fun MainContentScreen(
                         if (showDatePicker) {
                             val datePickerDialog = android.app.DatePickerDialog(
                                 context,
+                                R.style.Theme_MyTransitMakers_PickerDialog,
                                 { _, year, month, dayOfMonth ->
                                     val selectedDate = Calendar.getInstance().apply {
                                         set(year, month, dayOfMonth)
@@ -305,6 +306,7 @@ fun MainContentScreen(
                             if (showTimePicker) {
                                 val timePickerDialog = android.app.TimePickerDialog(
                                     context,
+                                    R.style.Theme_MyTransitMakers_PickerDialog,
                                     { _, hourOfDay, minute ->
                                         val newCalendar = Calendar.getInstance().apply {
                                             time = Date()

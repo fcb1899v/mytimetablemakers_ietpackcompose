@@ -875,15 +875,16 @@ enum class ODPTAPIType {
     GTFS         // No API (Use GTFS Data)
 }
 
-// Get localized display name for ODPT train type string (e.g. "odpt.TrainType:JR-East.ChuoSpecialRapid")
+// Get localized display name for ODPT train type string (e.g. "odpt.TrainType:JR-East.ChuoSpecialRapid" or short form "ChuoSpecialRapid")
 fun getTrainTypeDisplayName(trainType: String, context: Context): String {
-    val parts = trainType.split(".")
-    if (parts.size >= 3) {
-        val resourceName = parts[2].replaceFirstChar { it.lowercaseChar() }
-        val displayType = DisplayTrainType.entries.firstOrNull { it.rawValue.replaceFirstChar { c -> c.lowercaseChar() } == resourceName }
-        return displayType?.displayName(context) ?: trainType
+    val resourceName = if (trainType.contains(".")) {
+        val parts = trainType.split(".")
+        if (parts.size >= 3) parts[2].replaceFirstChar { it.lowercaseChar() } else trainType.replaceFirstChar { it.lowercaseChar() }
+    } else {
+        trainType.replaceFirstChar { it.lowercaseChar() }
     }
-    return trainType
+    val displayType = DisplayTrainType.entries.firstOrNull { it.rawValue.replaceFirstChar { c -> c.lowercaseChar() } == resourceName }
+    return displayType?.displayName(context) ?: trainType
 }
 
 // MARK: - Transfer Type Enumeration

@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <style name="Theme.MyTransitMakers_JetpackCompose" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- DatePicker and TimePicker dialog theme (Primary: purple_700) -->
+    <style name="Theme.MyTransitMakers.PickerDialog" parent="android:Theme.Material.Light.Dialog">
+        <item name="android:colorPrimary">@color/purple_700</item>
+        <item name="android:colorAccent">@color/purple_700</item>
+        <item name="android:colorPrimaryDark">@color/purple_700</item>
+    </style>
 </resources>

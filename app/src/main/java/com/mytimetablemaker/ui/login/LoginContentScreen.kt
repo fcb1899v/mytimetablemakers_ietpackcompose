@@ -61,11 +61,11 @@ fun LoginContentScreen(
     val email by loginViewModel.email.collectAsState()
     val password by loginViewModel.password.collectAsState()
     
-    // Clear fields on appear
+    // Clear fields on appear (updateAlert=false to avoid overwriting logout message with signUpCheck validation)
     LaunchedEffect(Unit) {
-        loginViewModel.updateEmail("")
-        loginViewModel.updatePassword("")
-        loginViewModel.loginCheck()
+        loginViewModel.updateEmail("", updateAlert = false)
+        loginViewModel.updatePassword("", updateAlert = false)
+        loginViewModel.loginCheck(updateAlert = !isShowMessage)
     }
     
     // Handle login result message changes
@@ -272,45 +272,25 @@ fun LoginContentScreen(
         }
     }
 
-    // MARK: - Login Result Alert
+    // MARK: - Login Result Alert (also handles logout message from Settings)
+    // Note: Only use showLoginResultAlert - the redundant isShowMessage check caused double display when navigating from Settings after logout
     if (showLoginResultAlert) {
-        AlertDialog(
-            onDismissRequest = { 
+        CommonComponents.CustomAlertDialog(
+            onDismissRequest = {
                 showLoginResultAlert = false
                 loginViewModel.dismissMessage()
             },
-            title = { Text(alertTitle) },
-            text = { Text(alertMessage) },
-            confirmButton = {
-                TextButton(onClick = { 
-                    showLoginResultAlert = false
-                    loginViewModel.dismissMessage()
-                    if (isLoginSuccess) {
-                        CoroutineScope(Dispatchers.Main).launch {
-                            delay(100)
-                            onNavigateToSettings()
-                        }
-                    }
-                }) {
-                    Text(stringResource(R.string.ok))
-                }
-            }
-        )
-    }
-    
-    // MARK: - Message Alert
-    if (isShowMessage) {
-        AlertDialog(
-            onDismissRequest = { 
+            title = alertTitle,
+            alertMessage = alertMessage,
+            confirmButtonText = stringResource(R.string.ok),
+            onConfirmClick = {
+                showLoginResultAlert = false
                 loginViewModel.dismissMessage()
-            },
-            title = { Text(alertTitle) },
-            text = { Text(alertMessage) },
-            confirmButton = {
-                TextButton(onClick = { 
-                    loginViewModel.dismissMessage()
-                }) {
-                    Text(stringResource(R.string.ok))
+                if (isLoginSuccess) {
+                    CoroutineScope(Dispatchers.Main).launch {
+                        delay(100)
+                        onNavigateToSettings()
+                    }
                 }
             }
         )
@@ -318,12 +298,14 @@ fun LoginContentScreen(
     
     // MARK: - Password Reset Alert
     if (showResetAlert) {
-        AlertDialog(
+        CommonComponents.CustomAlertDialog(
             onDismissRequest = { showResetAlert = false },
-            title = { Text(stringResource(R.string.passwordReset)) },
-            text = {
+            title = stringResource(R.string.passwordReset),
+            alertMessage = stringResource(R.string.resetYourPassword),
+            confirmButtonText = stringResource(R.string.ok),
+            textContent = {
                 Column {
-                    Text(stringResource(R.string.resetYourPassword))
+                    Text(text = stringResource(R.string.resetYourPassword), fontSize = ScreenSize.alertDialogTextFontSize().value.sp, color = Black)
                     Spacer(modifier = Modifier.height(ScreenSize.loginSpacingSmall()))
                     CommonComponents.CustomLoginTextField(
                         value = resetEmail,
@@ -334,20 +316,13 @@ fun LoginContentScreen(
                     )
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { 
-                    loginViewModel.updateEmail(resetEmail)
-                    loginViewModel.reset()
-                    showResetAlert = false
-                }) {
-                    Text(stringResource(R.string.ok))
-                }
+            onConfirmClick = {
+                loginViewModel.updateEmail(resetEmail)
+                loginViewModel.reset()
+                showResetAlert = false
             },
-            dismissButton = {
-                TextButton(onClick = { showResetAlert = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
+            dismissButtonText = stringResource(R.string.cancel),
+            onDismissClick = { showResetAlert = false }
         )
     }
 }

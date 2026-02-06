@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.mytimetablemaker.R
@@ -59,8 +60,14 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
     }
     
     // MARK: - Data Upload
-    // Uploads all SharedPreferences data to Firestore server
-    fun setFirestore() {
+    // Uploads all SharedPreferences data to Firestore server (requires password for re-authentication)
+    fun setFirestore(password: String) {
+        if (password.isBlank()) {
+            title = getApplication<Application>().getString(R.string.inputError)
+            message = getApplication<Application>().getString(R.string.enterYourPassword)
+            isShowMessage = true
+            return
+        }
         viewModelScope.launch {
             isLoading = true
             isShowAlert = false
@@ -78,6 +85,22 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 return@launch
             }
             try {
+                val user = auth.currentUser
+                if (user == null || user.email.isNullOrEmpty()) {
+                    message = getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
+                    isLoading = false
+                    isShowMessage = true
+                    return@launch
+                }
+                val credential = EmailAuthProvider.getCredential(user.email!!, password)
+                user.reauthenticate(credential).await()
+            } catch (e: Exception) {
+                message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
+                isLoading = false
+                isShowMessage = true
+                return@launch
+            }
+            try {
                 // Process each route (go/back) and upload timetable and line information (sequential await)
                 for (goorback in goorbackarray) {
                     for (linenumber in 0..2) {
@@ -88,6 +111,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             } catch (e: Exception) {
                 println("❌ Error in setFirestore: ${e.message}")
+                message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
                 isLoading = false
                 isShowMessage = true
             }
@@ -95,31 +119,10 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
     }
     
     // MARK: - Available Calendar Types Detection
-    // Get available calendar types for specific route and line
+    // Get available calendar types for specific route and line (from cache or fallback to 3 standard types)
     private fun getAvailableCalendarTypesForRoute(goorback: String, num: Int): List<ODPTCalendarType> {
-        val availableTypes = mutableListOf<ODPTCalendarType>()
-        
-        // Check which calendar types have data in SharedPreferences
-        for (calendarType in ODPTCalendarType.allCases) {
-            var hasData = false
-            for (hour in 4..25) {
-                val timetableKey = goorback.timetableKey(calendarType.calendarTag(), num, hour)
-                if (sharedPreferences.getString(timetableKey, null) != null) {
-                    hasData = true
-                    break
-                }
-            }
-            if (hasData) {
-                availableTypes.add(calendarType)
-            }
-        }
-        
-        // Fallback to basic types if no data found
-        if (availableTypes.isEmpty()) {
-            availableTypes.add(ODPTCalendarType.Weekday)
-            availableTypes.add(ODPTCalendarType.SaturdayHoliday)
-        }
-        
+        val loadedTypes = goorback.loadAvailableCalendarTypes(sharedPreferences, num)
+        val availableTypes = loadedTypes.mapNotNull { ODPTCalendarType.fromRawValue(it) }
         println("📅 Available calendar types for $goorback line $num: ${availableTypes.map { it.debugDisplayName() }}")
         return availableTypes
     }
@@ -136,10 +139,9 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             
             for (hour in 4..25) {
                 val hourKey = "hour${String.format("%02d", hour)}"
-                val calendarTag = calendarType.calendarTag()
-                val timetableKey = goorback.timetableKey(calendarTag, num, hour)
-                val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarTag, num, hour)
-                val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarTag, num, hour)
+                val timetableKey = goorback.timetableKey(calendarType, num, hour)
+                val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarType, num, hour)
+                val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarType, num, hour)
                 
                 // Get data from SharedPreferences
                 val timetableData = sharedPreferences.getString(timetableKey, "") ?: ""
@@ -172,6 +174,9 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
     private suspend fun setLineInfoFirestore(goorback: String) {
         val batch = firestore.batch()
         val ref = getRef(goorback)
+        
+        // Calendar types cache key per line (saved when ODPT API fetches types; empty = show 3 standard types)
+        fun calendarTypesCacheKey(goorback: String, num: Int) = "${goorback}line${num + 1}_calendarTypes"
         
         val lineData = mapOf(
             "switch" to goorback.isShowRoute2(sharedPreferences),
@@ -209,7 +214,10 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             "transittime1" to goorback.transferTimeArray(sharedPreferences)[1].toString(),
             "transittime2" to goorback.transferTimeArray(sharedPreferences)[2].toString(),
             "transittime3" to goorback.transferTimeArray(sharedPreferences)[3].toString(),
-            "transittimee" to goorback.transferTimeArray(sharedPreferences)[0].toString()
+            "transittimee" to goorback.transferTimeArray(sharedPreferences)[0].toString(),
+            "calendarTypes1" to (sharedPreferences.getStringSet(calendarTypesCacheKey(goorback, 0), null)?.toList() ?: emptyList()),
+            "calendarTypes2" to (sharedPreferences.getStringSet(calendarTypesCacheKey(goorback, 1), null)?.toList() ?: emptyList()),
+            "calendarTypes3" to (sharedPreferences.getStringSet(calendarTypesCacheKey(goorback, 2), null)?.toList() ?: emptyList())
         )
         
         batch.set(ref, lineData)
@@ -234,8 +242,14 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
     }
     
     // MARK: - Data Download
-    // Downloads all data from Firestore server to SharedPreferences
-    fun getFirestore() {
+    // Downloads all data from Firestore server to SharedPreferences (requires password for re-authentication)
+    fun getFirestore(password: String) {
+        if (password.isBlank()) {
+            title = getApplication<Application>().getString(R.string.inputError)
+            message = getApplication<Application>().getString(R.string.enterYourPassword)
+            isShowMessage = true
+            return
+        }
         viewModelScope.launch {
             isLoading = true
             isShowAlert = false
@@ -253,11 +267,27 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 return@launch
             }
             try {
+                val user = auth.currentUser
+                if (user == null || user.email.isNullOrEmpty()) {
+                    message = getApplication<Application>().getString(R.string.dataCouldNotBeGot)
+                    isLoading = false
+                    isShowMessage = true
+                    return@launch
+                }
+                val credential = EmailAuthProvider.getCredential(user.email!!, password)
+                user.reauthenticate(credential).await()
+            } catch (e: Exception) {
+                message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
+                isLoading = false
+                isShowMessage = true
+                return@launch
+            }
+            try {
                 // Process each route (go/back) and download timetable and line information (sequential await)
+                // Use all calendar types on download so we fetch everything on server (new device may have no local data yet)
                 for (goorback in goorbackarray) {
                     for (linenumber in 0..2) {
-                        val availableCalendarTypes = getAvailableCalendarTypesForRoute(goorback, linenumber)
-                        for (calendarType in availableCalendarTypes) {
+                        for (calendarType in ODPTCalendarType.allCases) {
                             getTimetableFirestore(goorback, linenumber, calendarType)
                         }
                     }
@@ -265,6 +295,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             } catch (e: Exception) {
                 println("❌ Error in getFirestore: ${e.message}")
+                message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                 isLoading = false
                 isShowMessage = true
             }
@@ -278,6 +309,9 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             val document = getRef(goorback).get().await()
             if (document.exists() && document.data != null) {
                 val data = document.data!!
+                
+                // Calendar types cache key per line
+                fun calendarTypesCacheKey(goorback: String, num: Int) = "${goorback}line${num + 1}_calendarTypes"
                 
                 sharedPreferences.edit {
                     data["switch"]?.let { putBoolean(goorback.isShowRoute2Key(), it as? Boolean ?: false) }
@@ -296,6 +330,10 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                         data["ridetime${num + 1}"]?.let { putString(goorback.rideTimeKey(num), it.toString()) }
                         data["transportation${num + 1}"]?.let { putString(goorback.transportationKey(num + 1), it.toString()) }
                         data["transittime${num + 1}"]?.let { putString(goorback.transferTimeKey(num + 1), it.toString()) }
+                        // Restore calendar types from Firestore (list from ODPT API; empty = show 3 standard types)
+                        (data["calendarTypes${num + 1}"] as? List<*>)?.mapNotNull { it?.toString() }?.toSet()?.let { types ->
+                            putStringSet(calendarTypesCacheKey(goorback, num), types)
+                        }
                     }
                     
                     data["transportatione"]?.let { putString(goorback.transportationKey(0), it.toString()) }
@@ -311,6 +349,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             } else {
                 if (goorback == "go2") {
+                    message = getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                     isLoading = false
                     isShowMessage = true
                 }
@@ -318,9 +357,11 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
         } catch (e: Exception) {
             println("❌ Error downloading line info: ${e.message}")
             if (goorback == "go2") {
+                message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                 isLoading = false
                 isShowMessage = true
             }
+            throw e
         }
     }
     
@@ -339,10 +380,9 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 for (hour in 4..25) {
                     val hourKey = "hour${String.format("%02d", hour)}"
                     val enhancedHourKey = "${hourKey}_enhanced"
-                    val calendarTag = calendarType.calendarTag()
-                    val timetableKey = goorback.timetableKey(calendarTag, num, hour)
-                    val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarTag, num, hour)
-                    val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarTag, num, hour)
+                    val timetableKey = goorback.timetableKey(calendarType, num, hour)
+                    val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarType, num, hour)
+                    val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarType, num, hour)
                     
                     // Try to load enhanced format first (new format)
                     val enhancedData = data[enhancedHourKey] as? Map<*, *>
@@ -369,6 +409,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             }
         } catch (e: Exception) {
             println("❌ Error getting document for ${calendarType.debugDisplayName()}: ${e.message}")
+            throw e
         }
     }
 }

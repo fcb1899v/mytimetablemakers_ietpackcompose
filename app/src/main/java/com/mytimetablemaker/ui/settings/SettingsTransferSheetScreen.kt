@@ -165,6 +165,8 @@ fun SettingsTransferSheetScreen(
                     showRoute2 = showRoute2
                 )
 
+                Spacer(modifier = Modifier.height(verticalSpacing))
+
                 // Header section - Setting departure point
                 HeaderSection(title = stringResource(R.string.settingDeparturePoint))
                 
@@ -464,7 +466,7 @@ private fun TransportationSettingsSection(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
                 modifier = Modifier
-                    .background(color = LightGray)
+                    .background(color = LightGray.copy(alpha = 0.85f))
                     .offset(
                         y = ScreenSize.settingsLineSheetTransportationDropdownOffsetY(),
                     )
@@ -554,12 +556,11 @@ private fun TransferTimeSettingsSection(
                 )
             }
         }
-        
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
             tint = if (transferTime > 0) Accent else Gray,
-            modifier = Modifier.size(ScreenSize.settingsSheetInputFontSize() * 1.2f)
+            modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
         )
     }
 }

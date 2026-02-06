@@ -645,9 +645,8 @@ class SettingsLineViewModel(
                         }
                     }
                 } else {
-                    // If operator name is saved but dataSource and operatorCode are not found,
-                    // clear operator selection
-                    operatorInput.value = ""
+                    // Name match failed and no saved code (e.g. user only typed, didn't select from dropdown).
+                    // Keep operatorInput as savedOperatorName so typed text is still shown; only clear selection state.
                     selectedOperatorCode.value = null
                     operatorSelected.value = false
                 }
@@ -1348,6 +1347,7 @@ class SettingsLineViewModel(
         
         // Display in enum order (no reversal)
         operatorSuggestions.value = sortedResults.take(20)
+        // showOperatorSuggestions = isOperatorFieldFocused && !operatorSuggestions.isEmpty
         showOperatorSuggestions.value = fieldIsFocused && operatorSuggestions.value.isNotEmpty()
         
         android.util.Log.d("SettingsLineViewModel", "filterOperators: Final results - operatorSuggestions count=${operatorSuggestions.value.size}, showOperatorSuggestions=${showOperatorSuggestions.value}")
@@ -1503,6 +1503,7 @@ class SettingsLineViewModel(
     // Process operator input changes and trigger search/filter
     suspend fun processOperatorInput(newValue: String) = withContext(Dispatchers.Main) {
         // Don't reset operator selection if line number or direction is being changed
+        // if isLineNumberChanging || isGoorBackChanging { return }
         if (isLineNumberChanging.value || isGoorBackChanging.value) return@withContext
         
         // Get current selected operator name for comparison before updating
@@ -1600,6 +1601,7 @@ class SettingsLineViewModel(
     // filterLine is called first, then lineInput is updated via binding
     fun processLineInput(newValue: String) {
         // Don't reset station selection if line number or direction is being changed
+        // if isLineNumberChanging || isGoorBackChanging { return }
         if (isLineNumberChanging.value || isGoorBackChanging.value) return
         
         // Trigger filtering when lineInput changes
@@ -1631,7 +1633,7 @@ class SettingsLineViewModel(
             lineSelected.value = false
         }
         
-        // Update lineInput value
+        // Update lineInput value (lineInput is updated via binding, but we need to set it explicitly)
         lineInput.value = newValue
         
         // Show station selection UI for custom line input
@@ -1708,7 +1710,7 @@ class SettingsLineViewModel(
                 }
             }
         } else {
-            // For railway lines: use odpt:stationOrder from Railway JSON
+            // For railway lines, use odpt:stationOrder from Railway JSON
             // TrainTimetable API is only used for timetable generation, not for station list
             lineBusStops.value = emptyList()
             
@@ -2041,6 +2043,11 @@ class SettingsLineViewModel(
     override suspend fun saveAllDataToUserDefaults() = withContext(Dispatchers.IO) {
         val lineIndex = _selectedLineNumber.value - 1
         
+        // When all timetable ride times are the same, update all to the new ride time BEFORE saving rideTimeKey.
+        // If called after rideTimeKey is saved, loadTransportationTimes uses the new value as default when
+        // timetableRideTimeKey is empty (ODPT not used), causing previousRideTime == newRideTime and early return.
+        syncTimetableRideTimeWhenAllSame(lineIndex, _selectedRideTime.value)
+        
         sharedPreferences.edit {
             // Save line name
             if (lineInput.value.trim().isNotEmpty()) {
@@ -2095,13 +2102,11 @@ class SettingsLineViewModel(
                 val operatorNameKey = _selectedGoorback.value.operatorNameKey(lineIndex)
                 putString(operatorNameKey, operatorInput.value)
             }
-            
-            // Save operator code if selectedLine is available
-            _selectedLine.value?.operatorCode?.let { operatorCode ->
-                if (operatorCode.isNotEmpty()) {
-                    val operatorCodeKey = _selectedGoorback.value.operatorCodeKey(lineIndex)
-                    putString(operatorCodeKey, operatorCode)
-                }
+            // Save operator code when operator is selected (even if no line selected yet)
+            val operatorCodeToSave = _selectedLine.value?.operatorCode ?: selectedOperatorCode.value
+            if (!operatorCodeToSave.isNullOrEmpty()) {
+                val operatorCodeKey = _selectedGoorback.value.operatorCodeKey(lineIndex)
+                putString(operatorCodeKey, operatorCodeToSave)
             }
 
             // Save transportation kind
@@ -2200,6 +2205,39 @@ class SettingsLineViewModel(
         
         // Update display (but don't override selectedLineColor if user has explicitly set it)
         updateDisplay()
+    }
+    
+    // If all timetable ride times for this route are the same value, update every entry to the new ride time.
+    // If they are not all the same, do not change timetable ride times.
+    private fun syncTimetableRideTimeWhenAllSame(lineIndex: Int, newRideTime: Int) {
+        val goorback = _selectedGoorback.value
+        val calendarTypeStrings = goorback.loadAvailableCalendarTypes(sharedPreferences, lineIndex)
+        val calendarTypes = calendarTypeStrings.mapNotNull { ODPTCalendarType.fromRawValue(it) }
+        val allRideTimes = mutableListOf<Int>()
+        val slotsWithData = mutableListOf<Pair<ODPTCalendarType, Int>>()
+        for (calendarType in calendarTypes) {
+            val hours = goorback.validHourRange(calendarType, lineIndex, sharedPreferences)
+            for (hour in hours) {
+                val times = goorback.loadTransportationTimes(calendarType, lineIndex, hour, sharedPreferences)
+                if (times.isNotEmpty()) {
+                    slotsWithData.add(calendarType to hour)
+                    times.mapTo(allRideTimes) { it.rideTime }
+                }
+            }
+        }
+        if (allRideTimes.isEmpty()) return
+        val distinctRideTimes = allRideTimes.distinct()
+        if (distinctRideTimes.size != 1) return
+        val previousRideTime = distinctRideTimes.single()
+        if (previousRideTime == newRideTime) return
+        for ((calendarType, hour) in slotsWithData) {
+            val times = goorback.loadTransportationTimes(calendarType, lineIndex, hour, sharedPreferences)
+            val updated: List<TransportationTime> = times.map { tt ->
+                if (tt is BusTime) tt.copy(rideTime = newRideTime)
+                else (tt as TrainTime).copy(rideTime = newRideTime)
+            }
+            goorback.saveTransportationTimes(updated, calendarType, lineIndex, hour, sharedPreferences)
+        }
     }
     
     // Update all line information at once

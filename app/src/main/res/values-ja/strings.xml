@@ -105,6 +105,7 @@
     <string name="deleteAccountSuccessfully">アカウント削除成功</string>
     <string name="accountDeletedSuccessfully">アカウントの削除成功</string>
     <string name="accountCouldNotBeDeleted">アカウントの削除失敗</string>
+    <string name="deleteAccountPasswordPlaceholder">パスワードを入力</string>
 
     <!-- MARK: - Timetable Content View -->
     <!-- Timetable editing and calendar type selection -->
