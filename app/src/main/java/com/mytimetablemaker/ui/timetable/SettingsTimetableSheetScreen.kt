@@ -186,8 +186,14 @@ fun SettingsTimetableSheetScreen(
         // First, try to get existing train types from the current line
         val existingTrainTypes = goorback.loadTrainTypeList(currentCalendarType, num, sharedPreferences)
         
-        // If no existing train types are found, return default list
+        // If no existing train types are found, use default list + operator-specific types for railway
         if (existingTrainTypes.isEmpty()) {
+            val operatorCode = goorback.operatorCode(sharedPreferences, num)
+            val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode }
+            if (dataSource != null && dataSource.hasTrainTimeTable()) {
+                val operatorTypes = dataSource.operatorTrainType().mapNotNull { it.split(".").lastOrNull() }.filter { it.isNotEmpty() }
+                return (defaultTypeList + operatorTypes).distinct()
+            }
             return defaultTypeList
         }
         
@@ -452,7 +458,7 @@ fun SettingsTimetableSheetScreen(
         val timetableTrainTypeKey = goorback.timetableTrainTypeKey(currentCalendarType, num, currentHour)
         val timetableRideTimeKey = goorback.timetableRideTimeKey(currentCalendarType, num, currentHour)
         
-        val copiedTime = sharedPreferences.getString(sourceTimetableKey, null) ?: ""
+        val copiedTime = goorback.choiceCopyTime(currentCalendarType, num, currentHour, index, sharedPreferences)
         val copiedTrainTypes = sharedPreferences.getString(sourceTrainTypeKey, null) ?: ""
         val copiedRideTimes = sharedPreferences.getString(sourceRideTimeKey, null) ?: ""
         
@@ -539,6 +545,8 @@ fun SettingsTimetableSheetScreen(
                         )
                         HourControlSection(
                             hour = currentHour,
+                            trainCount = goorback.getTrainTimesCounts(currentCalendarType, num, sharedPreferences)
+                                .getOrElse(goorback.validHourRange(currentCalendarType, num, sharedPreferences).indexOf(currentHour)) { 0 },
                             onDecreaseHour = {
                                 if (currentHour > 4) {
                                     currentHour -= 1
@@ -733,6 +741,7 @@ private fun CalendarDropDownSection(
 @Composable
 private fun HourControlSection(
     hour: Int,
+    trainCount: Int = 0,
     onDecreaseHour: () -> Unit,
     onIncreaseHour: () -> Unit
 ) {
@@ -756,7 +765,11 @@ private fun HourControlSection(
         }
         
         Text(
-            text = "$hour${stringResource(R.string.hour)}",
+            text = if (trainCount > 0) {
+                "$hour${stringResource(R.string.hour)} ($trainCount)"
+            } else {
+                "$hour${stringResource(R.string.hour)}"
+            },
             fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
             fontWeight = FontWeight.Bold,
             color = Primary,

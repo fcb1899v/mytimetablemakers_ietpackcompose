@@ -1,5 +1,6 @@
 package com.mytimetablemaker.extensions
 
+import android.util.Log
 import androidx.compose.ui.graphics.Color
 import com.mytimetablemaker.models.CustomColor
 import com.mytimetablemaker.models.DisplayTrainType
@@ -36,7 +37,7 @@ val String.safeColor: Color
             val colorString = if (this.startsWith("#")) this else "#$this"
             Color(colorString.toColorInt())
         } catch (e: Exception) {
-            // Fallback to default gray color if parsing fails
+            Log.d("ColorExtensions", "Failed to parse color '$this': ${e.message}", e)
             Gray
         }
     }
@@ -75,7 +76,7 @@ fun colorForTrainType(trainType: String?): Color {
     val displayTrainType = try {
         DisplayTrainType.valueOf(lastComponent.uppercase().replace("-", "_"))
     } catch (e: IllegalArgumentException) {
-        // Try to find by rawValue
+        Log.d("ColorExtensions", "DisplayTrainType.valueOf failed for '$lastComponent': ${e.message}. Trying rawValue lookup.")
         DisplayTrainType.entries.find { it.rawValue == lastComponent } ?: return White
     }
     
@@ -169,7 +170,7 @@ val CustomColor.color: Color
                 Color(0xFF9C9C9C)
             }
         } catch (e: Exception) {
-            // Fallback to gray color directly using hex value to avoid circular reference
+            Log.d("ColorExtensions", "Failed to parse CustomColor $this rgb=$rgbString: ${e.message}", e)
             Color(0xFF9C9C9C)
         }
     }

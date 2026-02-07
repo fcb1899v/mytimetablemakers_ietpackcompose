@@ -14,7 +14,6 @@ object ScreenSize {
     
     // MARK: - Basic Screen Properties
     // Use LocalConfiguration for actual screen size
-    // Note: LocalWindowInfo.containerSize is window/container size, not screen size
     @Composable
     fun screenWidth(): Dp = LocalConfiguration.current.screenWidthDp.dp
     @Composable
@@ -45,8 +44,6 @@ object ScreenSize {
     fun headerDateHeight(): Dp = customWidth() / 30f
     @Composable
     fun headerDateMargin(): Dp = customWidth() / 6f
-    @Composable
-    fun headerSpace(): Dp = customWidth() / 60f
     @Composable
     fun headerSettingsButtonSize(): Dp = customWidth() * 0.08f
     @Composable
@@ -108,8 +105,6 @@ object ScreenSize {
     @Composable
     fun loginButtonWidth(): Dp = customWidth() * 0.88f
     @Composable
-    fun loginTextFieldFontSize(): Dp = customWidth() * 0.036f
-    @Composable
     fun loginEyeIconSize(): Dp = customWidth() * 0.042f
     @Composable
     fun loginTitleTopMargin(): Dp = screenHeight() * 0.02f
@@ -150,10 +145,6 @@ object ScreenSize {
     @Composable
     fun timetableHorizontalSpacing(): Dp = customWidth() * 0.02f
     @Composable
-    fun timetableCalendarTypeSelectorPaddingVertical(): Dp = screenHeight() * 0.002f
-    @Composable
-    fun timetableCalendarTypeSelectorPaddingHorizontal(): Dp = customWidth() * 0.015f
-    @Composable
     fun timetableHourFrameWidth(): Dp = customWidth() * 0.08f
     @Composable
     fun timetableMinuteFrameWidth(): Dp = customWidth() - timetableHourFrameWidth() - 2.0.dp
@@ -164,11 +155,7 @@ object ScreenSize {
     @Composable
     fun timetablePickerWidth(): Dp = customWidth() * 0.43f
     @Composable
-    fun timetableTypeMenuOffsetX(): Dp = customWidth() * 0.00f
-    @Composable
     fun timetableNumberHeight(): Dp = screenHeight() * 0.02f
-    @Composable
-    fun timetableGridHeight(): Dp = screenHeight() * 0.026f
     @Composable
     fun timetableGridHeaderHeight(): Dp = screenHeight() * 0.030f
     @Composable
@@ -185,7 +172,6 @@ object ScreenSize {
     fun timetableMaxHeight(): Dp = screenHeight() * 0.64f
     @Composable
     fun timetableVerticalSpacing(): Dp = screenHeight() * 0.012f
-    // Dropdown overlay offset Y (adjust multiplier to move vertically; smaller = higher on screen)
     @Composable
     fun timetableCopyMenuOffsetY(): Dp = screenHeight() * 0.18f  // SettingsTimetableSheet: copy time dropdown (発車時刻のコピー)
     @Composable
@@ -247,11 +233,7 @@ object ScreenSize {
     @Composable
     fun settingsSheetRectangleButtonHeight(): Dp = screenHeight() * 0.036f
     @Composable
-    fun settingsSheetPickerSelectWidth(): Dp = customWidth() * 0.08f
-    @Composable
     fun settingsSheetPickerDigitColumnWidth(): Dp = customWidth() * 0.04f 
-    @Composable
-    fun settingsSheetPickerSpacing(): Dp = customWidth() * 0.01f
     @Composable
     fun settingsSheetPickerDigitSpacing(): Dp = customWidth() * 0.02f  
     @Composable
@@ -260,10 +242,6 @@ object ScreenSize {
     fun settingsSheetCornerRadius(): Dp = screenHeight() * 0.015f
     @Composable
     fun settingsSheetPickerSelectHeight(): Dp = screenHeight() * 0.075f
-    @Composable
-    fun settingsSheetPickerDisplayHeight(): Dp = screenHeight() * 0.022f
-    @Composable
-    fun settingsSheetPickerItemPaddingVertical(): Dp = screenHeight() * 0.004f
     @Composable
     fun settingsSheetButtonHeight(): Dp = screenHeight() * 0.044f
     @Composable
@@ -306,19 +284,7 @@ object ScreenSize {
     fun settingsLineSheetColorCircleSize(): Dp = customWidth() * 0.09f
     @Composable
     fun settingsLineSheetColorCircleSmallSize(): Dp = customWidth() * 0.05f
-    @Composable
-    fun settingsLineSheetTagPaddingHorizontal(): Dp = customWidth() * 0.01f
-    
-    // MARK: - Settings Transfer Sheet
-    @Composable
-    fun settingsTransferSheetVerticalSpacing(): Dp = screenHeight() * 0.02f
-    @Composable
-    fun settingsTransferSheetCheckmarkSpacing(): Dp = screenHeight() * 0.009f
-    @Composable
-    fun settingsTransferSheetPickerWidth(): Dp = customWidth() * 0.28f
-    @Composable
-    fun settingsTransferSheetPaddingLeft(): Dp = customWidth() * 0.03f
-    
+
     // MARK: - Alert Dialog
     @Composable
     fun alertDialogContentPadding(): Dp = customWidth() * 0.02f
@@ -333,23 +299,13 @@ object ScreenSize {
     @Composable
     fun alertDialogButtonCornerRadius(): Dp = customWidth() * 0.04f
     @Composable
-    fun alertDialogTextTopPadding(): Dp = customWidth() * 0.01f
-    @Composable
     fun alertDialogElevation(): Dp = customWidth() * 0.015f
 
     // MARK: - Custom Component
     @Composable
     fun customToggleSpacing(): Dp = screenHeight() * 0.006f
     @Composable
-    fun customToggleCornerRadius(): Dp = screenHeight() * 0.026f
-    @Composable
-    fun customToggleWidth(): Dp = screenHeight() * 0.051f
-    @Composable
     fun customToggleHeight(): Dp = screenHeight() * 0.018f
-    @Composable
-    fun customToggleCircleSize(): Dp = screenHeight() * 0.022f
-    @Composable
-    fun customToggleCircleOffset(): Dp = screenHeight() * 0.1f
     @Composable
     fun customTogglePaddingHorizontal(): Dp = customWidth() * 0.02f
     @Composable

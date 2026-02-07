@@ -67,6 +67,7 @@
     <string name="termsUrl">https://nakajimamasao-appstudio.web.app/terms</string>
     <string name="contact">Contact</string>
     <string name="contactUrl">https://nakajimamasao-appstudio.web.app/contact/</string>
+    <string name="couldNotOpenLink">Could not open link</string>
     <string name="settingYourTimetable">Setting your timetable</string>
 
     <!-- MARK: - Settings Transfer Sheet -->

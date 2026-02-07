@@ -145,7 +145,7 @@ object ODPTParser {
                     )
                 }
             } catch (e: Exception) {
-                android.util.Log.e("ODPTParser", "🚌 parseBusRoutes: Failed to parse DTO: ${e.message}", e)
+                android.util.Log.d("ODPTParser", "🚌 parseBusRoutes: Failed to parse DTO: ${e.message}", e)
                 null
             }
         }
@@ -211,7 +211,7 @@ object ODPTParser {
             android.util.Log.d("ODPTParser", "parseRailwayRoutes: Parsed JSON element type=${jsonElement.javaClass.simpleName}")
             
             if (!jsonElement.isJsonArray) {
-                android.util.Log.e("ODPTParser", "parseRailwayRoutes: JSON is not an array, it's ${jsonElement.javaClass.simpleName}")
+                android.util.Log.d("ODPTParser", "parseRailwayRoutes: JSON is not an array, it's ${jsonElement.javaClass.simpleName}")
                 throw ODPTError.InvalidData()
             }
             
@@ -278,7 +278,7 @@ object ODPTParser {
                                     else -> {
                                         // If value is not JsonPrimitive, skip it or use empty string
                                         // This handles unexpected nested structures
-                                        android.util.Log.w("ODPTParser", "parseRailwayRoutes: Unexpected nested value type in JsonObject: ${nestedValue.javaClass.simpleName}")
+                                        android.util.Log.d("ODPTParser", "parseRailwayRoutes: Unexpected nested value type in JsonObject: ${nestedValue.javaClass.simpleName}")
                                         ""
                                     }
                                 }
@@ -396,8 +396,8 @@ object ODPTParser {
                 )
             }
         } catch (e: Exception) {
-            android.util.Log.e("ODPTParser", "parseRailwayRoutes: Failed to parse data: ${e.message}", e)
-            android.util.Log.e("ODPTParser", "parseRailwayRoutes: Exception type: ${e.javaClass.simpleName}")
+            android.util.Log.d("ODPTParser", "parseRailwayRoutes: Failed to parse data: ${e.message}", e)
+            android.util.Log.d("ODPTParser", "parseRailwayRoutes: Exception type: ${e.javaClass.simpleName}")
             e.printStackTrace()
             throw ODPTError.InvalidData()
         }
@@ -613,7 +613,7 @@ class ODPTDataService(private val context: Context) {
                 }
             }
         } catch (e: Exception) {
-            println("❌ ${transportOperator.operatorDisplayName(context)}: Request failed: $e")
+            android.util.Log.d("ODPTDataService", "${transportOperator.operatorDisplayName(context)}: Request failed: ${e.message}", e)
             return@withContext false // Don't update on error
         }
     }
@@ -652,7 +652,7 @@ class ODPTDataService(private val context: Context) {
             val (_, _) = processOperatorUpdate(transportOperator, consumerKey)
             Result.success(Unit)
         } catch (e: Exception) {
-            println("❌ ${transportOperator.operatorDisplayName(context)}: Failed to update data: $e")
+            android.util.Log.d("ODPTDataService", "${transportOperator.operatorDisplayName(context)}: Failed to update data: ${e.message}", e)
             Result.failure(e)
         }
     }
@@ -747,13 +747,13 @@ class ODPTDataService(private val context: Context) {
             // If it's a single object, wrap it in an array
             JsonArray().apply { add(jsonElement) }
         } else {
-            android.util.Log.e("ODPTDataService", "parseJSONArray: Invalid JSON type: ${jsonElement.javaClass.simpleName}")
+            android.util.Log.d("ODPTDataService", "parseJSONArray: Invalid JSON type: ${jsonElement.javaClass.simpleName}")
             return emptyList()
         }
         
         return jsonArray.mapNotNull { element ->
             if (!element.isJsonObject) {
-                android.util.Log.w("ODPTDataService", "parseJSONArray: Element is not a JsonObject: ${element.javaClass.simpleName}")
+                android.util.Log.d("ODPTDataService", "parseJSONArray: Element is not a JsonObject: ${element.javaClass.simpleName}")
                 return@mapNotNull null
             }
             parseJsonObjectToMap(element.asJsonObject)

@@ -232,7 +232,7 @@ fun SignUpContentScreen(
                             try {
                                 val intent = Intent(Intent.ACTION_VIEW, termsUrl.toUri())
                                 context.startActivity(intent)
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 // Handle error
                             }
                         }

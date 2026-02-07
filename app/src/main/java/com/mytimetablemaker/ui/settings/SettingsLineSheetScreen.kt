@@ -58,7 +58,7 @@ fun SettingsLineSheetScreen(
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
     // Validate goorback value and use default if invalid
-    val validGoorback = if (goorback.isEmpty() || !goorbackOptions.contains(goorback)) "back1" else goorback
+    val validGoorback = if (goorback.isEmpty() || !goorbackList.contains(goorback)) "back1" else goorback
     
     // Create ViewModel
     val viewModel = remember(validGoorback, lineIndex) {
@@ -339,7 +339,7 @@ fun SettingsLineSheetScreen(
                                         viewModel.fetchGTFSLinesForOperator(dataSource)
                                         android.util.Log.d("SettingsLineSheetScreen", "onOperatorSelected: fetchGTFSLinesForOperator completed for ${dataSource.name}")
                                     } catch (e: Exception) {
-                                        android.util.Log.e("SettingsLineSheetScreen", "onOperatorSelected: fetchGTFSLinesForOperator failed for ${dataSource.name}: ${e.message}", e)
+                                        android.util.Log.d("SettingsLineSheetScreen", "onOperatorSelected: fetchGTFSLinesForOperator failed for ${dataSource.name}: ${e.message}", e)
                                     }
                                 }
                             } else {
@@ -629,7 +629,7 @@ fun SettingsLineSheetScreen(
                                 // Navigate to timetable content screen after generation
                                 showTimetableSettings = true
                             } catch (e: Exception) {
-                                android.util.Log.e("SettingsLineSheetScreen", "Failed to auto-generate timetable: ${e.message}", e)
+                                android.util.Log.d("SettingsLineSheetScreen", "Failed to auto-generate timetable: ${e.message}", e)
                             }
                         }
                     }
@@ -692,7 +692,7 @@ fun SettingsLineSheetScreen(
                                         viewModel.fetchGTFSLinesForOperator(dataSource)
                                         android.util.Log.d("SettingsLineSheetScreen", "OperatorSuggestionsView onOperatorSelected: fetchGTFSLinesForOperator completed for ${dataSource.name}")
                                     } catch (e: Exception) {
-                                        android.util.Log.e("SettingsLineSheetScreen", "OperatorSuggestionsView onOperatorSelected: fetchGTFSLinesForOperator failed for ${dataSource.name}: ${e.message}", e)
+                                        android.util.Log.d("SettingsLineSheetScreen", "OperatorSuggestionsView onOperatorSelected: fetchGTFSLinesForOperator failed for ${dataSource.name}: ${e.message}", e)
                                     }
                                 }
                             } else {
@@ -960,7 +960,7 @@ private fun RouteHeaderMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false }
             ) {
-                goorbackOptions.forEach { option ->
+                goorbackList.forEach { option ->
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -1156,7 +1156,7 @@ private fun LineColorSection(
                 try {
                     val hexString = if (it.startsWith("#")) it else "#$it"
                     Color(hexString.toColorInt())
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     null
                 }
             }

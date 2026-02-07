@@ -207,6 +207,7 @@ fun SettingsContentScreen(
                     // Home and Destination button
                     SettingsButton(
                         title = stringResource(R.string.homeDestinationSettings),
+                        subtitle = "go1".settingsDeparturePoint(sharedPreferences, context) + " → " + "go1".settingsDestination(sharedPreferences, context),
                         onClick = { showTransferSheet = true }
                     )
                     
@@ -562,6 +563,7 @@ private fun SettingsSection(
 @Composable
 private fun SettingsButton(
     title: String,
+    subtitle: String? = null,
     onClick: () -> Unit
 ) {
     TextButton(
@@ -578,11 +580,20 @@ private fun SettingsButton(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = title,
-                fontSize = ScreenSize.settingsFontSize().value.sp,
-                color = Black
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = ScreenSize.settingsFontSize().value.sp,
+                    color = Black
+                )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        fontSize = (ScreenSize.settingsFontSize().value * 0.85f).sp,
+                        color = Gray
+                    )
+                }
+            }
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
@@ -629,7 +640,8 @@ private fun openUrl(context: android.content.Context, url: String) {
         val intent = Intent(Intent.ACTION_VIEW, url.toUri())
         context.startActivity(intent)
     } catch (e: Exception) {
-        // Handle error
+        android.util.Log.d("SettingsContentScreen", "Failed to open URL: $url", e)
+        android.widget.Toast.makeText(context, context.getString(R.string.couldNotOpenLink), android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -638,7 +650,7 @@ private fun getAppVersion(context: android.content.Context): String {
     return try {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         packageInfo.versionName ?: "Unknown"
-    } catch (e: PackageManager.NameNotFoundException) {
+    } catch (_: PackageManager.NameNotFoundException) {
         "Unknown"
     }
 }

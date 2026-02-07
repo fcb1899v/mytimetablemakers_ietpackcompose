@@ -16,6 +16,7 @@ import com.mytimetablemaker.extensions.*
 import com.mytimetablemaker.models.ODPTCalendarType
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.util.Locale
 
 // MARK: - App Constants
 // Array of route direction identifiers
@@ -110,7 +111,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                     setLineInfoFirestore(goorback)
                 }
             } catch (e: Exception) {
-                println("❌ Error in setFirestore: ${e.message}")
+                android.util.Log.d("FirestoreViewModel", "Error in setFirestore: ${e.message}", e)
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
                 isLoading = false
                 isShowMessage = true
@@ -138,7 +139,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             val hourData = mutableMapOf<String, Any>()
             
             for (hour in 4..25) {
-                val hourKey = "hour${String.format("%02d", hour)}"
+                val hourKey = "hour${String.format(Locale.ROOT, "%02d", hour)}"
                 val timetableKey = goorback.timetableKey(calendarType, num, hour)
                 val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarType, num, hour)
                 val timetableTrainTypeKey = goorback.timetableTrainTypeKey(calendarType, num, hour)
@@ -164,7 +165,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 nextRef.set(hourData).await()
                 println("✅ Uploaded timetable data to Firestore for ${calendarType.debugDisplayName()}")
             } catch (e: Exception) {
-                println("❌ Error uploading timetable data: ${e.message}")
+                android.util.Log.d("FirestoreViewModel", "Error uploading timetable data: ${e.message}", e)
             }
         }
     }
@@ -178,43 +179,55 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
         // Calendar types cache key per line (saved when ODPT API fetches types; empty = show 3 standard types)
         fun calendarTypesCacheKey(goorback: String, num: Int) = "${goorback}line${num + 1}_calendarTypes"
         
+        // SharedPreferences から1回だけ取得してキャッシュ
+        val operatorNames = goorback.operatorNameArray(sharedPreferences)
+        val lineNames = goorback.lineNameArray(sharedPreferences, getApplication())
+        val departStations = goorback.departStationArray(sharedPreferences, getApplication())
+        val arriveStations = goorback.arriveStationArray(sharedPreferences, getApplication())
+        val lineColors = goorback.lineColorStringArray(sharedPreferences)
+        val lineCodes = goorback.lineCodeArray(sharedPreferences)
+        val lineKinds = goorback.lineKindArray(sharedPreferences)
+        val rideTimes = goorback.rideTimeArray(sharedPreferences)
+        val transportations = goorback.transportationArray(sharedPreferences)
+        val transferTimes = goorback.transferTimeArray(sharedPreferences)
+        
         val lineData = mapOf(
             "switch" to goorback.isShowRoute2(sharedPreferences),
             "changeline" to goorback.changeLineInt(sharedPreferences).toString(),
             "departpoint" to goorback.departurePoint(sharedPreferences, getApplication()),
             "arrivalpoint" to goorback.destination(sharedPreferences, getApplication()),
-            "operatorname1" to goorback.operatorNameArray(sharedPreferences)[0],
-            "operatorname2" to goorback.operatorNameArray(sharedPreferences)[1],
-            "operatorname3" to goorback.operatorNameArray(sharedPreferences)[2],
-            "linename1" to goorback.lineNameArray(sharedPreferences, getApplication())[0],
-            "linename2" to goorback.lineNameArray(sharedPreferences, getApplication())[1],
-            "linename3" to goorback.lineNameArray(sharedPreferences, getApplication())[2],
-            "departstation1" to goorback.departStationArray(sharedPreferences, getApplication())[0],
-            "departstation2" to goorback.departStationArray(sharedPreferences, getApplication())[1],
-            "departstation3" to goorback.departStationArray(sharedPreferences, getApplication())[2],
-            "arrivalstation1" to goorback.arriveStationArray(sharedPreferences, getApplication())[0],
-            "arrivalstation2" to goorback.arriveStationArray(sharedPreferences, getApplication())[1],
-            "arrivalstation3" to goorback.arriveStationArray(sharedPreferences, getApplication())[2],
-            "linecolor1" to goorback.lineColorStringArray(sharedPreferences)[0],
-            "linecolor2" to goorback.lineColorStringArray(sharedPreferences)[1],
-            "linecolor3" to goorback.lineColorStringArray(sharedPreferences)[2],
-            "linecode1" to goorback.lineCodeArray(sharedPreferences)[0],
-            "linecode2" to goorback.lineCodeArray(sharedPreferences)[1],
-            "linecode3" to goorback.lineCodeArray(sharedPreferences)[2],
-            "linekind1" to goorback.lineKindArray(sharedPreferences)[0].firestoreRawValue(),
-            "linekind2" to goorback.lineKindArray(sharedPreferences)[1].firestoreRawValue(),
-            "linekind3" to goorback.lineKindArray(sharedPreferences)[2].firestoreRawValue(),
-            "ridetime1" to goorback.rideTimeArray(sharedPreferences)[0].toString(),
-            "ridetime2" to goorback.rideTimeArray(sharedPreferences)[1].toString(),
-            "ridetime3" to goorback.rideTimeArray(sharedPreferences)[2].toString(),
-            "transportation1" to goorback.transportationArray(sharedPreferences)[1],
-            "transportation2" to goorback.transportationArray(sharedPreferences)[2],
-            "transportation3" to goorback.transportationArray(sharedPreferences)[3],
-            "transportatione" to goorback.transportationArray(sharedPreferences)[0],
-            "transittime1" to goorback.transferTimeArray(sharedPreferences)[1].toString(),
-            "transittime2" to goorback.transferTimeArray(sharedPreferences)[2].toString(),
-            "transittime3" to goorback.transferTimeArray(sharedPreferences)[3].toString(),
-            "transittimee" to goorback.transferTimeArray(sharedPreferences)[0].toString(),
+            "operatorname1" to operatorNames[0],
+            "operatorname2" to operatorNames[1],
+            "operatorname3" to operatorNames[2],
+            "linename1" to lineNames[0],
+            "linename2" to lineNames[1],
+            "linename3" to lineNames[2],
+            "departstation1" to departStations[0],
+            "departstation2" to departStations[1],
+            "departstation3" to departStations[2],
+            "arrivalstation1" to arriveStations[0],
+            "arrivalstation2" to arriveStations[1],
+            "arrivalstation3" to arriveStations[2],
+            "linecolor1" to lineColors[0],
+            "linecolor2" to lineColors[1],
+            "linecolor3" to lineColors[2],
+            "linecode1" to lineCodes[0],
+            "linecode2" to lineCodes[1],
+            "linecode3" to lineCodes[2],
+            "linekind1" to lineKinds[0].firestoreRawValue(),
+            "linekind2" to lineKinds[1].firestoreRawValue(),
+            "linekind3" to lineKinds[2].firestoreRawValue(),
+            "ridetime1" to rideTimes[0].toString(),
+            "ridetime2" to rideTimes[1].toString(),
+            "ridetime3" to rideTimes[2].toString(),
+            "transportation1" to transportations[1],
+            "transportation2" to transportations[2],
+            "transportation3" to transportations[3],
+            "transportatione" to transportations[0],
+            "transittime1" to transferTimes[1].toString(),
+            "transittime2" to transferTimes[2].toString(),
+            "transittime3" to transferTimes[3].toString(),
+            "transittimee" to transferTimes[0].toString(),
             "calendarTypes1" to (sharedPreferences.getStringSet(calendarTypesCacheKey(goorback, 0), null)?.toList() ?: emptyList()),
             "calendarTypes2" to (sharedPreferences.getStringSet(calendarTypesCacheKey(goorback, 1), null)?.toList() ?: emptyList()),
             "calendarTypes3" to (sharedPreferences.getStringSet(calendarTypesCacheKey(goorback, 2), null)?.toList() ?: emptyList())
@@ -233,7 +246,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 isShowMessage = true
             }
         } catch (e: Exception) {
-            println("❌ Error uploading line info: ${e.message}")
+            android.util.Log.d("FirestoreViewModel", "Error uploading line info: ${e.message}", e)
             if (goorback == "go2") {
                 isLoading = false
                 isShowMessage = true
@@ -294,7 +307,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                     getLineInfoFirestore(goorback)
                 }
             } catch (e: Exception) {
-                println("❌ Error in getFirestore: ${e.message}")
+                android.util.Log.d("FirestoreViewModel", "Error in getFirestore: ${e.message}", e)
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                 isLoading = false
                 isShowMessage = true
@@ -355,7 +368,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
         } catch (e: Exception) {
-            println("❌ Error downloading line info: ${e.message}")
+            android.util.Log.d("FirestoreViewModel", "Error downloading line info: ${e.message}", e)
             if (goorback == "go2") {
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                 isLoading = false
@@ -378,7 +391,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 
                 // Set data from Firestore for all hours with backward compatibility
                 for (hour in 4..25) {
-                    val hourKey = "hour${String.format("%02d", hour)}"
+                    val hourKey = "hour${String.format(Locale.ROOT, "%02d", hour)}"
                     val enhancedHourKey = "${hourKey}_enhanced"
                     val timetableKey = goorback.timetableKey(calendarType, num, hour)
                     val timetableRideTimeKey = goorback.timetableRideTimeKey(calendarType, num, hour)
@@ -408,7 +421,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
         } catch (e: Exception) {
-            println("❌ Error getting document for ${calendarType.debugDisplayName()}: ${e.message}")
+            android.util.Log.d("FirestoreViewModel", "Error getting document for ${calendarType.debugDisplayName()}: ${e.message}", e)
             throw e
         }
     }

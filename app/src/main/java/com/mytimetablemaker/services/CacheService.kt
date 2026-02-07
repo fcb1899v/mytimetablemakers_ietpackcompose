@@ -47,7 +47,7 @@ class CacheStore(private val context: Context) {
                 android.util.Log.d("CacheStore", "loadData: Successfully loaded ${data.size} bytes from ${url.absolutePath}")
                 data
             } catch (e: IOException) {
-                android.util.Log.e("CacheStore", "loadData: IOException while loading from ${url.absolutePath}: ${e.message}", e)
+                android.util.Log.d("CacheStore", "loadData: IOException while loading from ${url.absolutePath}: ${e.message}", e)
                 null
             }
         } else {
@@ -70,10 +70,10 @@ class CacheStore(private val context: Context) {
             if (renamed) {
                 android.util.Log.d("CacheStore", "saveData: Successfully saved data to ${url.absolutePath}, file exists=${url.exists()}, file size=${url.length()}")
             } else {
-                android.util.Log.e("CacheStore", "saveData: Failed to rename temp file to ${url.absolutePath}")
+                android.util.Log.d("CacheStore", "saveData: Failed to rename temp file to ${url.absolutePath}")
             }
         } catch (e: IOException) {
-            android.util.Log.e("CacheStore", "saveData: IOException while saving to ${url.absolutePath}: ${e.message}", e)
+            android.util.Log.d("CacheStore", "saveData: IOException while saving to ${url.absolutePath}: ${e.message}", e)
             e.printStackTrace()
         }
     }
@@ -194,7 +194,7 @@ class SharedDataManager private constructor(private val context: Context) {
                             gtfsService.downloadGTFSZipOnly(gtfsURL, consumerKey, transportOperator)
                         }
                     } catch (e: Exception) {
-                        android.util.Log.w("SharedDataManager", "⚠️ Failed to download GTFS ZIP for ${transportOperator.operatorDisplayName(context)}: ${e.message}")
+                        android.util.Log.d("SharedDataManager", "⚠️ Failed to download GTFS ZIP for ${transportOperator.operatorDisplayName(context)}: ${e.message}", e)
                     }
                 }
                 // Don't fetch lines at startup - return empty array
@@ -277,7 +277,7 @@ class SharedDataManager private constructor(private val context: Context) {
                     android.util.Log.d("SharedDataManager", "✅ Fetched: ${transportOperator.operatorDisplayName(context)}")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SharedDataManager", "❌ Failed to initialize ${transportOperator.operatorDisplayName(context)}: ${e.message}")
+                android.util.Log.d("SharedDataManager", "❌ Failed to initialize ${transportOperator.operatorDisplayName(context)}: ${e.message}", e)
             }
         }
     }
@@ -327,7 +327,7 @@ class SharedDataManager private constructor(private val context: Context) {
                 performInitialFetch(TransportationLineKind.RAILWAY)
                 performInitialFetch(TransportationLineKind.BUS)
             } catch (e: Exception) {
-                android.util.Log.e("SharedDataManager", "❌ Initial fetch failed: ${e.message}", e)
+                android.util.Log.d("SharedDataManager", "❌ Initial fetch failed: ${e.message}", e)
             }
         } else {
             // Cache exists: preload into memory for faster access
@@ -336,7 +336,7 @@ class SharedDataManager private constructor(private val context: Context) {
                 getLines(TransportationLineKind.RAILWAY, allowFetch = false)
                 getLines(TransportationLineKind.BUS, allowFetch = false)
             } catch (e: Exception) {
-                android.util.Log.e("SharedDataManager", "❌ Cache load failed: ${e.message}", e)
+                android.util.Log.d("SharedDataManager", "❌ Cache load failed: ${e.message}", e)
             }
         }
         

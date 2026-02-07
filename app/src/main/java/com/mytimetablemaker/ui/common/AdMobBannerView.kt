@@ -81,7 +81,7 @@ private fun getAdUnitID(context: Context): String {
         if (unitID.isNotEmpty() && unitID != "$(ADMOB_BANNER_UNIT_ID)") {
             return unitID
         }
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         // Resource not found, continue to next method
     }
     

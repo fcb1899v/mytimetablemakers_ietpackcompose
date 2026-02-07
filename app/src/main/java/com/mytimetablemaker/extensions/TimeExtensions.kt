@@ -6,7 +6,9 @@ import androidx.compose.runtime.Composable
 import com.mytimetablemaker.R
 import com.mytimetablemaker.models.ODPTCalendarType
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 // MARK: - Time Extensions
 // Extensions for time formatting and calculations
@@ -19,17 +21,9 @@ fun Int.addZeroTime(): String {
 // MARK: - Int Time Extensions
 // Time format conversions and calculations
 
-// Convert MMSS to seconds
-val Int.MMSStoSS: Int
-    get() = this / 100 * 60 + this % 100
-
 // Convert seconds to MMSS
 val Int.SStoMMSS: Int
     get() = (this / 60) * 100 + (this % 60)
-
-// Convert seconds to HHMMSS
-val Int.SStoHHMMSS: Int
-    get() = (this / 3600) * 10000 + ((this % 3600) / 60) * 100 + (this % 60)
 
 // Get hour component from HHMM format
 val Int.timeHH: String
@@ -55,9 +49,7 @@ val String.timeToMinutes: Int get() {
         val hour = components[0].toIntOrNull()
         val minute = components[1].toIntOrNull()
         if (hour != null && minute != null) {
-            // timetableHour: (hour > 3) ? hour : hour + 24
-            val timetableHour = if (hour > 3) hour else hour + 24
-            return timetableHour * 60 + minute
+            return hour.timetableHour * 60 + minute
         }
     }
     return 0
@@ -73,40 +65,18 @@ fun Date.formatDate(context: Context): String {
     return formatter.format(this)
 }
 
-// Legacy property: uses system default locale (prefer formatDate(context) for app language)
-val Date.setDate: String get() {
-    val formatter = SimpleDateFormat("E, MMM d, yyyy", Locale.getDefault())
-    return formatter.format(this)
-}
-
 // Format time for display
 val Date.setTime: String get() {
     val formatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     return formatter.format(this)
 }
 
-// Convert current date to HHMMSS format integer
-val Date.currentTime: Int get() {
-    val calendar = Calendar.getInstance()
-    calendar.time = this
-    val hour = calendar.get(Calendar.HOUR_OF_DAY)
-    val minute = calendar.get(Calendar.MINUTE)
-    val second = calendar.get(Calendar.SECOND)
-    return hour * 10000 + minute * 100 + second
-}
-
 // MARK: - Int Extensions
 // Convert HHMM format to HH:MM string format
 val Int.stringTime: String get() {
-    val timeHH = (this / 100 + (this % 100) / 60).addZeroTime()
-    val timeMM = (this % 100 % 60).addZeroTime()
-    val timeString = "$timeHH:$timeMM"
+    val timeString = "${this.timeHH}:${this.timeMM}"
     return if (timeString != "27:00") timeString else "--:--"
 }
-
-// Convert HHMMSS to MMSS format
-val Int.HHMMSStoMMSS: Int
-    get() = (this / 10000 * 60 + (this % 10000) / 100) * 100 + this % 100
 
 // Convert HHMMSS to seconds
 val Int.HHMMSStoSS: Int
@@ -366,8 +336,13 @@ fun String.loadAvailableCalendarTypes(sharedPreferences: SharedPreferences, num:
         }
     }
     
-    // Cache empty (no ODPT API fetch for this line): display 3 standard types
-    return FALLBACK_CALENDAR_TYPES
+    // Cache empty: detect from manual timetable data if any, otherwise use standard types
+    val detectedTypes = this.detectAvailableCalendarTypesFromData(num, sharedPreferences)
+    return if (detectedTypes.isNotEmpty()) {
+        detectedTypes.map { it.rawValue }
+    } else {
+        FALLBACK_CALENDAR_TYPES
+    }
 }
 
 // Generate time array for route based on date and current time
@@ -390,7 +365,7 @@ fun String.timeArray(
     val timeArray = mutableListOf(firstDepartTime)
     
     // Arrive time of line 1
-    val rideTime1 = this.getRideTime(sharedPreferences, date, firstDepartTime, 0)
+    val rideTime1 = this.getRideTime(sharedPreferences, date, firstDepartTime, 0, rideTimeArray)
     val arriveTime1 = firstDepartTime.plusHHMM(rideTime1).overTime(firstDepartTime)
     timeArray.add(arriveTime1)
     
@@ -407,7 +382,7 @@ fun String.timeArray(
             timeArray.add(lineDepartTime)
             
             // Arrive time of line i
-            val rideTimeI = this.getRideTime(sharedPreferences, date, lineDepartTime, i)
+            val rideTimeI = this.getRideTime(sharedPreferences, date, lineDepartTime, i, rideTimeArray)
             val arriveTimeI = lineDepartTime.plusHHMM(rideTimeI).overTime(lineDepartTime)
             timeArray.add(arriveTimeI)
         }
@@ -430,18 +405,8 @@ fun String.adjustedForTimetable(): String {
     val hour = components[0].toIntOrNull() ?: return this
     val minute = components[1].toIntOrNull() ?: return this
     
-    // Adjust hour for timetable display (0-3 AM becomes 24-27)
-    val adjustedHour = if (hour in 0..3) hour + 24 else hour
-    
+    val adjustedHour = hour.timetableHour
     return "${adjustedHour.addZeroTime()}:${minute.addZeroTime()}"
-}
-
-// MARK: - String Calendar Type Cache Extensions
-// Clear cache when calendar types are updated (called from SettingsLineViewModel)
-fun String.clearCalendarTypesCache(num: Int) {
-    val cacheKey = "${this}_line${num}"
-    // TODO: Implement cache clearing if using a cache map
-    // For now, this is handled by SharedPreferences removal in SettingsTimetableViewModel
 }
 
 // MARK: - String Minutes Only Extension
@@ -455,7 +420,7 @@ val String.minutesOnly: String
                 val minutes = components[1]
                 val minutesInt = minutes.toIntOrNull()
                 if (minutesInt != null && minutesInt < 10) {
-                    return String.format("%02d", minutesInt)
+                    return String.format(Locale.ROOT, "%02d", minutesInt)
                 }
                 return minutes
             }
@@ -465,7 +430,7 @@ val String.minutesOnly: String
         val minutesInt = this.toIntOrNull()
         if (minutesInt != null) {
             if (minutesInt < 10) {
-                return String.format("%02d", minutesInt)
+                return String.format(Locale.ROOT, "%02d", minutesInt)
             }
             return this
         }
@@ -473,6 +438,10 @@ val String.minutesOnly: String
         // Fallback: return original string
         return this
     }
+
+// Extract minutes as Int from time string (HH:MM format or minutes-only format)
+val String.minutesOnlyInt: Int
+    get() = this.minutesOnly.toIntOrNull() ?: 0
 
 // MARK: - String Time Comparison Extension
 // Compare two time strings (single or double digit format)
@@ -501,13 +470,13 @@ fun String.containsTimeInAnyFormat(departureTime: Int): Boolean {
 @Composable
 fun Int.choiceCopyTimeList(context: Context): List<String> {
     // Note: hour string resource is ":00-"
-    val hourString = context.getString(com.mytimetablemaker.R.string.hour)
+    val hourString = context.getString(R.string.hour)
     return listOf(
         "${this - 1}$hourString",
         "${this + 1}$hourString",
-        context.getString(com.mytimetablemaker.R.string.otherRouteOfLine1),
-        context.getString(com.mytimetablemaker.R.string.otherRouteOfLine2),
-        context.getString(com.mytimetablemaker.R.string.otherRouteOfLine3)
+        context.getString(R.string.otherRouteOfLine1),
+        context.getString(R.string.otherRouteOfLine2),
+        context.getString(R.string.otherRouteOfLine3)
     )
 }
 

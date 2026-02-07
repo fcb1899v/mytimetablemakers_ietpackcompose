@@ -168,7 +168,7 @@ class SettingsTimetableViewModel(
                             allTimes[calendarType] = times
                         }
                         } catch (e: Exception) {
-                            android.util.Log.e("SettingsTimetableViewModel", "Failed to fetch GTFS bus timetable for all calendar types: ${e.message}")
+                            android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch GTFS bus timetable for all calendar types: ${e.message}", e)
                             // Fallback to individual processing
                             for (calendarType in availableCalendarTypes) {
                                 val times = processBusTimetableData(calendarType)
@@ -334,7 +334,7 @@ class SettingsTimetableViewModel(
             val routeId = selectedLine.code
             
             if (routeId.isEmpty()) {
-                android.util.Log.w("SettingsTimetableViewModel", "GTFS: Missing routeId for calendar type fetch")
+                android.util.Log.d("SettingsTimetableViewModel", "GTFS: Missing routeId for calendar type fetch")
                 return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
             }
             
@@ -345,7 +345,7 @@ class SettingsTimetableViewModel(
                 android.util.Log.d("SettingsTimetableViewModel", "GTFS Calendar Types: ${calendarTypes.joinToString { it.displayName(getApplication()) }}")
                 return calendarTypes
             } catch (e: Exception) {
-                android.util.Log.e("SettingsTimetableViewModel", "Failed to fetch GTFS calendar types: ${e.message}")
+                android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch GTFS calendar types: ${e.message}", e)
                 // Fallback to default calendar types
                 return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
             }
@@ -358,7 +358,7 @@ class SettingsTimetableViewModel(
             }
             
             if (apiLink == null) {
-                android.util.Log.w("SettingsTimetableViewModel", "$apiTypeName: Missing required information")
+                android.util.Log.d("SettingsTimetableViewModel", "$apiTypeName: Missing required information")
                 return emptyList()
             }
             
@@ -374,7 +374,7 @@ class SettingsTimetableViewModel(
                 val (data, response) = odptService.fetchODPTDataWithAuth(apiLink, authKey)
                 
                 if (response.code != 200) {
-                    android.util.Log.e("SettingsTimetableViewModel", "Failed to fetch calendar types - status: ${response.code}")
+                    android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch calendar types - status: ${response.code}")
                     return emptyList()
                 }
                 
@@ -394,7 +394,7 @@ class SettingsTimetableViewModel(
                 return processCalendarTypes(foundCalendarTypes, apiTypeName)
                 
             } catch (e: Exception) {
-                android.util.Log.e("SettingsTimetableViewModel", "Error fetching calendar types from $apiTypeName: ${e.message}")
+                android.util.Log.d("SettingsTimetableViewModel", "Error fetching calendar types from $apiTypeName: ${e.message}", e)
                 return emptyList()
             }
         }
@@ -438,10 +438,10 @@ class SettingsTimetableViewModel(
                     ascendingSuccess = true
                     android.util.Log.d("SettingsTimetableViewModel", "Successfully fetched calendar types from ascending direction")
                 } else {
-                    android.util.Log.w("SettingsTimetableViewModel", "Failed to fetch calendar types from ascending direction - status: ${response.code}")
+                    android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch calendar types from ascending direction - status: ${response.code}")
                 }
             } catch (e: Exception) {
-                android.util.Log.w("SettingsTimetableViewModel", "Error fetching calendar types from ascending direction: ${e.message}")
+                android.util.Log.d("SettingsTimetableViewModel", "Error fetching calendar types from ascending direction: ${e.message}", e)
             }
         }
         
@@ -471,10 +471,10 @@ class SettingsTimetableViewModel(
                     }
                     android.util.Log.d("SettingsTimetableViewModel", "Successfully fetched calendar types from descending direction")
                 } else {
-                    android.util.Log.w("SettingsTimetableViewModel", "Failed to fetch calendar types from descending direction - status: ${response.code}")
+                    android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch calendar types from descending direction - status: ${response.code}")
                 }
             } catch (e: Exception) {
-                android.util.Log.w("SettingsTimetableViewModel", "Error fetching calendar types from descending direction: ${e.message}")
+                android.util.Log.d("SettingsTimetableViewModel", "Error fetching calendar types from descending direction: ${e.message}", e)
             }
         }
         
@@ -516,7 +516,7 @@ class SettingsTimetableViewModel(
         if (result.isNotEmpty()) {
             android.util.Log.d("SettingsTimetableViewModel", "$apiTypeName: Found calendar types: ${result.joinToString { it.displayName(getApplication()) }}")
         } else {
-            android.util.Log.w("SettingsTimetableViewModel", "$apiTypeName: No calendar types found")
+            android.util.Log.d("SettingsTimetableViewModel", "$apiTypeName: No calendar types found")
         }
         
         return result
@@ -543,7 +543,7 @@ class SettingsTimetableViewModel(
                 android.util.Log.d("SettingsTimetableViewModel", "Fetched ${busTimes.size} GTFS bus times for ${calendarType.displayName(getApplication())}")
                 return busTimes
             } catch (e: Exception) {
-                android.util.Log.e("SettingsTimetableViewModel", "Failed to fetch GTFS bus timetable: ${e.message}")
+                android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch GTFS bus timetable: ${e.message}", e)
                 return emptyList()
             }
         }
@@ -632,7 +632,7 @@ class SettingsTimetableViewModel(
         if (selectedOperator.apiType() == ODPTAPIType.GTFS) {
             // For GTFS routes, return empty array
             // GTFS timetable data will be fetched separately using GTFS files
-            android.util.Log.w("SettingsTimetableViewModel", "GTFS routes don't use ODPT API for timetable data")
+            android.util.Log.d("SettingsTimetableViewModel", "GTFS routes don't use ODPT API for timetable data")
             return emptyList()
         }
         
@@ -651,7 +651,7 @@ class SettingsTimetableViewModel(
             val json = odptService.parseJSONArray(data)
             return json.map { it }
         } catch (e: Exception) {
-            android.util.Log.e("SettingsTimetableViewModel", "Error fetching bus timetable data: ${e.message}")
+            android.util.Log.d("SettingsTimetableViewModel", "Error fetching bus timetable data: ${e.message}", e)
             return emptyList()
         }
     }
@@ -695,7 +695,7 @@ class SettingsTimetableViewModel(
                     val firstObject = firstTimetableObjects.firstOrNull() as? Map<*, *>
                     android.util.Log.d("SettingsTimetableViewModel", "First timetable object sample: departureStation=${firstObject?.get("odpt:departureStation")}, arrivalStation=${firstObject?.get("odpt:arrivalStation")}, departureTime=${firstObject?.get("odpt:departureTime")}, keys=${firstObject?.keys}")
                 } else {
-                    android.util.Log.w("SettingsTimetableViewModel", "First timetable object is null or empty")
+                    android.util.Log.d("SettingsTimetableViewModel", "First timetable object is null or empty")
                 }
             }
             
@@ -712,7 +712,7 @@ class SettingsTimetableViewModel(
                     is List<*> -> trainTimetableObjectsRaw
                     is Map<*, *> -> listOf(trainTimetableObjectsRaw)
                     else -> {
-                        android.util.Log.w("SettingsTimetableViewModel", "trainTimetableObject is not List or Map: ${trainTimetableObjectsRaw?.javaClass?.simpleName}")
+                        android.util.Log.d("SettingsTimetableViewModel", "trainTimetableObject is not List or Map: ${trainTimetableObjectsRaw?.javaClass?.simpleName}")
                         continue
                     }
                 }
@@ -787,7 +787,7 @@ class SettingsTimetableViewModel(
         // Choose the direction with smaller average ride time
         // For loop lines, both directions may have data, so compare average ride times
         val result = if (validResults.isEmpty()) {
-            android.util.Log.w("SettingsTimetableViewModel", "No valid results for calendarType=${calendarType.rawValue}")
+            android.util.Log.d("SettingsTimetableViewModel", "No valid results for calendarType=${calendarType.rawValue}")
             emptyList()
         } else if (validResults.size == 1) {
             android.util.Log.d("SettingsTimetableViewModel", "Returning ${validResults[0].size} times from single direction")
@@ -817,7 +817,7 @@ class SettingsTimetableViewModel(
         // apiLink method will automatically use challengeKey for CHALLENGE API type
         // Ensure challengeKey is not empty for CHALLENGE API type
         val effectiveChallengeKey = if (selectedOperator.apiType() == ODPTAPIType.CHALLENGE && challengeKey.isEmpty()) {
-            android.util.Log.w("SettingsTimetableViewModel", "challengeKey is empty for CHALLENGE API type!")
+            android.util.Log.d("SettingsTimetableViewModel", "challengeKey is empty for CHALLENGE API type!")
             consumerKey // Fallback to consumerKey if challengeKey is empty
         } else {
             challengeKey
@@ -839,7 +839,7 @@ class SettingsTimetableViewModel(
             val (data, response) = odptService.fetchODPTDataWithAuth(apiLink, authKey)
             
             if (response.code != 200) {
-                android.util.Log.e("SettingsTimetableViewModel", "HTTP error ${response.code} for train timetable: $apiLink")
+                android.util.Log.d("SettingsTimetableViewModel", "HTTP error ${response.code} for train timetable: $apiLink")
                 return emptyList()
             }
             
@@ -851,7 +851,7 @@ class SettingsTimetableViewModel(
             android.util.Log.d("SettingsTimetableViewModel", "Parsed ${json.size} timetable entries")
             return json.map { it }
         } catch (e: Exception) {
-            android.util.Log.e("SettingsTimetableViewModel", "Error fetching train timetable data: ${e.message}", e)
+            android.util.Log.d("SettingsTimetableViewModel", "Error fetching train timetable data: ${e.message}", e)
             return emptyList()
         }
     }
@@ -973,7 +973,7 @@ class SettingsTimetableViewModel(
             val (data, response) = odptService.fetchODPTDataWithAuth(urlString, authKey)
             
             if (response.code != 200) {
-                android.util.Log.w("SettingsTimetableViewModel", "Failed to fetch calendar types from ${if (urlString.contains("Westbound")) "ascending" else "descending"} direction - status: ${response.code}")
+                android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch calendar types from ${if (urlString.contains("Westbound")) "ascending" else "descending"} direction - status: ${response.code}")
                 return emptyList()
             }
             
@@ -1012,7 +1012,7 @@ class SettingsTimetableViewModel(
                 firstMinutes.compareTo(secondMinutes)
             }
         } catch (e: Exception) {
-            android.util.Log.e("SettingsTimetableViewModel", "Failed to process timetable data from $urlString: ${e.message}")
+            android.util.Log.d("SettingsTimetableViewModel", "Failed to process timetable data from $urlString: ${e.message}", e)
             return emptyList()
         }
     }
@@ -1277,9 +1277,6 @@ class SettingsTimetableViewModel(
         // Save all data after timetable data has been processed and saved
         lineViewModel?.saveAllDataToUserDefaults()
         
-        // Clear cache for available calendar types to force reload
-        goorback.clearCalendarTypesCache(lineIndex)
-        
         // Notify that timetable data has been updated
         // TODO: Implement notification system for Android
     }
@@ -1304,9 +1301,6 @@ class SettingsTimetableViewModel(
         val lineCacheKey = "${goorback}line${lineIndex + 1}_calendarTypes"
         val typeStrings = mergedRepresentativeTypes.map { it.rawValue }
         sharedPreferences.edit { putStringSet(lineCacheKey, typeStrings.toSet()) }
-        
-        // Clear cache for available calendar types to force reload
-        goorback.clearCalendarTypesCache(lineIndex)
         
         // Notify that timetable data has been updated
         // TODO: Implement notification system for Android

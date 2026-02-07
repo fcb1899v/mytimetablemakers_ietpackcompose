@@ -1,7 +1,6 @@
 package com.mytimetablemaker.extensions
 
 import android.content.Context
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.mytimetablemaker.R
 import java.util.regex.Pattern
@@ -31,24 +30,6 @@ fun String.isMatching(confirmPassword: String): Boolean {
     return this == confirmPassword
 }
 
-// MARK: - Firebase Auth Extensions
-// Helper extensions for Firebase Authentication user management
-
-// MARK: - Current User ID
-// Safely retrieves current authenticated user ID, returns null if not logged in
-fun FirebaseAuth.currentUserID(): String? {
-    return currentUser?.uid
-}
-
-// MARK: - Authentication State
-// Checks if user is currently authenticated
-fun FirebaseAuth.isAuthenticated(): Boolean {
-    return currentUser != null
-}
-
-// MARK: - AuthErrorCode Extensions
-// Helper extensions for Firebase Authentication error handling
-
 // MARK: - Localized Error Message
 // Converts Firebase Auth error code to localized user-friendly message
 fun FirebaseAuthException.getLocalizedMessage(context: Context): String {
@@ -74,14 +55,13 @@ object ValidationMessages {
     fun enterEmail(context: Context): String = context.getString(R.string.enterYourEmail)
     fun enterPassword(context: Context): String = context.getString(R.string.enterYourPassword)
     fun enterConfirmPassword(context: Context): String = context.getString(R.string.enterYourConfirmPassword)
+    fun enterEmailAgain(context: Context): String = context.getString(R.string.enterYourEmailAgain)
     fun incorrectEmailFormat(context: Context): String = context.getString(R.string.incorrectEmailFormat)
     fun incorrectPasswordFormat(context: Context): String = context.getString(R.string.incorrectPasswordFormat)
     fun passwordMismatch(context: Context): String = context.getString(R.string.confirmPasswordDontMatch)
     fun checkTerms(context: Context): String = context.getString(R.string.checkTheTermsAndPrivacyPolicy)
-    fun enterEmailAgain(context: Context): String = context.getString(R.string.enterYourEmailAgain)
     
     // MARK: - Success Messages
-    // Success messages for authentication operations
     fun loginSuccess(context: Context): String = context.getString(R.string.loginSuccessfully)
     fun logoutSuccess(context: Context): String = context.getString(R.string.loggedOutSuccessfully)
     fun signUpSuccess(context: Context): String = context.getString(R.string.signupSuccessfully)
@@ -91,7 +71,6 @@ object ValidationMessages {
     fun accountDeletedSuccess(context: Context): String = context.getString(R.string.accountDeletedSuccessfully)
     
     // MARK: - Error Titles
-    // Error titles for authentication operations
     fun loginErrorTitle(context: Context): String = context.getString(R.string.loginError)
     fun logoutErrorTitle(context: Context): String = context.getString(R.string.logoutError)
     fun signUpErrorTitle(context: Context): String = context.getString(R.string.signupError)
@@ -99,10 +78,8 @@ object ValidationMessages {
     fun deleteAccountErrorTitle(context: Context): String = context.getString(R.string.deleteAccountError)
     
     // MARK: - Error Messages
-    // Error messages for authentication operations
     fun notVerifiedAccount(context: Context): String = context.getString(R.string.notVerifiedAccount)
     fun confirmEmail(context: Context): String = context.getString(R.string.confirmYourEmail)
-    fun verificationEmailNotSent(context: Context): String = context.getString(R.string.loginError) // Using login error as fallback
     fun accountNotDeleted(context: Context): String = context.getString(R.string.accountCouldNotBeDeleted)
     fun passwordResetTitle(context: Context): String = context.getString(R.string.passwordReset)
     fun incorrectEmail(context: Context): String = context.getString(R.string.incorrectEmail)

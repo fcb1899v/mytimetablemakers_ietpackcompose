@@ -48,7 +48,7 @@ class SettingsLineViewModel(
         
         // Log consumerKey status (without exposing the actual key)
         if (consumerKey.isEmpty()) {
-            android.util.Log.w("SettingsLineViewModel", "⚠️ ODPT_ACCESS_TOKEN is not set in local.properties. GTFS operators requiring authentication will fail.")
+            android.util.Log.d("SettingsLineViewModel", "⚠️ ODPT_ACCESS_TOKEN is not set in local.properties. GTFS operators requiring authentication will fail.")
         } else {
             android.util.Log.d("SettingsLineViewModel", "✅ ODPT_ACCESS_TOKEN is set (length=${consumerKey.length})")
         }
@@ -239,7 +239,7 @@ class SettingsLineViewModel(
         android.util.Log.d("SettingsLineViewModel", "init: SettingsLineViewModel initializing, goorback=$goorback, lineIndex=$lineIndex")
         
         // Validate goorback value and use default if invalid
-        val validGoorback = if (goorback.isEmpty() || !goorbackOptions.contains(goorback)) "back1" else goorback
+        val validGoorback = if (goorback.isEmpty() || !goorbackList.contains(goorback)) "back1" else goorback
         this.goorback = validGoorback
         this.lineIndex = lineIndex
         this._selectedGoorback.value = validGoorback
@@ -268,7 +268,7 @@ class SettingsLineViewModel(
                 loadFromCache()
                 android.util.Log.d("SettingsLineViewModel", "init: loadFromCache() completed successfully")
             } catch (e: Exception) {
-                android.util.Log.e("SettingsLineViewModel", "init: loadFromCache() failed: ${e.message}", e)
+                android.util.Log.d("SettingsLineViewModel", "init: loadFromCache() failed: ${e.message}", e)
             }
         }
         android.util.Log.d("SettingsLineViewModel", "init: SettingsLineViewModel initialization completed")
@@ -353,9 +353,7 @@ class SettingsLineViewModel(
     fun hasTimetableSupport(): Boolean {
         val operatorCode = _selectedLine.value?.operatorCode ?: return false
         val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode } ?: return false
-        // TODO: Implement hasTrainTimeTable and hasBusTimeTable in LocalDataSource
-        // For now, return true for all operators
-        return true
+        return dataSource.hasTrainTimeTable() || dataSource.hasBusTimeTable()
     }
     
     // MARK: - Data Management
@@ -395,9 +393,9 @@ class SettingsLineViewModel(
                         dataSource = "LineData directory"
                     } catch (e: Exception) {
                         if (isBus) {
-                            android.util.Log.e("SettingsLineViewModel", "🚌 loadFromCache: Failed to load BUS data from LineData directory for ${transportOperator.name}: ${e.message}", e)
+                            android.util.Log.d("SettingsLineViewModel", "🚌 loadFromCache: Failed to load BUS data from LineData directory for ${transportOperator.name}: ${e.message}", e)
                         } else {
-                            android.util.Log.e("SettingsLineViewModel", "loadFromCache: Failed to load data from LineData directory for ${transportOperator.name}: ${e.message}", e)
+                            android.util.Log.d("SettingsLineViewModel", "loadFromCache: Failed to load data from LineData directory for ${transportOperator.name}: ${e.message}", e)
                         }
                     }
                 }
@@ -421,9 +419,9 @@ class SettingsLineViewModel(
                     }
                 } catch (e: Exception) {
                     if (isBus) {
-                        android.util.Log.e("SettingsLineViewModel", "🚌 loadFromCache: Failed to fetch BUS data from API for ${transportOperator.name}: ${e.message}", e)
+                        android.util.Log.d("SettingsLineViewModel", "🚌 loadFromCache: Failed to fetch BUS data from API for ${transportOperator.name}: ${e.message}", e)
                     } else {
-                        android.util.Log.e("SettingsLineViewModel", "🚃 loadFromCache: Failed to fetch data from API for ${transportOperator.name}: ${e.message}", e)
+                        android.util.Log.d("SettingsLineViewModel", "🚃 loadFromCache: Failed to fetch data from API for ${transportOperator.name}: ${e.message}", e)
                     }
                 }
             }
@@ -445,11 +443,11 @@ class SettingsLineViewModel(
                     }
                 } catch (e: Exception) {
                     if (isBus) {
-                        android.util.Log.e("SettingsLineViewModel", "🚌 Failed to parse BUS data for ${transportOperator.name}: ${e.message}", e)
+                        android.util.Log.d("SettingsLineViewModel", "🚌 Failed to parse BUS data for ${transportOperator.name}: ${e.message}", e)
                     } else {
-                        android.util.Log.e("SettingsLineViewModel", "🚃 Failed to parse data for ${transportOperator.name}: ${e.message}", e)
+                        android.util.Log.d("SettingsLineViewModel", "🚃 Failed to parse data for ${transportOperator.name}: ${e.message}", e)
                     }
-                    android.util.Log.e("SettingsLineViewModel", "Exception type: ${e.javaClass.simpleName}")
+                    android.util.Log.d("SettingsLineViewModel", "Exception type: ${e.javaClass.simpleName}")
                     e.printStackTrace()
                 }
             }
@@ -609,7 +607,7 @@ class SettingsLineViewModel(
                             fetchGTFSLinesForOperator(dataSource)
                             android.util.Log.d("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: fetchGTFSLinesForOperator completed for ${dataSource.name}")
                         } catch (e: Exception) {
-                            android.util.Log.e("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: fetchGTFSLinesForOperator failed for ${dataSource.name}: ${e.message}", e)
+                            android.util.Log.d("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: fetchGTFSLinesForOperator failed for ${dataSource.name}: ${e.message}", e)
                             // Fallback to SharedPreferences if fetch fails
                             _selectedGoorback.value.loadOperatorLineList(currentLineIndex, sharedPreferences)?.let { savedLineList ->
                                 _lineSuggestions.value = savedLineList
@@ -635,7 +633,7 @@ class SettingsLineViewModel(
                                 fetchGTFSLinesForOperator(dataSourceFromCode)
                                 android.util.Log.d("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: fetchGTFSLinesForOperator completed for ${dataSourceFromCode.name}")
                             } catch (e: Exception) {
-                                android.util.Log.e("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: fetchGTFSLinesForOperator failed for ${dataSourceFromCode.name}: ${e.message}", e)
+                                android.util.Log.d("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: fetchGTFSLinesForOperator failed for ${dataSourceFromCode.name}: ${e.message}", e)
                                 // Fallback to SharedPreferences if fetch fails
                                 _selectedGoorback.value.loadOperatorLineList(currentLineIndex, sharedPreferences)?.let { savedLineList ->
                                     _lineSuggestions.value = savedLineList
@@ -668,7 +666,7 @@ class SettingsLineViewModel(
                             fetchGTFSLinesForOperator(dataSource)
                             android.util.Log.d("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: fetchGTFSLinesForOperator completed for ${dataSource.name}")
                         } catch (e: Exception) {
-                            android.util.Log.e("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: fetchGTFSLinesForOperator failed for ${dataSource.name}: ${e.message}", e)
+                            android.util.Log.d("SettingsLineViewModel", "🚌 loadSettingsForSelectedLine: fetchGTFSLinesForOperator failed for ${dataSource.name}: ${e.message}", e)
                             // Fallback to SharedPreferences if fetch fails
                             _selectedGoorback.value.loadOperatorLineList(currentLineIndex, sharedPreferences)?.let { savedLineList ->
                                 _lineSuggestions.value = savedLineList
@@ -1727,7 +1725,7 @@ class SettingsLineViewModel(
                 // If stationOrder is not available, stations cannot be determined
                 // This should not happen if Railway JSON is properly parsed
                 lineStations.value = emptyList()
-                android.util.Log.w("SettingsLineViewModel", "⚠️ selectLine: stationOrder is null or empty for line ${line.code}")
+                android.util.Log.d("SettingsLineViewModel", "⚠️ selectLine: stationOrder is null or empty for line ${line.code}")
             }
         }
         
@@ -1881,7 +1879,7 @@ class SettingsLineViewModel(
                 loadFromCache()
                 android.util.Log.d("SettingsLineViewModel", "switchTransportationKind: loadFromCache() completed successfully, busLines=${busLines.value.size}, railwayLines=${railwayLines.value.size}")
             } catch (e: Exception) {
-                android.util.Log.e("SettingsLineViewModel", "switchTransportationKind: loadFromCache() failed: ${e.message}", e)
+                android.util.Log.d("SettingsLineViewModel", "switchTransportationKind: loadFromCache() failed: ${e.message}", e)
             }
             
             // Re-filter existing data if line input exists
@@ -1907,7 +1905,7 @@ class SettingsLineViewModel(
         // Check if consumerKey is required and available
         // TOEI_BUS uses api-public.odpt.org, so consumerKey is not required
         if (dataSource != LocalDataSource.TOEI_BUS && consumerKey.isEmpty()) {
-            android.util.Log.e("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: consumerKey is empty but required for ${dataSource.name}. Please set ODPT_ACCESS_TOKEN in AndroidManifest.xml.")
+            android.util.Log.d("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: consumerKey is empty but required for ${dataSource.name}. Please set ODPT_ACCESS_TOKEN in AndroidManifest.xml.")
             _lineSuggestions.value = emptyList()
             showLineSuggestions.value = false
             isLoadingLines.value = false
@@ -1944,7 +1942,7 @@ class SettingsLineViewModel(
             val filteredLines = gtfsLines.filter { 
                 val matches = it.operatorCode == expectedOperatorCode
                 if (!matches && it.operatorCode != null) {
-                    android.util.Log.w("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: Line operatorCode mismatch: expected=$expectedOperatorCode, actual=${it.operatorCode}")
+                    android.util.Log.d("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: Line operatorCode mismatch: expected=$expectedOperatorCode, actual=${it.operatorCode}")
                 }
                 matches
             }
@@ -1974,8 +1972,8 @@ class SettingsLineViewModel(
             showLineSuggestions.value = _lineSuggestions.value.isNotEmpty()
             android.util.Log.d("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: Updated lineSuggestions with ${uniqueResults.size} unique lines, showLineSuggestions=${showLineSuggestions.value}")
         } catch (e: Exception) {
-            android.util.Log.e("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: Failed to fetch GTFS lines for ${dataSource.operatorDisplayName(getApplication())}: ${e.message}", e)
-            android.util.Log.e("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: Exception type: ${e.javaClass.simpleName}")
+            android.util.Log.d("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: Failed to fetch GTFS lines for ${dataSource.operatorDisplayName(getApplication())}: ${e.message}", e)
+            android.util.Log.d("SettingsLineViewModel", "🚌 fetchGTFSLinesForOperator: Exception type: ${e.javaClass.simpleName}")
             e.printStackTrace()
             _lineSuggestions.value = emptyList()
             showLineSuggestions.value = false
@@ -2001,7 +1999,7 @@ class SettingsLineViewModel(
                 _lineStops.value = getStopsForSelectedLine()
             }
         } catch (e: Exception) {
-            android.util.Log.e("SettingsLineViewModel", "❌ Failed to fetch GTFS stops for route $routeId: ${e.message}")
+            android.util.Log.d("SettingsLineViewModel", "❌ Failed to fetch GTFS stops for route $routeId: ${e.message}", e)
         }
     }
     
@@ -2343,7 +2341,7 @@ class SettingsLineViewModel(
             
             android.util.Log.d("SettingsLineViewModel", "Auto-generated timetable data: ${timetableData.size} calendar types")
         } catch (e: Exception) {
-            android.util.Log.e("SettingsLineViewModel", "Failed to auto-generate timetable: ${e.message}", e)
+            android.util.Log.d("SettingsLineViewModel", "Failed to auto-generate timetable: ${e.message}", e)
         } finally {
             isLoadingTimetable = false
             loadingMessage = null

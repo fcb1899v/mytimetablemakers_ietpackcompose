@@ -8,7 +8,7 @@ import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 import com.mytimetablemaker.BuildConfig
 import com.mytimetablemaker.R
 
@@ -877,12 +877,13 @@ enum class ODPTAPIType {
 
 // Get localized display name for ODPT train type string (e.g. "odpt.TrainType:JR-East.ChuoSpecialRapid" or short form "ChuoSpecialRapid")
 fun getTrainTypeDisplayName(trainType: String, context: Context): String {
-    val resourceName = if (trainType.contains(".")) {
+    if (trainType.contains(".")) {
         val parts = trainType.split(".")
-        if (parts.size >= 3) parts[2].replaceFirstChar { it.lowercaseChar() } else trainType.replaceFirstChar { it.lowercaseChar() }
-    } else {
-        trainType.replaceFirstChar { it.lowercaseChar() }
+        if (parts.size >= 3) {
+            return LocalDataSource.JR_EAST.getDisplayName(context, trainType) // operator doesn't matter, mapping is same
+        }
     }
+    val resourceName = trainType.replaceFirstChar { it.lowercaseChar() }
     val displayType = DisplayTrainType.entries.firstOrNull { it.rawValue.replaceFirstChar { c -> c.lowercaseChar() } == resourceName }
     return displayType?.displayName(context) ?: trainType
 }
@@ -949,11 +950,7 @@ enum class TransferType(val rawValue: String) {
 // Composable extension function for getting localized display name
 @Composable
 fun TransferType.displayName(): String {
-    return when (this) {
-        TransferType.NONE -> stringResource(R.string.none)
-        TransferType.WALKING -> stringResource(R.string.walking)
-        TransferType.BICYCLE -> stringResource(R.string.bicycle)
-        TransferType.CAR -> stringResource(R.string.car)
-    }
+    val context = LocalContext.current
+    return this.transportationDisplayName(context)
 }
 

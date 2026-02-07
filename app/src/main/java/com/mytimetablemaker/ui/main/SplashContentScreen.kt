@@ -74,7 +74,7 @@ fun SplashContentScreen(
                 val sharedDataManager = SharedDataManager.getInstance(application)
                 sharedDataManager.performSplashInitialization()
             } catch (e: Exception) {
-                println("⚠️ Splash initialization failed: ${e.message}")
+                android.util.Log.w("SplashContentScreen", "Splash initialization failed: ${e.message}", e)
             }
         }
         

@@ -14,10 +14,8 @@ import androidx.core.content.edit
 
 // MARK: - App Constants
 // Core application constants
-val goorbackArray = listOf("back1", "go1", "back2", "go2")
-
 // Route direction constants
-val goorbackOptions = listOf("back1", "back2", "go1", "go2")
+val goorbackList = listOf("back1", "back2", "go1", "go2")
 
 // Route direction display names (using string resource keys)
 val goorbackDisplayNamesRaw = mapOf(
@@ -110,7 +108,7 @@ fun String.userDefaultsInt(sharedPreferences: SharedPreferences, defaultValue: I
     if (!sharedPreferences.contains(this)) return defaultValue
     return try {
         sharedPreferences.getInt(this, defaultValue)
-    } catch (e: ClassCastException) {
+    } catch (_: ClassCastException) {
         // Value was stored as String (e.g. from Firestore getLineInfoFirestore)
         sharedPreferences.getString(this, null)?.toIntOrNull() ?: defaultValue
     }
@@ -120,7 +118,7 @@ fun String.userDefaultsBool(sharedPreferences: SharedPreferences, defaultValue: 
     if (!sharedPreferences.contains(this)) return defaultValue
     return try {
         sharedPreferences.getBoolean(this, defaultValue)
-    } catch (e: ClassCastException) {
+    } catch (_: ClassCastException) {
         sharedPreferences.getString(this, null)?.toBooleanStrictOrNull() ?: defaultValue
     }
 }
@@ -206,11 +204,7 @@ fun String.lineName(sharedPreferences: SharedPreferences, num: Int, context: Con
 
 fun String.lineColor(sharedPreferences: SharedPreferences, num: Int): Color {
     val accentString = "#03DAC5"
-    val key = this.lineColorKey(num)
-    val colorString = key.userDefaultsValue(sharedPreferences, accentString) ?: accentString
-    val color = colorString.safeColor
-    android.util.Log.d("LineExtensions", "🎨 Loading line color: goorback=$this, num=$num, key=$key, colorString=$colorString, color=$color")
-    return color
+    return this.lineColorKey(num).userDefaultsColor(sharedPreferences, accentString)
 }
 
 fun String.lineCode(sharedPreferences: SharedPreferences, num: Int): String {
@@ -491,7 +485,6 @@ fun String.busRouteEnglishName(): String? {
 }
 
 // Extract English name from bus stop pole identifier
-// Example: "odpt.BusstopPole:Toei.KameidoStation.369.7" → "KameidoStation"
 fun String.busStopEnglishName(): String? {
     val currentLanguage = Locale.getDefault().language
     if (currentLanguage == "ja") return null
@@ -552,13 +545,14 @@ fun String.timetableArray(
 
 // MARK: - Get Ride Time
 // Get ride time for a specific departure time
-// Uses timetableRideTime if available, otherwise falls back to input rideTime
+// Uses timetableRideTime if available, otherwise falls back to rideTimeArray[num] or provided fallback
 // Determines calendar type based on date and available calendar types for the line
 fun String.getRideTime(
     sharedPreferences: SharedPreferences,
     date: Date,
     departTime: Int,
-    num: Int
+    num: Int,
+    rideTimeArrayFallback: List<Int>? = null
 ): Int {
     // Get target calendar type based on date and available calendar types
     val availableTypes = this.loadAvailableCalendarTypes(sharedPreferences, num)
@@ -595,7 +589,7 @@ fun String.getRideTime(
     }
     
     // Fallback to default ride time for this line
-    return this.rideTimeArray(sharedPreferences)[num]
+    return rideTimeArrayFallback?.getOrNull(num) ?: this.rideTimeArray(sharedPreferences)[num]
 }
 
 // MARK: - Valid Hour Range
@@ -755,7 +749,7 @@ fun String.saveTransportationTimes(
     }
     
     if (transportationTimes.isEmpty()) {
-        android.util.Log.w("LineExtensions", "No TransportationTime objects to save for hour $hour")
+        android.util.Log.d("LineExtensions", "No TransportationTime objects to save for hour $hour")
         return
     }
     
@@ -766,7 +760,7 @@ fun String.saveTransportationTimes(
     
     for (transportationTime in transportationTimes) {
         // Convert HH:MM format to minutes format for consistency with manual editing
-        val departureTimeInMinutes = convertHHMMToMinutes(transportationTime.departureTime)
+        val departureTimeInMinutes = transportationTime.departureTime.minutesOnlyInt
         departureTimes.add(departureTimeInMinutes.toString())
         rideTimes.add(transportationTime.rideTime.toString())
         
@@ -789,22 +783,6 @@ fun String.saveTransportationTimes(
             .putString(timetableRideTimeKey, timetableRideTimeString)
             .putString(timetableTrainTypeKey, timetableTrainTypeString)
     }
-}
-
-// MARK: - Time Format Conversion
-// Convert HH:MM format or minutes-only format to minutes within the hour
-// - "8:30" or "08:30" -> 30 (extract minutes from HH:MM)
-// - "30" -> 30 (already minutes, used when loading from timetable storage "0 15 30 45")
-private fun convertHHMMToMinutes(timeString: String): Int {
-    val components = timeString.split(":")
-    if (components.size == 2) {
-        val minute = components[1].toIntOrNull()
-        if (minute != null) {
-            return minute  // Return only minutes within the hour
-        }
-    }
-    // If no colon, treat as minutes directly (e.g. "30" from timetable storage)
-    return timeString.toIntOrNull() ?: 0
 }
 
 // MARK: - Save Train Type List
@@ -924,8 +902,7 @@ fun String.validHourRange(
     sharedPreferences: SharedPreferences
 ): List<Int> {
     val allHours = (4..25).toList()
-    val calendarTag = calendarType.calendarTag()
-    
+
     // Find hours with transportation times
     val hoursWithData = allHours.filter { hour ->
         val times = this.loadTransportationTimes(calendarType, num, hour, sharedPreferences)
@@ -1108,7 +1085,7 @@ fun String.loadOperatorLineList(
         val gson = Gson()
         val type = object : TypeToken<List<TransportationLine>>() {}.type
         gson.fromJson<List<TransportationLine>>(json, type)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 }
@@ -1140,7 +1117,7 @@ fun String.loadLineStopList(
         val gson = Gson()
         val type = object : TypeToken<List<TransportationStop>>() {}.type
         gson.fromJson<List<TransportationStop>>(json, type)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         null
     }
 }

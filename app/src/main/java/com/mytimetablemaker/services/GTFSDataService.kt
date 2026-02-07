@@ -48,13 +48,13 @@ class GTFSDataService(private val context: Context) {
     private fun loadTranslations(extractedDir: File): Map<String, String> {
         val translationsData = try {
             loadGTFSFile(extractedDir, "translations.txt")
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return emptyMap()
         }
         
         val translations = try {
             parseGTFSCSV(translationsData)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return emptyMap()
         }
         
@@ -615,7 +615,7 @@ class GTFSDataService(private val context: Context) {
             // Get GTFS URL using apiLink
             val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
             if (gtfsURL.isEmpty()) {
-                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Empty GTFS URL for ${transportOperator.name}")
+                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Empty GTFS URL for ${transportOperator.name}")
                 throw ODPTError.InvalidData()
             }
             android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: GTFS URL=$gtfsURL")
@@ -632,13 +632,13 @@ class GTFSDataService(private val context: Context) {
             val routesData = try {
                 loadGTFSFile(extractedDir, "routes.txt")
             } catch (e: Exception) {
-                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to load routes.txt: ${e.message}", e)
+                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to load routes.txt: ${e.message}", e)
                 throw e
             }
             val routes = try {
                 parseGTFSCSV(routesData)
             } catch (e: Exception) {
-                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to parse routes.txt: ${e.message}", e)
+                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to parse routes.txt: ${e.message}", e)
                 throw e
             }
             android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Parsed ${routes.size} routes")
@@ -647,13 +647,13 @@ class GTFSDataService(private val context: Context) {
             val tripsData = try {
                 loadGTFSFile(extractedDir, "trips.txt")
             } catch (e: Exception) {
-                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to load trips.txt: ${e.message}", e)
+                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to load trips.txt: ${e.message}", e)
                 throw e
             }
             val trips = try {
                 parseGTFSCSV(tripsData)
             } catch (e: Exception) {
-                android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to parse trips.txt: ${e.message}", e)
+                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to parse trips.txt: ${e.message}", e)
                 throw e
             }
             android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Parsed ${trips.size} trips")
@@ -676,7 +676,7 @@ class GTFSDataService(private val context: Context) {
         // Load stops.txt to get stop names
         val stopsData = try {
             loadGTFSFile(extractedDir, "stops.txt")
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
         if (stopsData != null) {
@@ -785,7 +785,7 @@ class GTFSDataService(private val context: Context) {
                 if (line != null) {
                     transportationLines.add(line)
                 } else {
-                    android.util.Log.w("GTFSDataService", "🚌 fetchGTFSData: createTransportationLine returned null for route_id=$routeId (no directions)")
+                    android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: createTransportationLine returned null for route_id=$routeId (no directions)")
                 }
             } else if (directions.size == 1) {
                 // Only one direction - create single line
@@ -815,7 +815,7 @@ class GTFSDataService(private val context: Context) {
                 if (line != null) {
                     transportationLines.add(line)
                 } else {
-                    android.util.Log.w("GTFSDataService", "🚌 fetchGTFSData: createTransportationLine returned null for route_id=$routeId (single direction)")
+                    android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: createTransportationLine returned null for route_id=$routeId (single direction)")
                 }
             } else {
                 // Multiple directions - create separate line for each direction
@@ -854,7 +854,7 @@ class GTFSDataService(private val context: Context) {
                     if (line != null) {
                         transportationLines.add(line)
                     } else {
-                        android.util.Log.w("GTFSDataService", "🚌 fetchGTFSData: createTransportationLine returned null for route_id=$routeId, directionCode=$directionCode")
+                        android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: createTransportationLine returned null for route_id=$routeId, directionCode=$directionCode")
                     }
                 }
             }
@@ -863,8 +863,8 @@ class GTFSDataService(private val context: Context) {
         android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Created ${transportationLines.size} transportation lines for ${transportOperator.name} (skipped ${skippedRoutes} routes without route_id)")
         transportationLines
         } catch (e: Exception) {
-            android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Failed to process GTFS data for ${transportOperator.name}: ${e.message}", e)
-            android.util.Log.e("GTFSDataService", "🚌 fetchGTFSData: Exception type: ${e.javaClass.simpleName}")
+            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to process GTFS data for ${transportOperator.name}: ${e.message}", e)
+            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Exception type: ${e.javaClass.simpleName}")
             e.printStackTrace()
             throw e
         }
