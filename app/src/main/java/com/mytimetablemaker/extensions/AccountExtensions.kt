@@ -5,33 +5,29 @@ import com.google.firebase.auth.FirebaseAuthException
 import com.mytimetablemaker.R
 import java.util.regex.Pattern
 
-// MARK: - String Extensions for Account Validation
-// Extensions for email and password validation
+// Account validation helpers and localized message utilities.
+// Keeps input checks and error text in one place.
 
-// MARK: - Email Validation
-// Validates email format using regex pattern
+// Email format validation using a regex pattern.
 fun String.isValidEmail(): Boolean {
     val emailRegex = "[A-Z0-9a-z._+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}"
     val pattern = Pattern.compile(emailRegex)
     return pattern.matcher(this).matches()
 }
 
-// MARK: - Password Validation
-// Validates password strength (minimum 8 characters with special characters)
+// Password validation: 8+ chars with at least one special character.
 fun String.isValidPassword(): Boolean {
     val passwordRegex = "^(?=.*[A-Za-z0-9])(?=.*[!@#$&~]).{8,}$"
     val pattern = Pattern.compile(passwordRegex)
     return pattern.matcher(this).matches()
 }
 
-// MARK: - Password Comparison
-// Checks if password matches confirmation password
+// Compares password and confirmation.
 fun String.isMatching(confirmPassword: String): Boolean {
     return this == confirmPassword
 }
 
-// MARK: - Localized Error Message
-// Converts Firebase Auth error code to localized user-friendly message
+// Maps Firebase Auth error codes to localized messages.
 fun FirebaseAuthException.getLocalizedMessage(context: Context): String {
     return when (errorCode) {
         "ERROR_INVALID_EMAIL" -> context.getString(R.string.incorrectEmailFormat)
@@ -44,12 +40,10 @@ fun FirebaseAuthException.getLocalizedMessage(context: Context): String {
     }
 }
 
-// MARK: - Validation Message Helpers
-// Helper functions for generating validation error messages
+// Centralized validation text for UI messages.
 object ValidationMessages {
     
-    // MARK: - Common Messages
-    // Standard validation error messages for form inputs
+    // Common validation messages for form inputs.
     fun inputError(context: Context): String = context.getString(R.string.inputError)
     fun checkError(context: Context): String = context.getString(R.string.checkError)
     fun enterEmail(context: Context): String = context.getString(R.string.enterYourEmail)
@@ -61,7 +55,7 @@ object ValidationMessages {
     fun passwordMismatch(context: Context): String = context.getString(R.string.confirmPasswordDontMatch)
     fun checkTerms(context: Context): String = context.getString(R.string.checkTheTermsAndPrivacyPolicy)
     
-    // MARK: - Success Messages
+    // Success messages for account actions.
     fun loginSuccess(context: Context): String = context.getString(R.string.loginSuccessfully)
     fun logoutSuccess(context: Context): String = context.getString(R.string.loggedOutSuccessfully)
     fun signUpSuccess(context: Context): String = context.getString(R.string.signupSuccessfully)
@@ -70,22 +64,21 @@ object ValidationMessages {
     fun deleteAccountSuccess(context: Context): String = context.getString(R.string.deleteAccountSuccessfully)
     fun accountDeletedSuccess(context: Context): String = context.getString(R.string.accountDeletedSuccessfully)
     
-    // MARK: - Error Titles
+    // Error titles for dialogs or snack bars.
     fun loginErrorTitle(context: Context): String = context.getString(R.string.loginError)
     fun logoutErrorTitle(context: Context): String = context.getString(R.string.logoutError)
     fun signUpErrorTitle(context: Context): String = context.getString(R.string.signupError)
     fun passwordResetErrorTitle(context: Context): String = context.getString(R.string.passwordResetError)
     fun deleteAccountErrorTitle(context: Context): String = context.getString(R.string.deleteAccountError)
     
-    // MARK: - Error Messages
+    // Detailed error messages for account flows.
     fun notVerifiedAccount(context: Context): String = context.getString(R.string.notVerifiedAccount)
     fun confirmEmail(context: Context): String = context.getString(R.string.confirmYourEmail)
     fun accountNotDeleted(context: Context): String = context.getString(R.string.accountCouldNotBeDeleted)
     fun passwordResetTitle(context: Context): String = context.getString(R.string.passwordReset)
     fun incorrectEmail(context: Context): String = context.getString(R.string.incorrectEmail)
     
-    // MARK: - Login Validation
-    // Generates validation messages for login form
+    // Login validation with a title/message pair.
     fun loginValidationMessage(
         context: Context,
         email: String,
@@ -112,8 +105,7 @@ object ValidationMessages {
         }
     }
     
-    // MARK: - Sign Up Validation
-    // Generates validation messages for sign up form
+    // Sign-up validation with a title/message pair.
     fun signUpValidationMessage(
         context: Context,
         email: String,

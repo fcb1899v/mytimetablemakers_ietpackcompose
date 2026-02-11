@@ -67,14 +67,7 @@ fun TimetableContentScreen(
     
     // Increment when sheet is dismissed to force grid refresh (sheet changes don't trigger recomposition)
     var timetableRefreshTrigger by remember { mutableIntStateOf(0) }
-
     // MARK: - Helper Functions
-    
-    // Get display name (split by ":" and return first component for ODPT format)
-    fun getDisplayName(name: String): String {
-        val components = name.split(":")
-        return components.firstOrNull()?.trim() ?: name
-    }
     
     // Update valid hours for current calendar type
     // This is called when calendar type changes or timetable data is updated
@@ -231,7 +224,7 @@ fun TimetableContentScreen(
                 
                 val stationArray = goorback.stationArray(sharedPreferences, context)
                 Text(
-                    text = "${getDisplayName(stationArray[2 * num])}${stringResource(R.string.toSpace)}${getDisplayName(stationArray[2 * num + 1])}",
+                    text = "${stationArray[2 * num].getDisplayName()}${stringResource(R.string.toSpace)}${stationArray[2 * num + 1].getDisplayName()}",
                     fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = White,
@@ -565,10 +558,9 @@ private fun CalendarTypeDropdownView(
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         availableCalendarTypes.forEachIndexed { index, calendarType ->
-            val selectedType = calendarType
             Button(
                 onClick = {
-                    onCalendarTypeSelected(selectedType)
+                    onCalendarTypeSelected(calendarType)
                 },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent,
@@ -587,10 +579,10 @@ private fun CalendarTypeDropdownView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = selectedType.displayName(context),
+                        text = calendarType.displayName(context),
                         fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = selectedType.calendarSubColor,
+                        color = calendarType.calendarSubColor,
                         maxLines = 1
                     )
                 }

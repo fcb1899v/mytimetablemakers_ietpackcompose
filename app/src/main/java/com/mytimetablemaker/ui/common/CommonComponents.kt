@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -45,6 +47,7 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.Dp
 import com.mytimetablemaker.ui.theme.*
 
 // MARK: - Common Components Object
@@ -56,11 +59,11 @@ object CommonComponents {
     @Composable
     fun CustomButton(
         title: String,
+        modifier: Modifier = Modifier,
         icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
         backgroundColor: Color = Accent,
         textColor: Color = White,
         isEnabled: Boolean = true,
-        modifier: Modifier = Modifier,
         onClick: () -> Unit
     ) {
         Button(
@@ -142,11 +145,11 @@ object CommonComponents {
         isLeftSelected: Boolean,
         onToggle: (Boolean) -> Unit,
         leftText: String,
-        leftColor: Color,
         rightText: String,
-        rightColor: Color,
+        onColor: Color = Primary,
+        offColor: Color = Gray,
+        backgroundColor: Color = Primary,
         circleColor: Color = White,
-        offColor: Color = Gray
     ) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(ScreenSize.customToggleSpacing()),
@@ -157,7 +160,7 @@ object CommonComponents {
         ) {
             // Left label
             val leftLabelColor = animateColorAsState(
-                targetValue = if (isLeftSelected) leftColor else offColor,
+                targetValue = if (isLeftSelected) onColor else offColor,
                 animationSpec = tween(durationMillis = 200),
                 label = "leftLabelColor"
             )
@@ -194,17 +197,17 @@ object CommonComponents {
                     },
                     modifier = Modifier.scale(scaleX = scaleFactor, scaleY = scaleFactor),
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = White,
-                        checkedTrackColor = Primary,
-                        uncheckedThumbColor = White,
-                        uncheckedTrackColor = Primary,
+                        checkedThumbColor = circleColor,
+                        checkedTrackColor = backgroundColor,
+                        uncheckedThumbColor = circleColor,
+                        uncheckedTrackColor = backgroundColor,
                     )
                 )
             }
             
             // Right label
             val rightLabelColor = animateColorAsState(
-                targetValue = if (isLeftSelected) offColor else rightColor,
+                targetValue = if (isLeftSelected) offColor else onColor,
                 animationSpec = tween(durationMillis = 200),
                 label = "rightLabelColor"
             )
@@ -273,6 +276,7 @@ object CommonComponents {
     // MARK: - Custom 2 Digit Picker
     // Picker component for selecting two-digit numbers with separate tens and ones place
     @Composable
+    @OptIn(ExperimentalFoundationApi::class)
     fun Custom2DigitPicker(
         value: Int,
         onValueChange: (Int) -> Unit,
@@ -309,6 +313,46 @@ object CommonComponents {
         var onesIsProgrammaticScroll by remember { mutableStateOf(false) }
         var tensWasUserScrolling by remember { mutableStateOf(false) }
         var onesWasUserScrolling by remember { mutableStateOf(false) }
+
+        val tensFlingBehavior = rememberSnapFlingBehavior(lazyListState = tensListState)
+        val onesFlingBehavior = rememberSnapFlingBehavior(lazyListState = onesListState)
+
+        val isTensClickEnabled = !tensIsProgrammaticScroll && !tensWasUserScrolling
+        val isOnesClickEnabled = !onesIsProgrammaticScroll && !onesWasUserScrolling
+
+        val scrollToTensIndex: (Int) -> Unit = scrollToTensIndex@{ index ->
+            if (index !in tensList.indices) return@scrollToTensIndex
+            tensIsProgrammaticScroll = true
+            coroutineScope.launch {
+                tensListState.animateScrollToItem(index = index, scrollOffset = 0)
+                val newValue = tensList[index] * 10 + onesDigit
+                kotlinx.coroutines.delay(100)
+                tensIsProgrammaticScroll = false
+                if (newValue in minValue..maxValue && newValue != value) {
+                    onValueChange(newValue)
+                }
+            }
+        }
+        val scrollToOnesIndex: (Int) -> Unit = scrollToOnesIndex@{ index ->
+            if (index !in onesList.indices) return@scrollToOnesIndex
+            onesIsProgrammaticScroll = true
+            coroutineScope.launch {
+                onesListState.animateScrollToItem(index = index, scrollOffset = 0)
+                val newValue = tensDigit * 10 + onesList[index]
+                kotlinx.coroutines.delay(100)
+                onesIsProgrammaticScroll = false
+                if (newValue in minValue..maxValue && newValue != value) {
+                    onValueChange(newValue)
+                }
+            }
+        }
+
+        LaunchedEffect(tensDigit, onesList) {
+            if (onesDigit !in onesList) {
+                val fallbackOnes = onesList.firstOrNull() ?: return@LaunchedEffect
+                onValueChange(tensDigit * 10 + fallbackOnes)
+            }
+        }
         
         LaunchedEffect(tensSelectedIndex) {
             if (tensSelectedIndex != tensLastSelectedIndex) {
@@ -316,8 +360,8 @@ object CommonComponents {
                 tensIsProgrammaticScroll = true
                 coroutineScope.launch {
                     tensListState.animateScrollToItem(
-                        index = tensSelectedIndex,
-                        scrollOffset = -centerPadding.value.toInt()
+                        index = tensLastSelectedIndex,
+                        scrollOffset = 0
                     )
                     kotlinx.coroutines.delay(100)
                     tensIsProgrammaticScroll = false
@@ -331,8 +375,8 @@ object CommonComponents {
                 onesIsProgrammaticScroll = true
                 coroutineScope.launch {
                     onesListState.animateScrollToItem(
-                        index = onesSelectedIndex,
-                        scrollOffset = -centerPadding.value.toInt()
+                        index = onesLastSelectedIndex,
+                        scrollOffset = 0
                     )
                     kotlinx.coroutines.delay(100)
                     onesIsProgrammaticScroll = false
@@ -341,12 +385,11 @@ object CommonComponents {
         }
         
         LaunchedEffect(tensListState.isScrollInProgress) {
-            if (tensListState.isScrollInProgress) {
-                if (!tensIsProgrammaticScroll) {
-                    tensWasUserScrolling = true
-                }
-            } else if (tensWasUserScrolling && !tensIsProgrammaticScroll) {
-                tensWasUserScrolling = false
+            val wasUserScrolling = tensWasUserScrolling
+            val isUserScrolling = tensListState.isScrollInProgress && !tensIsProgrammaticScroll
+            tensWasUserScrolling = isUserScrolling
+            val isUserScrollingNow = tensWasUserScrolling
+            if (!tensListState.isScrollInProgress && wasUserScrolling && isUserScrollingNow && !tensIsProgrammaticScroll) {
                 val layoutInfo = tensListState.layoutInfo
                 val visibleItems = layoutInfo.visibleItemsInfo
                 if (visibleItems.isNotEmpty()) {
@@ -356,11 +399,18 @@ object CommonComponents {
                     }
                     val centerIndex = centerItem?.index ?: tensListState.firstVisibleItemIndex
                     
-                    if (centerIndex != tensSelectedIndex && centerIndex in tensList.indices) {
+                    if (centerIndex in tensList.indices) {
                         val newTens = tensList[centerIndex]
                         val newValue = newTens * 10 + onesDigit
-                        if (newValue in minValue..maxValue) {
-                            onValueChange(newValue)
+                        coroutineScope.launch {
+                            tensListState.animateScrollToItem(
+                                index = centerIndex,
+                                scrollOffset = 0
+                            )
+                            kotlinx.coroutines.delay(100)
+                            if (newValue in minValue..maxValue && newValue != value) {
+                                onValueChange(newValue)
+                            }
                         }
                     }
                 }
@@ -368,12 +418,11 @@ object CommonComponents {
         }
         
         LaunchedEffect(onesListState.isScrollInProgress) {
-            if (onesListState.isScrollInProgress) {
-                if (!onesIsProgrammaticScroll) {
-                    onesWasUserScrolling = true
-                }
-            } else if (onesWasUserScrolling && !onesIsProgrammaticScroll) {
-                onesWasUserScrolling = false
+            val wasUserScrolling = onesWasUserScrolling
+            val isUserScrolling = onesListState.isScrollInProgress && !onesIsProgrammaticScroll
+            onesWasUserScrolling = isUserScrolling
+            val isUserScrollingNow = onesWasUserScrolling
+            if (!onesListState.isScrollInProgress && wasUserScrolling && isUserScrollingNow && !onesIsProgrammaticScroll) {
                 val layoutInfo = onesListState.layoutInfo
                 val visibleItems = layoutInfo.visibleItemsInfo
                 if (visibleItems.isNotEmpty()) {
@@ -383,11 +432,18 @@ object CommonComponents {
                     }
                     val centerIndex = centerItem?.index ?: onesListState.firstVisibleItemIndex
                     
-                    if (centerIndex != onesSelectedIndex && centerIndex in onesList.indices) {
+                    if (centerIndex in onesList.indices) {
                         val newOnes = onesList[centerIndex]
                         val newValue = tensDigit * 10 + newOnes
-                        if (newValue in minValue..maxValue) {
-                            onValueChange(newValue)
+                        coroutineScope.launch {
+                            onesListState.animateScrollToItem(
+                                index = centerIndex,
+                                scrollOffset = 0
+                            )
+                            kotlinx.coroutines.delay(100)
+                            if (newValue in minValue..maxValue && newValue != value) {
+                                onValueChange(newValue)
+                            }
                         }
                     }
                 }
@@ -406,6 +462,7 @@ object CommonComponents {
             ) {
                 LazyColumn(
                     state = tensListState,
+                    flingBehavior = tensFlingBehavior,
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = centerPadding)
@@ -418,17 +475,9 @@ object CommonComponents {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(itemHeight)
-                                .clickable {
+                                .clickable(enabled = isTensClickEnabled) {
                                     coroutineScope.launch {
-                                        tensListState.animateScrollToItem(
-                                            index = index,
-                                            scrollOffset = -centerPadding.value.toInt()
-                                        )
-                                        val newTens = tensList[index]
-                                        val newValue = newTens * 10 + onesDigit
-                                        if (newValue in minValue..maxValue) {
-                                            onValueChange(newValue)
-                                        }
+                                        scrollToTensIndex(index)
                                     }
                                 },
                             contentAlignment = Alignment.Center
@@ -452,6 +501,7 @@ object CommonComponents {
             ) {
                 LazyColumn(
                     state = onesListState,
+                    flingBehavior = onesFlingBehavior,
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = centerPadding)
@@ -464,17 +514,9 @@ object CommonComponents {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(itemHeight)
-                                .clickable {
+                                .clickable(enabled = isOnesClickEnabled) {
                                     coroutineScope.launch {
-                                        onesListState.animateScrollToItem(
-                                            index = index,
-                                            scrollOffset = -centerPadding.value.toInt()
-                                        )
-                                        val newOnes = onesList[index]
-                                        val newValue = tensDigit * 10 + newOnes
-                                        if (newValue in minValue..maxValue) {
-                                            onValueChange(newValue)
-                                        }
+                                        scrollToOnesIndex(index)
                                     }
                                 },
                             contentAlignment = Alignment.Center
@@ -497,8 +539,8 @@ object CommonComponents {
     @Composable
     fun CustomTag(
         text: String,
+        modifier: Modifier = Modifier,
         backgroundColor: Color? = null,
-        modifier: Modifier = Modifier
     ) {
         Box(
             modifier = modifier
@@ -526,14 +568,14 @@ object CommonComponents {
     fun <T> CustomDropdown(
         items: List<T>,
         onItemSelected: (T) -> Unit,
-        onDismissRequest: () -> Unit,
         itemContent: @Composable (T) -> Unit,
         modifier: Modifier = Modifier,
-        maxHeight: androidx.compose.ui.unit.Dp = ScreenSize.settingsLineSheetSuggestionItemHeight() * 7f,
+        maxHeight: Dp = ScreenSize.settingsLineSheetSuggestionItemHeight() * 7f,
         backgroundColor: Color = LightGray.copy(alpha = 0.85f),
-        offsetX: androidx.compose.ui.unit.Dp = ScreenSize.settingsLineSheetDropdownOffsetX(),
-        offsetY: androidx.compose.ui.unit.Dp = 0.dp, // Position directly below the text field
-        itemHeight: androidx.compose.ui.unit.Dp = ScreenSize.settingsLineSheetSuggestionItemHeight()
+        offsetX: Dp = ScreenSize.settingsLineSheetDropdownOffsetX(),
+        offsetY: Dp = 0.dp,
+        itemHeight: Dp = ScreenSize.settingsLineSheetSuggestionItemHeight(),
+        onDismissRequest: () -> Unit = {},
     ) {
         Box(
             modifier = modifier
@@ -572,6 +614,7 @@ object CommonComponents {
                                     indication = null
                                 ) {
                                     onItemSelected(item)
+                                    onDismissRequest()
                                 }
                                 .padding(horizontal = ScreenSize.settingsSheetInputPaddingHorizontal())
                                 .focusable(false),
@@ -603,8 +646,8 @@ object CommonComponents {
     // Custom border for input fields
     @Composable
     fun CustomBorder(
+        modifier: Modifier = Modifier,
         borderColor: Color = MaterialTheme.colorScheme.outline,
-        modifier: Modifier = Modifier
     ) {
         Box(
             modifier = modifier
@@ -629,6 +672,7 @@ object CommonComponents {
         focusRequester: FocusRequester? = null,
         title: String? = null,
         isCheckmarkValid: Boolean? = null,
+        isCheckmarkSelected: Boolean? = null,
         onFocusChanged: ((Boolean) -> Unit)? = null,
         visualTransformation: VisualTransformation = VisualTransformation.None,
         keyboardType: KeyboardType = KeyboardType.Text,
@@ -660,8 +704,8 @@ object CommonComponents {
                 color = Black
             )
             
-            // Monitor focus state
             var isFocused by remember { mutableStateOf(false) }
+            val placeholderColor = if (isFocused) Gray else Color(0xFF9C9C9C)
             
             BasicTextField(
                 value = value,
@@ -698,7 +742,7 @@ object CommonComponents {
                         Text(
                             text = placeholder,
                             fontSize = inputFontSize.value.sp,
-                            color = Color(0xFF9C9C9C),
+                            color = placeholderColor,
                         )
                     },
                     trailingIcon = trailingIcon,
@@ -732,7 +776,7 @@ object CommonComponents {
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = if (isCheckmarkValid) Accent else Gray,
+                    tint = if (!isCheckmarkValid) Gray else if (isCheckmarkSelected == true) Primary else Accent,
                     modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
                 )
             }
@@ -758,7 +802,7 @@ object CommonComponents {
         
         // Password visibility: false = masked (***), true = plain text
         var isPasswordVisible by remember { mutableStateOf(false) }
-        
+
         val visualTransformation = if (isPassword && !isPasswordVisible)
             PasswordVisualTransformation() else
             VisualTransformation.None
@@ -826,13 +870,12 @@ object CommonComponents {
     // Styled alert dialog with consistent design (responsive font/size, Primary accent, proper button hierarchy)
     @Composable
     fun CustomAlertDialog(
-        onDismissRequest: () -> Unit,
         title: String,
         alertMessage: String? = null,
         confirmButtonText: String,
-        onConfirmClick: () -> Unit,
         dismissButtonText: String? = null,
-        onDismissClick: (() -> Unit)? = null,
+        onConfirmClick: () -> Unit,
+        onDismissRequest: () -> Unit,
         icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
         isDestructive: Boolean = false,
         textContent: (@Composable () -> Unit)? = null
@@ -843,7 +886,7 @@ object CommonComponents {
         val dialogCornerRadius = ScreenSize.alertDialogCornerRadius()
         val buttonCornerRadius = ScreenSize.alertDialogButtonCornerRadius()
         val elevation = ScreenSize.alertDialogElevation()
-        
+
         AlertDialog(
             onDismissRequest = onDismissRequest,
             title = {
@@ -896,10 +939,10 @@ object CommonComponents {
                     )
                 }
             },
-            dismissButton = if (dismissButtonText != null && onDismissClick != null) {
+            dismissButton = if (dismissButtonText != null) {
                 {
                     OutlinedButton(
-                        onClick = onDismissClick,
+                        onClick = onDismissRequest,
                         shape = RoundedCornerShape(buttonCornerRadius),
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = Primary

@@ -1,7 +1,6 @@
 package com.mytimetablemaker.ui.common
 
 import android.content.Context
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -30,7 +29,7 @@ fun AdMobBannerView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var lastLoadTime by remember { mutableLongStateOf(0L) }
+    val lastLoadTimeState = remember { mutableLongStateOf(0L) }
     var isReadyToLoad by remember { mutableStateOf(false) }
     val minimumLoadInterval = 60_000L // 60 seconds in milliseconds
     
@@ -44,32 +43,28 @@ fun AdMobBannerView(
         isReadyToLoad = true
     }
     
-    Box(
-        modifier = modifier
-            .then(Modifier.height(bannerHeight))
-    ) {
-        AndroidView(
-            factory = { ctx ->
-                val adView = AdView(ctx)
-                adView.adUnitId = adUnitID
-                adView.setAdSize(AdSize.BANNER)
-                adView
-            },
-            update = { adView ->
-                if (!isReadyToLoad) return@AndroidView
-                val currentTime = System.currentTimeMillis()
-                if (currentTime - lastLoadTime >= minimumLoadInterval) {
-                    val request = AdRequest.Builder().build()
-                    adView.loadAd(request)
-                    lastLoadTime = currentTime
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(bannerHeight)
-                .then(modifier)
-        )
-    }
+    AndroidView(
+        factory = { ctx ->
+            val adView = AdView(ctx)
+            adView.adUnitId = adUnitID
+            adView.setAdSize(AdSize.BANNER)
+            adView
+        },
+        update = { adView ->
+            if (!isReadyToLoad) return@AndroidView
+            val currentTime = System.currentTimeMillis()
+            val lastLoadTime = lastLoadTimeState.longValue
+            if (currentTime - lastLoadTime >= minimumLoadInterval) {
+                val request = AdRequest.Builder().build()
+                adView.loadAd(request)
+                lastLoadTimeState.longValue = currentTime
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(bannerHeight)
+            .then(modifier)
+    )
 }
 
 // MARK: - Ad Unit ID Configuration

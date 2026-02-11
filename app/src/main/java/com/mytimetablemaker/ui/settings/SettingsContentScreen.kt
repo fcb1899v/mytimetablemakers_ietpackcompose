@@ -207,7 +207,6 @@ fun SettingsContentScreen(
                     // Home and Destination button
                     SettingsButton(
                         title = stringResource(R.string.homeDestinationSettings),
-                        subtitle = "go1".settingsDeparturePoint(sharedPreferences, context) + " → " + "go1".settingsDestination(sharedPreferences, context),
                         onClick = { showTransferSheet = true }
                     )
                     
@@ -245,11 +244,7 @@ fun SettingsContentScreen(
                                     saveRoute2Setting(sharedPreferences, newShowRoute2, mainViewModel)
                                 },
                                 leftText = stringResource(R.string.hide),
-                                leftColor = Gray,
                                 rightText = stringResource(R.string.display),
-                                rightColor = Primary,
-                                circleColor = White,
-                                offColor = Gray
                             )
                         }
                     }
@@ -360,7 +355,6 @@ fun SettingsContentScreen(
                 loginViewModel.logOut()
             },
             dismissButtonText = stringResource(R.string.cancel),
-            onDismissClick = { showLogoutAlert = false }
         )
     }
     
@@ -397,10 +391,6 @@ fun SettingsContentScreen(
                 deletePassword = ""
             },
             dismissButtonText = stringResource(R.string.cancel),
-            onDismissClick = {
-                showDeleteAlert = false
-                deletePassword = ""
-            },
             icon = Icons.Default.Warning,
             isDestructive = true
         )
@@ -439,10 +429,6 @@ fun SettingsContentScreen(
                 getFirestorePassword = ""
             },
             dismissButtonText = stringResource(R.string.cancel),
-            onDismissClick = {
-                showGetFirestoreAlert = false
-                getFirestorePassword = ""
-            },
             icon = Icons.Default.Warning
         )
     }
@@ -480,10 +466,6 @@ fun SettingsContentScreen(
                 saveFirestorePassword = ""
             },
             dismissButtonText = stringResource(R.string.cancel),
-            onDismissClick = {
-                showSaveFirestoreAlert = false
-                saveFirestorePassword = ""
-            },
             icon = Icons.Default.Warning
         )
     }

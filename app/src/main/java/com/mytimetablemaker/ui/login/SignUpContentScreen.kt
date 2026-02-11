@@ -287,7 +287,7 @@ fun SignUpContentScreen(
                     if (isSignUpSuccess) {
                         onDismiss()
                     }
-                }
+                },
             )
         }
     }

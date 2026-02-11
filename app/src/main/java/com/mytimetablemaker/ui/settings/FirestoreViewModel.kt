@@ -124,7 +124,6 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
     private fun getAvailableCalendarTypesForRoute(goorback: String, num: Int): List<ODPTCalendarType> {
         val loadedTypes = goorback.loadAvailableCalendarTypes(sharedPreferences, num)
         val availableTypes = loadedTypes.mapNotNull { ODPTCalendarType.fromRawValue(it) }
-        println("📅 Available calendar types for $goorback line $num: ${availableTypes.map { it.debugDisplayName() }}")
         return availableTypes
     }
     
@@ -163,7 +162,6 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             
             try {
                 nextRef.set(hourData).await()
-                println("✅ Uploaded timetable data to Firestore for ${calendarType.debugDisplayName()}")
             } catch (e: Exception) {
                 android.util.Log.d("FirestoreViewModel", "Error uploading timetable data: ${e.message}", e)
             }

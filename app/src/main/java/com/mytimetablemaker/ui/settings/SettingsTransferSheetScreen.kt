@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.ScreenSize
@@ -300,11 +299,7 @@ private fun Route2ToggleSection(
                 viewModel.showRoute2.value = !newValue
             },
             leftText = stringResource(R.string.hide),
-            leftColor = Gray,
             rightText = stringResource(R.string.display),
-            rightColor = Primary,
-            circleColor = White,
-            offColor = Gray
         )
     }
 }
@@ -595,11 +590,7 @@ private fun SaveButtonSection(
 private fun getTransferType(value: String): TransferType {
     val found = TransferType.entries.find { it.rawValue == value }
     // If value is "none" or empty, default to WALKING
-    return if (found == null || found == TransferType.NONE) {
-        TransferType.WALKING
-    } else {
-        found
-    }
+    return if (found == null || found == TransferType.NONE) TransferType.WALKING else found
 }
 
 

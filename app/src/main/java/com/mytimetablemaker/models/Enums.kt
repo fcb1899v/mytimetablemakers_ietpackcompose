@@ -12,8 +12,8 @@ import androidx.compose.ui.platform.LocalContext
 import com.mytimetablemaker.BuildConfig
 import com.mytimetablemaker.R
 
-// MARK: - GTFS Date Constants
-// Hardcoded dates for GTFS data files (format: YYYYMMDD)
+// GTFS date constants (YYYYMMDD).
+// Used when building GTFS download URLs.
 object GTFSDates {
     private val dates = mapOf(
         LocalDataSource.KEIO_BUS to "20251117",
@@ -24,7 +24,7 @@ object GTFSDates {
         LocalDataSource.IZUHAKONE_BUS to "20251101",
         LocalDataSource.KEISEI_TRANSIT_BUS to "20250401",
         LocalDataSource.YOKOHAMA_BUS to "20251101",
-        LocalDataSource.TOEI_BUS to "" // Toei Bus doesn't use date parameter
+        LocalDataSource.TOEI_BUS to ""
     )
     
     fun dateFor(operator: LocalDataSource): String? {
@@ -32,8 +32,7 @@ object GTFSDates {
     }
 }
 
-// MARK: - Custom Color Enumeration
-// Defines color options for line customization
+// Custom line color options.
 enum class CustomColor(val rawValue: String) {
     RED("RED"),              // Pure red - #E60012
     DARK_RED("DARK RED"),    // Dark red - #A22041
@@ -41,7 +40,7 @@ enum class CustomColor(val rawValue: String) {
     BROWN("BROWN"),          // Brown - #8F4C38
     YELLOW("YELLOW"),        // Bright yellow - #FFD400
     BEIGE("BEIGE"),          // Beige - #C1A470
-    ORIVE("ORIVE"),          // Olive green - #9FB01C
+    OLIVE("OLIVE"),          // Olive green - #9FB01C
     YELLOW_GREEN("YELLOW GREEN"), // Yellow green - #9ACD32
     GREEN("GREEN"),         // Green - #009739
     DARK_GREEN("DARK GREEN"), // Dark green - #004E2E
@@ -61,15 +60,14 @@ enum class CustomColor(val rawValue: String) {
     ACCENT("DEFAULT")       // Default accent color - #03DAC5
 }
 
-// MARK: - Data Source Definitions
-// Defines available data sources for railway information
+// Data source definitions for railway and bus operators.
 enum class LocalDataSource {
     JR_EAST,                    // JR East railway lines
     TOKYO_METRO,                // Tokyo Metro subway lines
     TOEI_METRO,                 // Toei subway lines
     YOKOHAMA_METRO,             // Yokohama Municipal Subway
     TOBU,                       // Tobu Railway
-    YURIKAMOME,                 // Yurikamomey line
+    YURIKAMOME,                 // Yurikamome line
     SOTETSU,                    // Sotetsu Railway
     TSUKUBA,                    // Tsukuba Express
     TAMA,                       // Tama Monorail
@@ -93,9 +91,7 @@ enum class LocalDataSource {
     KEISEI_TRANSIT_BUS,         // Keisei Transit Bus
     IZUHAKONE_BUS;              // Izuhakone Bus
     
-    // MARK: - GTFS File Name for Cache
-    // Generate safe file name for GTFS cache keys (without special characters)
-    // Used for cache key generation to avoid issues with special characters in file paths
+    // GTFS cache file name without special characters.
     fun gtfsFileName(): String {
         return when (this) {
             KEIO_BUS -> "keiobus"
@@ -108,7 +104,7 @@ enum class LocalDataSource {
             YOKOHAMA_BUS -> "yokohamabus"
             TOEI_BUS -> "toeibus"
             else -> {
-                // For non-GTFS operators, use fileName but remove special characters
+                // For non-GTFS operators, sanitize the file name.
                 fileName()
                     .replace("/", "_")
                     .replace("?", "_")
@@ -117,20 +113,18 @@ enum class LocalDataSource {
         }
     }
     
-    // MARK: - File Name Mapping
-    // Generate filename dynamically from operatorCode with transportation type included
+    // Generate file name from operator code and transport type.
     fun fileName(): String {
-        // Extract operator name from operatorCode (remove "odpt.Operator:" prefix)
+        // Extract operator name without the prefix.
         val operatorCode = operatorCode() ?: return ""
         val operatorName = operatorCode.replace("odpt.Operator:", "")
-        // Convert to lowercase and keep hyphens
+        // Normalize for filenames.
         val normalizedName = operatorName.lowercase().replace(" ", "")
-        // Add transportation type suffix
+        // Add transport type suffix.
         return "${normalizedName}_${transportationType().rawValue.lowercase()}.json"
     }
     
-    // MARK: - Operator Display Name Mapping
-    // Get localized display name for operator selection UI
+    // Localized display names for operator selection.
     fun operatorDisplayName(context: Context): String {
         return when (this) {
             JR_EAST -> context.getString(R.string.jrEast)
@@ -164,8 +158,7 @@ enum class LocalDataSource {
         }
     }
     
-    // MARK: - Operator Short Display Name Mapping
-    // Get short display name for CustomTag (compact version)
+    // Short display names for compact UI tags.
     fun operatorShortDisplayName(context: Context): String {
         return when (this) {
             JR_EAST -> context.getString(R.string.jrE)
@@ -199,8 +192,7 @@ enum class LocalDataSource {
         }
     }
     
-    // MARK: - ODPT Operator Code Mapping
-    // Get ODPT operator code for API queries and data matching
+    // ODPT operator codes for API queries and data matching.
     fun operatorCode(): String? {
         return when (this) {
             JR_EAST -> "odpt.Operator:JR-East"
@@ -234,9 +226,8 @@ enum class LocalDataSource {
         }
     }
     
-    // MARK: - Transportation Type
-    // Get transportation type (railway or bus) for data processing
-    // TODO: Implement TransportationLine.Kind enum
+    // Transportation kind for data processing.
+    // TODO: Replace with TransportationLine.Kind enum.
     fun transportationType(): TransportationKind {
         return when (this) {
             JR_EAST, TOKYO_METRO, TOEI_METRO,
@@ -253,8 +244,7 @@ enum class LocalDataSource {
         }
     }
     
-    // MARK: - API Type Determination
-    // Determine the appropriate API type for this operator
+    // Determine the appropriate API type for this operator.
     fun apiType(): ODPTAPIType {
         return when (this) {
             TOEI_METRO -> ODPTAPIType.PUBLIC_API
@@ -273,7 +263,7 @@ enum class LocalDataSource {
         }
     }
     
-    // Indicates if this operator provides train timetables
+    // Indicates if this operator provides train timetables.
     fun hasTrainTimeTable(): Boolean {
         return when (this) {
             JR_EAST, TOBU, SOTETSU,
@@ -284,7 +274,7 @@ enum class LocalDataSource {
         }
     }
     
-    // Indicates if this operator provides bus timetables
+    // Indicates if this operator provides bus timetables.
     fun hasBusTimeTable(): Boolean {
         return when (this) {
             TOEI_BUS, YOKOHAMA_BUS, TOKYU_BUS,
@@ -297,8 +287,7 @@ enum class LocalDataSource {
         }
     }
     
-    // MARK: - Train Type Mapping
-    // Get available train types for each operator
+    // Available train types per operator.
     fun operatorTrainType(): List<String> {
         return when (this) {
             JR_EAST -> listOf(
@@ -424,18 +413,16 @@ enum class LocalDataSource {
             TAMA -> listOf(
                 "odpt.TrainType:TamaMonorail.Local"
             )
-            // Bus operators don't have train types
+            // Bus operators do not have train types.
             else -> emptyList()
         }
     }
     
-    // MARK: - Train Type Helper Methods
-    // Get display name for a specific train type using localization
+    // Localized display name for a train type.
     fun getDisplayName(context: Context, trainType: String?): String {
         if (trainType == null) {
             return context.getString(R.string.dash)
         }
-        // Extract resource name from train type string (e.g., "odpt.TrainType:JR-East.ChuoSpecialRapid" -> "chuoSpecialRapid")
         val parts = trainType.split(".")
         if (parts.size >= 3) {
             val resourceName = parts[2].replaceFirstChar { it.lowercaseChar() }
@@ -476,9 +463,8 @@ enum class LocalDataSource {
         return trainType
     }
     
-    // MARK: - Unified API Link Generation
-    // Generate API links using clean enum-based approach
-    // Reads ODPT access tokens directly from BuildConfig (environment variables)
+    // Generate API links using enum-based routing.
+    // Reads ODPT access tokens from BuildConfig.
     fun apiLink(
         dataType: APIDataType,
         transportationKind: TransportationKind = TransportationKind.RAILWAY
@@ -486,16 +472,12 @@ enum class LocalDataSource {
         val operatorCode = operatorCode() ?: return ""
         if (operatorCode.isEmpty()) return ""
         
-        // Read ODPT access tokens from BuildConfig (environment variables)
+        // Read ODPT access tokens from BuildConfig.
         val odptAccessKey = BuildConfig.ODPT_ACCESS_TOKEN
         val odptChallengeKey = BuildConfig.ODPT_CHALLENGE_TOKEN
         
-        // Generate ODPT API URL for non-GTFS operators
-        val odptDataType = if (transportationKind == TransportationKind.RAILWAY) {
-            dataType.railwayOdpTDataType()
-        } else {
-            dataType.busOdpTDataType()
-        }
+        // Build ODPT API URL for non-GTFS operators.
+        val odptDataType = if (transportationKind == TransportationKind.RAILWAY) dataType.railwayOdpTDataType() else dataType.busOdpTDataType()
         
         return when (apiType()) {
             ODPTAPIType.PUBLIC_API -> {
@@ -508,12 +490,12 @@ enum class LocalDataSource {
                 "https://api-challenge.odpt.org/api/v4/${odptDataType.apiEndpoint()}?odpt:operator=$operatorCode&acl:consumerKey=$odptChallengeKey"
             }
             ODPTAPIType.GTFS -> {
-                // Special handling for Toei Bus (uses public API, no access token needed)
+                // Toei Bus uses public API with no token.
                 if (this == TOEI_BUS) {
                     "https://api-public.odpt.org/api/v4/files/$operatorCode"
                 } else {
-                    // For other GTFS operators, use standard API with date and access token
-                    // Remove trailing '?' from operatorCode if present (some operatorCodes have '?' suffix)
+                    // Other GTFS operators use standard API with date/token.
+                    // Remove trailing '?' from operator codes if present.
                     val cleanOperatorCode = operatorCode.trimEnd('?')
                     val dateString = GTFSDates.dateFor(this) ?: return ""
                     if (dateString.isEmpty()) return ""
@@ -524,23 +506,22 @@ enum class LocalDataSource {
     }
 }
 
-// MARK: - Transportation Kind Enum
-// Temporary enum for transportation type (will be replaced by TransportationLine.Kind)
+// Transportation kind enum (temporary).
+// Will be replaced by TransportationLine.Kind.
 enum class TransportationKind(val rawValue: String) {
     RAILWAY("Railway"),
     BUS("Bus")
 }
 
-// MARK: - API Data Type Enum
-// Defines the type of data to request from the API
+// API data type selection for requests.
 enum class APIDataType {
     LINE,              // Railway line or bus route information
     TIMETABLE,         // Train timetable data
     STOP_TIMETABLE,    // Station timetable data
     STOP;              // Bus stop pole data
     
-    // Maps APIDataType to ODPTDataType for railway context
-    // Note: .STOP is not used for railway (stations are included in odpt:Railway data)
+    // Map APIDataType to ODPTDataType for railway context.
+    // STOP is not used for railway (stations are in odpt:Railway).
     fun railwayOdpTDataType(): ODPTDataType {
         return when (this) {
             LINE -> ODPTDataType.RAILWAY
@@ -550,7 +531,7 @@ enum class APIDataType {
         }
     }
     
-    // Maps APIDataType to ODPTDataType for bus context
+    // Map APIDataType to ODPTDataType for bus context.
     fun busOdpTDataType(): ODPTDataType {
         return when (this) {
             LINE -> ODPTDataType.BUS_ROUTE_PATTERN
@@ -561,17 +542,16 @@ enum class APIDataType {
     }
 }
 
-// MARK: - Display Train Type Enum
-// Common train type categories for color mapping
+// Common train type categories for color mapping.
 enum class DisplayTrainType(val rawValue: String) {
-    // MARK: - Default Train Types
+    // Default train type slots.
     DEFAULT_LOCAL("defaultLocal"),
     DEFAULT_EXPRESS("defaultExpress"),
     DEFAULT_RAPID("defaultRapid"),
     DEFAULT_SPECIAL_RAPID("defaultSpecialRapid"),
     DEFAULT_LIMITED_EXPRESS("defaultLimitedExpress"),
     
-    // MARK: - Standard Train Types
+    // Standard train types.
     LOCAL("Local"),
     RAPID("Rapid"),
     SEMI_EXPRESS("SemiExpress"),
@@ -604,11 +584,7 @@ enum class DisplayTrainType(val rawValue: String) {
     MORNING_WING("MorningWing"),
     UNKNOWN("Unknown");
     
-    companion object {
-        val allCases = entries
-    }
-    
-    // Localized display name for UI (ODPT train type string resolution uses rawValue match)
+    // Localized display name for UI.
     fun displayName(context: Context): String = when (this) {
         DEFAULT_LOCAL -> context.getString(R.string.local)
         DEFAULT_EXPRESS -> context.getString(R.string.express)
@@ -649,28 +625,19 @@ enum class DisplayTrainType(val rawValue: String) {
     }
 }
 
-// MARK: - ODPT Error Types
-// Custom error types for ODPT operations
+// ODPT error types for API operations.
 sealed class ODPTError : Exception() {
-    class DateExtractionFailed : ODPTError() {
-        private fun readResolve(): Any = DateExtractionFailed()
-    }
-
     data class NetworkError(val errorMessage: String) : ODPTError()
-    class InvalidData : ODPTError() {
-        private fun readResolve(): Any = InvalidData()
-    }
+    data class InvalidData(val detail: String = "Invalid data structure") : ODPTError()
 
     override val message: String?
         get() = when (this) {
-            is DateExtractionFailed -> "Failed to extract date from API response"
             is NetworkError -> "Network error: ${this.errorMessage}"
-            is InvalidData -> "Invalid data structure"
+            is InvalidData -> "Invalid data: ${this.detail}"
         }
 }
 
-// MARK: - ODPT Calendar Type Enumeration
-// Defines calendar types used in ODPT API for timetable scheduling
+// ODPT calendar types used for timetables.
 sealed class ODPTCalendarType {
     abstract val rawValue: String
     
@@ -723,11 +690,7 @@ sealed class ODPTCalendarType {
                 "odpt.Calendar:Saturday" -> Saturday
                 else -> {
                     // Handle special calendar types (keep original rawValue for API calls)
-                    if (rawValue.startsWith("odpt.Calendar:Specific.")) {
-                        Specific(rawValue)
-                    } else {
-                        null // Unknown calendar type
-                    }
+                    if (rawValue.startsWith("odpt.Calendar:Specific.")) Specific(rawValue) else null // Unknown calendar type
                 }
             }
         }
@@ -737,53 +700,45 @@ sealed class ODPTCalendarType {
         )
     }
     
-    // MARK: - Display Calendar Type
-    // Convert .specific calendar types to standard types for display
-    // API calls use original rawValue, but display uses converted types
+    // Convert .specific types to standard display types.
+    // API calls still use the original rawValue.
     fun displayCalendarType(): ODPTCalendarType {
         return when (this) {
             is Specific -> {
-                // Check for suffix patterns (e.g., "odpt.Calendar:Specific.YokohamaMunicipal.01_1.Weekday")
+                // Check suffix patterns (e.g., Specific.*.Weekday).
                 val components = this.value.split(".")
                 val lastComponent = components.lastOrNull()
                 if (lastComponent != null) {
-                    // Check if last component is a day type name
+                    // Check if the last component is a day type.
                     when (lastComponent) {
                         "Weekday" -> Weekday
                         "Saturday" -> Saturday
                         "Holiday" -> Holiday
                         else -> {
-                            // Handle identifier patterns (e.g., "odpt.Calendar:Specific.Toei.81-170" or "21_7")
-                            // Extract identifier and check last part after "-" or "_"
+                            // Handle identifier patterns like 81-170 or 21_7.
+                            // Use the last part after "-" or "_".
                             val identifier = lastComponent
                             val partsByDash = identifier.split("-")
                             val partsByUnderscore = identifier.split("_")
-                            val lastPart = if (partsByDash.size > 1) {
-                                partsByDash.lastOrNull() ?: ""
-                            } else if (partsByUnderscore.size > 1) {
-                                partsByUnderscore.lastOrNull() ?: ""
-                            } else {
-                                identifier
-                            }
+                            val lastPart = if (partsByDash.size > 1) partsByDash.lastOrNull() ?: "" else if (partsByUnderscore.size > 1) partsByUnderscore.lastOrNull() ?: "" else identifier
                             
                             when (lastPart) {
                                 "100", "109" -> Holiday
                                 "160" -> Saturday
                                 "170", "179" -> Weekday
-                                else -> Weekday  // Fallback to weekday
+                                else -> Weekday  // Fallback to weekday.
                             }
                         }
                     }
                 } else {
-                    Weekday  // Default fallback
+                    Weekday  // Default fallback.
                 }
             }
             else -> this
         }
     }
     
-    // MARK: - Base Display Name
-    // Base English name for each calendar type
+    // Base English name for each calendar type.
     fun debugDisplayName(): String {
         val displayType = this.displayCalendarType()
         return when (displayType) {
@@ -801,9 +756,8 @@ sealed class ODPTCalendarType {
         }
     }
     
-    // MARK: - Display Name
-    // Localized display name for each calendar type
-    // For .specific types, shows only the display type (identifier not shown for cleaner UI)
+    // Localized display name for each calendar type.
+    // Specific types show only the display type.
     fun displayName(context: Context): String {
         val displayType = this.displayCalendarType()
         return when (displayType) {
@@ -817,15 +771,14 @@ sealed class ODPTCalendarType {
             is Thursday -> context.getString(R.string.thursday)
             is Friday -> context.getString(R.string.friday)
             is Saturday -> context.getString(R.string.saturday)
-            is Specific -> context.getString(R.string.dash) // Specific types show dash
+            is Specific -> context.getString(R.string.dash) // Specific types show dash.
         }
     }
     
-    // MARK: - Calendar Tag
-    // Get calendar tag for UserDefaults keys
-    // For .specific types, use identifier to ensure unique keys and prevent data overwriting
+    // Calendar tag for preference keys.
+    // Specific types use an identifier to avoid collisions.
     fun calendarTag(): String {
-        // Extract identifier from .specific rawValue for unique key
+        // Extract identifier for unique keys.
         if (this is Specific) {
             val components = this.value.split(".")
             val lastComponent = components.lastOrNull()
@@ -833,18 +786,13 @@ sealed class ODPTCalendarType {
                 return lastComponent.lowercase()
             }
         }
-        // For standard types, use display type tag
+        // For standard types, use display type tag.
         val displayType = this.displayCalendarType()
-        return if (displayType is SaturdayHoliday) {
-            "weekend"
-        } else {
-            displayType.debugDisplayName().lowercase()
-        }
+        return if (displayType is SaturdayHoliday) "weekend" else displayType.debugDisplayName().lowercase()
     }
 }
 
-// MARK: - ODPT Data Type Enum
-// Enumeration for different ODPT data types with associated values
+// ODPT data types used to build API endpoints.
 enum class ODPTDataType {
     RAILWAY,
     TRAIN_TIMETABLE,
@@ -853,7 +801,7 @@ enum class ODPTDataType {
     BUS_TIMETABLE,
     BUSSTOP_POLE;
     
-    // MARK: - API Endpoint
+    // Map to API endpoint strings.
     fun apiEndpoint(): String {
         return when (this) {
             RAILWAY -> "odpt:Railway"
@@ -866,16 +814,14 @@ enum class ODPTDataType {
     }
 }
 
-// MARK: - ODPT API Type Enum
-// Enumeration for different ODPT API endpoints
+// ODPT API access tiers.
 enum class ODPTAPIType {
-    STANDARD,    // Standard API with access key
-    PUBLIC_API,  // Public API without access key
-    CHALLENGE,   // Challenge API with challenge key
-    GTFS         // No API (Use GTFS Data)
+    STANDARD,    // Standard API with access key.
+    PUBLIC_API,  // Public API without access key.
+    CHALLENGE,   // Challenge API with challenge key.
+    GTFS         // GTFS data access.
 }
 
-// Get localized display name for ODPT train type string (e.g. "odpt.TrainType:JR-East.ChuoSpecialRapid" or short form "ChuoSpecialRapid")
 fun getTrainTypeDisplayName(trainType: String, context: Context): String {
     if (trainType.contains(".")) {
         val parts = trainType.split(".")
@@ -888,16 +834,14 @@ fun getTrainTypeDisplayName(trainType: String, context: Context): String {
     return displayType?.displayName(context) ?: trainType
 }
 
-// MARK: - Transfer Type Enumeration
-// Enumeration of available transportation methods for transfer
+// Transfer types for last-mile travel.
 enum class TransferType(val rawValue: String) {
-    CAR("car"),           // Car transportation
-    BICYCLE("bicycle"),   // Bicycle transportation
-    WALKING("walking"),   // Walking between stations
-    NONE("none");         // No transfer required
+    CAR("car"),           // Car transportation.
+    BICYCLE("bicycle"),   // Bicycle transportation.
+    WALKING("walking"),   // Walking between stations.
+    NONE("none");         // No transfer required.
     
-    // MARK: - Transportation Method Display Name
-    // Localized display name for each transportation method
+    // Localized display name for each method.
     fun transportationDisplayName(context: Context): String {
         return when (this) {
             NONE -> context.getString(R.string.none)
@@ -907,8 +851,7 @@ enum class TransferType(val rawValue: String) {
         }
     }
     
-    // MARK: - Icon Property
-    // Icon for each transportation method
+    // Icon for each transportation method.
     val icon: ImageVector
         get() = when (this) {
             NONE -> Icons.Filled.Cancel
@@ -918,10 +861,7 @@ enum class TransferType(val rawValue: String) {
         }
     
     companion object {
-        val allCases = entries
-        
-        // MARK: - Transfer Type Helper Function
-        // Helper function to convert string labels to TransferType enum values
+        // Convert string labels to TransferType values.
         fun transferType(label: String, context: Context): TransferType {
             val labelLower = label.lowercase()
             val noneLocalized = context.getString(R.string.none).lowercase()
@@ -934,20 +874,18 @@ enum class TransferType(val rawValue: String) {
                 "walking", walkingLocalized -> WALKING
                 "bicycle", bicycleLocalized -> BICYCLE
                 "car", carLocalized -> CAR
-                else -> WALKING // Default to walking instead of none
+                else -> WALKING // Default to walking instead of none.
             }
         }
         
-        // MARK: - Transfer Type from Raw Value
-        // Helper function to get TransferType from raw value string
+        // Get TransferType from raw value.
         fun fromRawValue(value: String): TransferType {
             return entries.find { it.rawValue == value } ?: NONE
         }
     }
 }
 
-// MARK: - TransferType Composable Extension
-// Composable extension function for getting localized display name
+// Composable extension for localized transfer display name.
 @Composable
 fun TransferType.displayName(): String {
     val context = LocalContext.current

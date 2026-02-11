@@ -745,8 +745,6 @@ private fun HourControlSection(
     onDecreaseHour: () -> Unit,
     onIncreaseHour: () -> Unit
 ) {
-    val context = LocalContext.current
-    
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Center,
@@ -765,11 +763,7 @@ private fun HourControlSection(
         }
         
         Text(
-            text = if (trainCount > 0) {
-                "$hour${stringResource(R.string.hour)} ($trainCount)"
-            } else {
-                "$hour${stringResource(R.string.hour)}"
-            },
+            text = if (trainCount > 0) "$hour${stringResource(R.string.hour)} ($trainCount)" else "$hour${stringResource(R.string.hour)}",
             fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
             fontWeight = FontWeight.Bold,
             color = Primary,
@@ -865,7 +859,6 @@ private fun DepartureTimeSelectSection(
     num: Int,
     sharedPreferences: SharedPreferences
 ) {
-    val context = LocalContext.current
     val isRailway = goorback.lineKind(sharedPreferences, num) == TransportationLineKind.RAILWAY
     
     //                  .padding(.bottom, screen.timetablePickerBottomPadding)
@@ -929,7 +922,6 @@ private fun RideTimeSelectSection(
     onRideTimeChange: (Int) -> Unit,
     isTimeExistsForDeletion: Boolean
 ) {
-    val context = LocalContext.current
     Column(
         modifier = Modifier
             .width(ScreenSize.timetablePickerWidth())
@@ -1155,11 +1147,7 @@ private fun AddDeleteButtonSection(
             (isRailway && selectedTrainType != null || !isRailway) &&
             !isExactSameEntryExists
     
-    val addButtonColor = if (isTimeExistsForDeletion) {
-        if (isEnabled) Primary else Gray
-    } else {
-        Accent
-    }
+    val addButtonColor = if (isTimeExistsForDeletion) if (isEnabled) Primary else Gray else Accent
     
     Row(
         modifier = Modifier

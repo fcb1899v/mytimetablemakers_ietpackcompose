@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.SharedPreferences
 import android.os.Handler
 import android.os.Looper
-import androidx.core.content.edit
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -13,7 +12,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.graphics.Color
 import com.mytimetablemaker.extensions.*
-import com.mytimetablemaker.models.ODPTCalendarType
 import com.mytimetablemaker.models.TransportationLineKind
 import com.mytimetablemaker.ui.theme.*
 import kotlinx.coroutines.Job
@@ -194,24 +192,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         transferTimeArray2 = goOrBack2.transferTimeArray(sharedPreferences)
     }
     
-    // MARK: - SharedPreferences Persistence
-    // Save route visibility settings to SharedPreferences
-    // Save both back and go route flags
-    fun saveRoute2Settings() {
-        sharedPreferences.edit {
-            putBoolean("back2".isShowRoute2Key(), isShowBackRoute2)
-            putBoolean("go2".isShowRoute2Key(), isShowGoRoute2)
-        }
-    }
-    
-    // Save line change settings to SharedPreferences
-    fun saveChangeLineSettings() {
-        sharedPreferences.edit {
-            putInt(goOrBack1.changeLineKey(), changeLine1)
-            putInt(goOrBack2.changeLineKey(), changeLine2)
-        }
-    }
-    
     // MARK: - SharedPreferences Data Update
     // Updates all data from SharedPreferences when changes are detected
     fun updateAllDataFromUserDefaults() {
@@ -298,64 +278,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val currentTime: Int
         get() = timeLabel.currentTime
     
-    // Calendar type based on current date for each line
-    // Each line may have different available calendar types
-    private fun currentCalendarType(route: String, lineNumber: Int): ODPTCalendarType {
-        // Use line-level cache key (structure: goorback -> line -> calendar types)
-        val lineCacheKey = "${route}line${lineNumber}_calendarTypes"
-        var availableTypes = mutableListOf<String>()
-        
-        // Try to get cached calendar types for this specific line
-        val cachedTypes = sharedPreferences.getStringSet(lineCacheKey, null)
-        if (cachedTypes != null && cachedTypes.isNotEmpty()) {
-            availableTypes = cachedTypes.toMutableList()
-        }
-        
-        // If no line-specific cache, try to detect from actual data
-        if (availableTypes.isEmpty()) {
-            availableTypes = route.loadAvailableCalendarTypes(sharedPreferences, lineNumber - 1).toMutableList()
-        }
-        
-        // Fallback when no cache/data: weekday, saturdayHoliday (route not selected)
-        if (availableTypes.isEmpty()) {
-            availableTypes = mutableListOf("weekday", "saturdayHoliday")
-        }
-        
-        // Determine calendar type from current date
-        val calendarTypeString = selectDate.odptCalendarType(availableTypes)
-        // Convert string to ODPTCalendarType
-        return when (calendarTypeString.lowercase()) {
-            "weekday" -> ODPTCalendarType.Weekday
-            "holiday" -> ODPTCalendarType.Holiday
-            "saturdayholiday", "saturday_holiday" -> ODPTCalendarType.SaturdayHoliday
-            "sunday" -> ODPTCalendarType.Sunday
-            "monday" -> ODPTCalendarType.Monday
-            "tuesday" -> ODPTCalendarType.Tuesday
-            "wednesday" -> ODPTCalendarType.Wednesday
-            "thursday" -> ODPTCalendarType.Thursday
-            "friday" -> ODPTCalendarType.Friday
-            "saturday" -> ODPTCalendarType.Saturday
-            else -> ODPTCalendarType.Weekday
-        }
-    }
-    
-    // Calendar type for route 1, line 1 (first line in route 1)
-    val currentCalendarType1: ODPTCalendarType
-        get() = currentCalendarType(goOrBack1, 1)
-    
-    // Calendar type for route 2, line 1 (first line in route 2)
-    val currentCalendarType2: ODPTCalendarType
-        get() = currentCalendarType(goOrBack2, 1)
-    
-    // Timetable data for both routes using line-specific calendar types
-    // Note: timetableArray returns data for all lines (0-2) in the route
-    // For simplicity, we use the calendar type of the first line for all lines in the route
-    // If needed, this could be made more sophisticated to use different types per line
-    val timetableArray1: List<List<Int>>
-        get() = goOrBack1.timetableArray(sharedPreferences, selectDate)
-    
-    val timetableArray2: List<List<Int>>
-        get() = goOrBack2.timetableArray(sharedPreferences, selectDate)
     
     // Current time-based schedule information using line-specific calendar types
     val timeArray1: List<Int>
@@ -383,7 +305,4 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val countdownColor2: Color
         get() = if (timeArray2.size > 1) currentTime.countdownColor(timeArray2[1]) else Gray
 }
-
-// MARK: - Boolean Extensions
-// Extensions for boolean values to provide route and weekday information
 

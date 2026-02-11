@@ -8,11 +8,10 @@ import com.mytimetablemaker.models.ODPTCalendarType
 import com.mytimetablemaker.ui.theme.*
 import androidx.core.graphics.toColorInt
 
-// MARK: - Color Extensions
-// Extensions for color management and hex color support
+// Color utilities and mappings.
+// Includes hex parsing and domain-specific colors.
 
-// MARK: - Hex Color Initializer
-// Initialize color from hex integer value
+// Create a Color from a hex int.
 fun Color(hex: Int, opacity: Float = 1.0f): Color {
     val red = ((hex and 0xff0000) shr 16) / 255.0f
     val green = ((hex and 0xff00) shr 8) / 255.0f
@@ -20,17 +19,16 @@ fun Color(hex: Int, opacity: Float = 1.0f): Color {
     return Color(red, green, blue, opacity)
 }
 
-// Initialize color from hex string value
+// Create a Color from a hex string, or null if invalid.
 fun Color(hex: String): Color? {
     val cleanString = hex.replace("#", "").trim()
     val hexValue = cleanString.toIntOrNull(16) ?: return null
     return Color(hexValue)
 }
 
-// MARK: - String Color Extensions
-// Extensions for string-based color operations
+// String-based color helpers.
 
-// Safely convert hex string to Color with fallback
+// Safe hex parsing with gray fallback on errors.
 val String.safeColor: Color
     get() {
         return try {
@@ -42,16 +40,15 @@ val String.safeColor: Color
         }
     }
 
-// MARK: - Integer Color Extensions
-// Extensions for countdown color calculations
+// Countdown color helpers.
 
-// Calculate color based on countdown time relative to departure time
-// minusHHMMSS returns seconds; convert to MMSS with SStoMMSS for countdownColor ranges
+// Determine countdown color from departure vs current time.
+// Uses `minusHHMMSS` and `SStoMMSS` to align ranges.
 fun Int.countdownColor(departTime: Int): Color {
     return (departTime * 100).minusHHMMSS(this).SStoMMSS.countdownColor
 }
 
-// Determine color based on countdown time ranges
+// Map countdown ranges to colors.
 val Int.countdownColor: Color
     get() = when {
         this % 2 == 1 -> Gray
@@ -61,10 +58,9 @@ val Int.countdownColor: Color
         else -> Gray
     }
 
-// MARK: - Train Type Color Management
-// Extensions for train type color mapping and management
+// Train type color mapping.
 
-// Convert train type string to appropriate color
+// Convert train type string to display color.
 fun colorForTrainType(trainType: String?): Color {
     if (trainType == null) {
         return White
@@ -83,7 +79,7 @@ fun colorForTrainType(trainType: String?): Color {
     return displayTrainType.color
 }
 
-// Priority mapping for sorting train types by color order
+// Priority order for sorting colors.
 val colorPriority: Map<Color, Int> = mapOf(
     White to 0,
     YellowGreen to 1,
@@ -93,14 +89,13 @@ val colorPriority: Map<Color, Int> = mapOf(
     LightBlue to 5
 )
 
-// Get priority value for color sorting, returns high value for unknown colors
+// Color sort key with a high fallback value.
 val Color.priorityValue: Int
     get() = colorPriority[this] ?: 999
 
-// MARK: - Display Train Type Extensions
-// Extensions for DisplayTrainType enum to provide color mapping
+// Color mapping for `DisplayTrainType`.
 
-// Map train types to colors
+// Map train categories to theme colors.
 val DisplayTrainType.color: Color
     get() = when (this) {
         // Local trains - White
@@ -152,10 +147,9 @@ val DisplayTrainType.color: Color
         DisplayTrainType.MORNING_WING -> LightBlue
     }
 
-// MARK: - CustomColor Extensions
-// Extensions for CustomColor enum to provide RGB color values
+// `CustomColor` parsing and metadata.
 
-// Convert RGB string to Color object
+// Parse RGB string into a safe Color.
 val CustomColor.color: Color
     get() = run {
         val rgbString = this.RGB
@@ -166,7 +160,7 @@ val CustomColor.color: Color
             if (parsedColor.alpha > 0f && parsedColor != Color.Unspecified && parsedColor != Color.Transparent) {
                 parsedColor
             } else {
-                // Fallback to gray color directly using hex value to avoid circular reference
+                // Gray fallback avoids circular reference.
                 Color(0xFF9C9C9C)
             }
         } catch (e: Exception) {
@@ -175,7 +169,7 @@ val CustomColor.color: Color
         }
     }
 
-// Hex color values for each custom color
+// Hex values for each `CustomColor`.
 val CustomColor.RGB: String
     get() = when (this) {
         CustomColor.RED -> "#E60012"
@@ -185,7 +179,7 @@ val CustomColor.RGB: String
         CustomColor.YELLOW -> "#FFD400"
         CustomColor.BEIGE -> "#C1A470"
         CustomColor.YELLOW_GREEN -> "#9ACD32"
-        CustomColor.ORIVE -> "#9FB01C"
+        CustomColor.OLIVE -> "#9FB01C"
         CustomColor.GREEN -> "#009739"
         CustomColor.DARK_GREEN -> "#004E2E"
         CustomColor.BLUE_GREEN -> "#00AC9A"
@@ -204,14 +198,13 @@ val CustomColor.RGB: String
         CustomColor.ACCENT -> "#03DAC5"
     }
 
-// Resource name for localization
-// Converts rawValue to string resource name format (camelCase)
+// Resource name for localization (camelCase from raw value).
 val CustomColor.resourceName: String
     get() = when (this) {
         CustomColor.PRIMARY -> "indigo"
         CustomColor.ACCENT -> "defaultColor"
         else -> {
-            // Convert "DARK RED" to "darkRed", "YELLOW GREEN" to "yellowGreen", etc.
+            // Convert words into camelCase (e.g., "DARK RED" -> "darkRed").
             val words = this.rawValue.lowercase().split(" ")
             words[0] + words.drop(1).joinToString("") {
                 it.replaceFirstChar { char ->
@@ -225,12 +218,10 @@ val CustomColor.resourceName: String
         }
     }
 
-// MARK: - ODPT Calendar Type Color Extensions
-// Color extensions for ODPT calendar types
+// ODPT calendar color helpers.
 
-// Returns primary color for calendar labels (weekend = red, weekday = white)
-// Used for quick visual distinction between weekend and weekday
-// For .specific types, converts to display type first
+// Primary label color by day type (weekend red, weekday white).
+// Converts .specific to display type first.
 val ODPTCalendarType.calendarColor: Color
     get() {
         val displayType = this.displayCalendarType()
@@ -249,9 +240,8 @@ val ODPTCalendarType.calendarColor: Color
         }
     }
 
-// Returns secondary text color for calendar labels (weekend = red, weekday = black)
-// Keeps contrast readable against calendarColor background
-// For .specific types, converts to display type first
+// Secondary text color by day type (weekend red, weekday black).
+// Converts .specific to display type first.
 val ODPTCalendarType.calendarSubColor: Color
     get() {
         val displayType = this.displayCalendarType()

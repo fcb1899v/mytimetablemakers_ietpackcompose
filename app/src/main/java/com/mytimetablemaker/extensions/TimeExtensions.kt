@@ -10,39 +10,37 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-// MARK: - Time Extensions
-// Extensions for time formatting and calculations
+// Time formatting and calculation helpers.
+// Keeps app-specific time rules together.
 
-// Format time values for display with leading zeros
+// Format time values with leading zeros.
 fun Int.addZeroTime(): String {
     return if (this in 0..9) "0$this" else "$this"
 }
 
-// MARK: - Int Time Extensions
-// Time format conversions and calculations
+// Int time conversions and calculations.
 
-// Convert seconds to MMSS
+// Convert seconds to MMSS.
 val Int.SStoMMSS: Int
     get() = (this / 60) * 100 + (this % 60)
 
-// Get hour component from HHMM format
+// Get hour component from HHMM.
 val Int.timeHH: String
     get() = (this / 100 + (this % 100) / 60).addZeroTime()
 
-// Get minute component from HHMM format
+// Get minute component from HHMM.
 val Int.timeMM: String
     get() = (this % 100 % 60).addZeroTime()
 
-// Get timetable hour (0-3 AM becomes 24-27)
+// Map 0-3 AM to 24-27 for timetable hours.
 val Int.timetableHour: Int
     get() = if (this > 3) this else this + 24
 
-// Remove leading space from time string
+// Remove a leading space from time strings.
 val String.timeString: String
     get() = if (this.startsWith(" ")) this.substring(1) else this
 
-
-// Convert HH:MM format to total minutes for sorting
+// Convert HH:MM to total minutes for sorting.
 val String.timeToMinutes: Int get() {
     val components = this.split(":")
     if (components.size == 2) {
@@ -55,8 +53,7 @@ val String.timeToMinutes: Int get() {
     return 0
 }
 
-// MARK: - Date Extensions
-// Format date for display (locale-aware via Context resources)
+// Date formatting (locale-aware via resources).
 fun Date.formatDate(context: Context): String {
     val pattern = context.getString(R.string.dateFormat)
     val locales = context.resources.configuration.locales
@@ -65,102 +62,88 @@ fun Date.formatDate(context: Context): String {
     return formatter.format(this)
 }
 
-// Format time for display
+// Format time for display.
 val Date.setTime: String get() {
     val formatter = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     return formatter.format(this)
 }
 
-// MARK: - Int Extensions
-// Convert HHMM format to HH:MM string format
+// Convert HHMM to HH:MM string.
 val Int.stringTime: String get() {
     val timeString = "${this.timeHH}:${this.timeMM}"
     return if (timeString != "27:00") timeString else "--:--"
 }
 
-// Convert HHMMSS to seconds
+// Convert HHMMSS to seconds.
 val Int.HHMMSStoSS: Int
     get() = this / 10000 * 3600 + (this % 10000) / 100 * 60 + this % 100
 
-// Subtract HHMMSS time
+// Subtract HHMMSS times with wrap-around.
 fun Int.minusHHMMSS(time: Int): Int {
     val diff = this.HHMMSStoSS - time.HHMMSStoSS
-    return if (diff < 0) {
-        (diff + 86400) % 86400
-    } else {
-        diff
-    }
+    return if (diff < 0) (diff + 86400) % 86400 else diff
 }
 
-// Format countdown timer display from MMSS format
+// Format countdown display from MMSS.
 val Int.countdown: String
     get() {
-        return if (this in 0..9999) {
-            "${(this / 100).addZeroTime()}:${(this % 100).addZeroTime()}"
-        } else {
-            "--:--"
-        }
+        return if (this in 0..9999) "${(this / 100).addZeroTime()}:${(this % 100).addZeroTime()}" else "--:--"
     }
 
-// Calculate countdown time from departure time
-// minusHHMMSS returns seconds; convert to MMSS (min*100+sec) with SStoMMSS for correct "MM:SS" display
+// Calculate countdown string from departure time.
+// Uses `minusHHMMSS` and `SStoMMSS` for MM:SS.
 fun Int.countdownTime(departTime: Int): String {
     return (departTime * 100).minusHHMMSS(this).SStoMMSS.countdown
 }
 
-// Convert HHMM to minutes
+// Convert HHMM to minutes.
 val Int.HHMMtoMM: Int
     get() = this / 100 * 60 + this % 100
 
-// Convert minutes to HHMM
+// Convert minutes to HHMM.
 val Int.MMtoHHMM: Int
     get() = (this / 60) * 100 + (this % 60)
 
-// Add HHMM time
+// Add HHMM times.
 fun Int.plusHHMM(time: Int): Int {
     return (this.HHMMtoMM + time.HHMMtoMM).MMtoHHMM
 }
 
-// Subtract HHMM time
+// Subtract HHMM times with day wrap.
 fun Int.minusHHMM(time: Int): Int {
-    return if (this.HHMMtoMM < time.HHMMtoMM) {
-        ((this + 2400).HHMMtoMM - time.HHMMtoMM).MMtoHHMM
-    } else {
-        (this.HHMMtoMM - time.HHMMtoMM).MMtoHHMM
-    }
+    return if (this.HHMMtoMM < time.HHMMtoMM) ((this + 2400).HHMMtoMM - time.HHMMtoMM).MMtoHHMM else (this.HHMMtoMM - time.HHMMtoMM).MMtoHHMM
 }
 
-// Limit time to 2700 (27:00)
+// Clamp time to 27:00.
 fun Int.overTime(beforeTime: Int): Int {
     return if (beforeTime == 2700) 2700 else if (this > 2700) 2700 else this
 }
 
-// MARK: - Date Extensions (continued)
-// Determine calendar type based on date with fallback to available types
-// Returns ODPTCalendarType directly
+// Determine calendar type with fallback to available types.
+// Returns ODPTCalendarType directly.
 fun Date.odptCalendarType(fallbackTo: List<ODPTCalendarType>): ODPTCalendarType {
-    // Helper function to check if a type or its displayCalendarType is available
+    // Check whether a type or its display type is available.
     fun isAvailable(type: ODPTCalendarType): Boolean {
         return fallbackTo.contains(type) || fallbackTo.any { it.displayCalendarType() == type }
     }
     
-    // Helper function to find matching .specific type for a display type
+    // Find the matching .specific type for a display type.
     fun findSpecificType(displayType: ODPTCalendarType): ODPTCalendarType? {
         return fallbackTo.firstOrNull { it.displayCalendarType() == displayType }
     }
     
-    // TODO: Implement Japanese holiday detection
-    val isHoliday = false // Placeholder
+    // TODO: Implement Japanese holiday detection.
+    val isHoliday = false // Placeholder.
     val calendar = Calendar.getInstance()
     calendar.time = this
     val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
     
-    // Check if it's a weekday (Monday-Friday, not a holiday)
+    // Weekday check (Mon-Fri, not a holiday).
     val isWeekdayDate = !isHoliday && dayOfWeek != Calendar.SUNDAY && dayOfWeek != Calendar.SATURDAY
     
-    // If it's a weekday date, prioritize weekday calendar types
+    // Prioritize weekday calendar types on weekdays.
     if (isWeekdayDate) {
-        // Check for specific weekday types first
+        // Check for specific weekday types first.
         if (dayOfWeek == Calendar.MONDAY && isAvailable(ODPTCalendarType.Monday)) {
             return findSpecificType(ODPTCalendarType.Monday) ?: ODPTCalendarType.Monday
         }
@@ -176,13 +159,13 @@ fun Date.odptCalendarType(fallbackTo: List<ODPTCalendarType>): ODPTCalendarType 
         if (dayOfWeek == Calendar.FRIDAY && isAvailable(ODPTCalendarType.Friday)) {
             return findSpecificType(ODPTCalendarType.Friday) ?: ODPTCalendarType.Friday
         }
-        // Fallback to weekday if available
+        // Fall back to weekday if available.
         if (isAvailable(ODPTCalendarType.Weekday)) {
             return findSpecificType(ODPTCalendarType.Weekday) ?: ODPTCalendarType.Weekday
         }
     }
     
-    // Check for holiday/weekend calendar types
+    // Check holiday/weekend calendar types.
     if (isHoliday && isAvailable(ODPTCalendarType.Holiday)) {
         return findSpecificType(ODPTCalendarType.Holiday) ?: ODPTCalendarType.Holiday
     }
@@ -197,32 +180,32 @@ fun Date.odptCalendarType(fallbackTo: List<ODPTCalendarType>): ODPTCalendarType 
         return findSpecificType(ODPTCalendarType.SaturdayHoliday) ?: ODPTCalendarType.SaturdayHoliday
     }
     
-    // Final fallback: Use weekday if available, otherwise use first available type
+    // Final fallback: weekday if available, else first available type.
     if (isAvailable(ODPTCalendarType.Weekday)) {
         return findSpecificType(ODPTCalendarType.Weekday) ?: ODPTCalendarType.Weekday
     }
     
-    // If weekday is not available, use the first available type
+    // If weekday is unavailable, use the first available type.
     return fallbackTo.firstOrNull() ?: ODPTCalendarType.Weekday
 }
 
-// Helper to check if availableTypes contains a calendar type (supports both short form and rawValue)
+// Check if availableTypes contains a calendar type (short form or rawValue).
 private fun List<String>.hasCalendarType(shortForm: String, rawValueSuffix: String): Boolean =
     any { it.equals(shortForm, ignoreCase = true) || it.endsWith(":$rawValueSuffix") }
 
-// Legacy version: Returns String (for backward compatibility)
+// Legacy version: returns String for backward compatibility.
 fun Date.odptCalendarType(availableTypes: List<String>): String {
     val calendar = Calendar.getInstance()
     calendar.time = this
     val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
     
-    // Check for weekday (Monday-Friday, not a holiday)
+    // Check for weekday (Mon-Fri, not a holiday).
     val isWeekday = dayOfWeek in Calendar.MONDAY..Calendar.FRIDAY
-    // TODO: Implement Japanese holiday detection
-    val isHoliday = false // Placeholder
+    // TODO: Implement Japanese holiday detection.
+    val isHoliday = false // Placeholder.
     
     if (isWeekday && !isHoliday) {
-        // Check for specific weekday types
+        // Check for specific weekday types.
         when (dayOfWeek) {
             Calendar.MONDAY -> if (availableTypes.hasCalendarType("monday", "Monday")) return "monday"
             Calendar.TUESDAY -> if (availableTypes.hasCalendarType("tuesday", "Tuesday")) return "tuesday"
@@ -230,24 +213,23 @@ fun Date.odptCalendarType(availableTypes: List<String>): String {
             Calendar.THURSDAY -> if (availableTypes.hasCalendarType("thursday", "Thursday")) return "thursday"
             Calendar.FRIDAY -> if (availableTypes.hasCalendarType("friday", "Friday")) return "friday"
         }
-        // Fallback to weekday
+        // Fall back to weekday.
         if (availableTypes.hasCalendarType("weekday", "Weekday")) return "weekday"
     }
     
-    // Check for holiday/weekend calendar types
-    // For 2-type fallback (weekday, saturdayHoliday): Saturday/Sunday/holiday -> saturdayHoliday
+    // Check holiday/weekend calendar types.
+    // For 2-type fallback, weekend/holiday -> saturdayHoliday.
     if ((isHoliday || dayOfWeek == Calendar.SUNDAY) && availableTypes.hasCalendarType("holiday", "Holiday")) return "holiday"
     if (dayOfWeek == Calendar.SUNDAY && availableTypes.hasCalendarType("sunday", "Sunday")) return "sunday"
     if (dayOfWeek == Calendar.SATURDAY && availableTypes.hasCalendarType("saturday", "Saturday")) return "saturday"
     if ((isHoliday || dayOfWeek == Calendar.SUNDAY || dayOfWeek == Calendar.SATURDAY) &&
         availableTypes.hasCalendarType("saturdayHoliday", "SaturdayHoliday")) return "saturdayHoliday"
     
-    // Final fallback
+    // Final fallback.
     return availableTypes.firstOrNull() ?: "weekday"
 }
 
-// MARK: - String Extensions
-// Parse time string (HH:MM:SS) to integer format (HHMMSS)
+// Parse time string (HH:MM:SS) into HHMMSS int.
 val String.currentTime: Int
     get() {
         val components = this.split(":")
@@ -260,15 +242,14 @@ val String.currentTime: Int
         return 0
     }
 
-// Load available calendar types for a route and line
-// Detect available calendar types by checking actual timetable data
+// Detect available calendar types from timetable data.
 fun String.detectAvailableCalendarTypesFromData(
     num: Int,
     sharedPreferences: SharedPreferences
 ): List<ODPTCalendarType> {
     val detectedTypes = mutableSetOf<ODPTCalendarType>()
     
-    // Check all possible calendar types
+    // Check all possible calendar types.
     val allCalendarTypes = ODPTCalendarType.allCases
     
     for (calendarType in allCalendarTypes) {
@@ -277,28 +258,28 @@ fun String.detectAvailableCalendarTypesFromData(
         }
     }
     
-    // Also check cached calendar types which may include .specific cases
+    // Also check cached calendar types, including .specific cases.
     val lineCacheKey = "${this}line${num + 1}_calendarTypes"
     val cachedTypes = sharedPreferences.getStringSet(lineCacheKey, null)
     if (cachedTypes != null) {
         for (cachedTypeString in cachedTypes) {
             val cachedCalendarType = ODPTCalendarType.fromRawValue(cachedTypeString)
             if (cachedCalendarType != null) {
-                // If it's a .specific type, check if data exists for THIS specific line
+                // For .specific types, check this line's data only.
                 if (cachedCalendarType is ODPTCalendarType.Specific) {
                     if (this.hasTimetableDataForType(cachedCalendarType, num, sharedPreferences)) {
                         detectedTypes.add(cachedCalendarType)
-                        // Also add the displayCalendarType so it appears in the dropdown
+                        // Add displayCalendarType so it appears in the dropdown.
                         val displayType = cachedCalendarType.displayCalendarType()
                         if (displayType != cachedCalendarType && !detectedTypes.contains(displayType)) {
-                            // Check if data exists for the display type as well
+                            // Check data for the display type as well.
                             if (this.hasTimetableDataForType(displayType, num, sharedPreferences)) {
                                 detectedTypes.add(displayType)
                             }
                         }
                     }
                 } else {
-                    // For non-specific types, just add if data exists
+                    // For non-specific types, add if data exists.
                     if (this.hasTimetableDataForType(cachedCalendarType, num, sharedPreferences)) {
                         detectedTypes.add(cachedCalendarType)
                     }
@@ -310,42 +291,29 @@ fun String.detectAvailableCalendarTypesFromData(
     return detectedTypes.sortedBy { it.rawValue }
 }
 
-// Fallback when no cache/data: weekday, saturday, holiday (route not selected - no ODPT API fetch)
+// Fallback when no cache: weekday and SaturdayHoliday.
 private val FALLBACK_CALENDAR_TYPES = listOf(
     "odpt.Calendar:Weekday",
     "odpt.Calendar:SaturdayHoliday"
 )
 
 fun String.loadAvailableCalendarTypes(sharedPreferences: SharedPreferences, num: Int): List<String> {
-    // Line-level cache: list of calendar types from ODPT API fetch (saved when API returns types)
-    // When cache has types: display all (verified to have timetable data)
-    // When cache is empty: display 2 standard types (weekday, saturdayHoliday)
+    // Line-level cache: calendar types from ODPT/GTFS fetch.
+    // Empty cache falls back to weekday and saturdayHoliday.
     val lineCacheKey = "${this}line${num + 1}_calendarTypes"
     val cachedTypes = sharedPreferences.getStringSet(lineCacheKey, null)
     if (cachedTypes != null && cachedTypes.isNotEmpty()) {
         val cachedCalendarTypes = cachedTypes.mapNotNull { ODPTCalendarType.fromRawValue(it) }
         if (cachedCalendarTypes.isNotEmpty()) {
-            // Verify that cached types have actual data for THIS specific line
-            val verifiedTypes = cachedCalendarTypes.filter { 
-                this.hasTimetableDataForType(it, num, sharedPreferences) 
-            }
-            if (verifiedTypes.isNotEmpty()) {
-                // Return all types from API (Monday, Tuesday, etc. when API returned them)
-                return verifiedTypes.map { it.rawValue }
-            }
+            return cachedCalendarTypes.map { it.rawValue }
         }
     }
-    
-    // Cache empty: detect from manual timetable data if any, otherwise use standard types
-    val detectedTypes = this.detectAvailableCalendarTypesFromData(num, sharedPreferences)
-    return if (detectedTypes.isNotEmpty()) {
-        detectedTypes.map { it.rawValue }
-    } else {
-        FALLBACK_CALENDAR_TYPES
-    }
+
+    // Cache empty: use standard types.
+    return FALLBACK_CALENDAR_TYPES
 }
 
-// Generate time array for route based on date and current time
+// Generate time array for a route based on date and current time.
 fun String.timeArray(
     sharedPreferences: SharedPreferences,
     date: Date,
@@ -356,7 +324,7 @@ fun String.timeArray(
     val timetableArray = this.timetableArray(sharedPreferences, date)
     val rideTimeArray = this.rideTimeArray(sharedPreferences)
     
-    // Depart time of line 1
+    // Depart time of line 1.
     val currentTimeHHMM = currentTime / 100
     val firstDepartTime = timetableArray[0].firstOrNull { 
         it > currentTimeHHMM.plusHHMM(transferTimeArray[1]) 
@@ -364,31 +332,31 @@ fun String.timeArray(
     
     val timeArray = mutableListOf(firstDepartTime)
     
-    // Arrive time of line 1
+    // Arrive time of line 1.
     val rideTime1 = this.getRideTime(sharedPreferences, date, firstDepartTime, 0, rideTimeArray)
     val arriveTime1 = firstDepartTime.plusHHMM(rideTime1).overTime(firstDepartTime)
     timeArray.add(arriveTime1)
     
-    // Depart time from depart point
+    // Depart time from depart point.
     val departPointTime = firstDepartTime.minusHHMM(transferTimeArray[1]).overTime(firstDepartTime)
     timeArray.add(0, departPointTime)
     
     if (changeLineInt > 0) {
         for (i in 1..changeLineInt) {
-            // Depart time of line i
+            // Depart time of line i.
             val lineDepartTime = timetableArray[i].firstOrNull { 
                 it >= timeArray[2 * i].plusHHMM(transferTimeArray[i + 1]) 
             } ?: 2700
             timeArray.add(lineDepartTime)
             
-            // Arrive time of line i
+            // Arrive time of line i.
             val rideTimeI = this.getRideTime(sharedPreferences, date, lineDepartTime, i, rideTimeArray)
             val arriveTimeI = lineDepartTime.plusHHMM(rideTimeI).overTime(lineDepartTime)
             timeArray.add(arriveTimeI)
         }
     }
     
-    // Arrive time to destination (insert at index 0)
+    // Arrive time to destination (insert at index 0).
     val lastArrivalTime = timeArray.last()
     val destinationTime = lastArrivalTime.plusHHMM(transferTimeArray[0]).overTime(lastArrivalTime)
     timeArray.add(0, destinationTime)
@@ -396,8 +364,7 @@ fun String.timeArray(
     return timeArray
 }
 
-// MARK: - String Time Extensions
-// Adjust hour for timetable display (0-3 AM becomes 24-27)
+// Adjust hours for timetable display (0-3 AM -> 24-27).
 fun String.adjustedForTimetable(): String {
     val components = this.split(":")
     if (components.size != 2) return this
@@ -409,11 +376,10 @@ fun String.adjustedForTimetable(): String {
     return "${adjustedHour.addZeroTime()}:${minute.addZeroTime()}"
 }
 
-// MARK: - String Minutes Only Extension
-// Extract minutes from time string (HH:MM format or minutes-only format)
+// Extract minutes from time string (HH:MM or minutes-only).
 val String.minutesOnly: String
     get() {
-        // Check if string contains ":" (HH:MM format)
+        // Check for HH:MM format.
         if (this.contains(":")) {
             val components = this.split(":")
             if (components.size == 2) {
@@ -426,7 +392,7 @@ val String.minutesOnly: String
             }
         }
         
-        // Handle minutes-only format (e.g., "5", "05", "24")
+        // Handle minutes-only format (e.g., "5", "05", "24").
         val minutesInt = this.toIntOrNull()
         if (minutesInt != null) {
             if (minutesInt < 10) {
@@ -435,29 +401,26 @@ val String.minutesOnly: String
             return this
         }
         
-        // Fallback: return original string
+        // Fallback: return original string.
         return this
     }
 
-// Extract minutes as Int from time string (HH:MM format or minutes-only format)
+// Extract minutes as Int from time string.
 val String.minutesOnlyInt: Int
     get() = this.minutesOnly.toIntOrNull() ?: 0
 
-// MARK: - String Time Comparison Extension
-// Compare two time strings (single or double digit format)
+// Compare two time strings (single or double digit).
 fun String.isTimeLessThan(other: String): Boolean {
     val time1 = this.toIntOrNull() ?: 0
     val time2 = other.toIntOrNull() ?: 0
     return time1 < time2
 }
 
-// MARK: - String Timetable Components Extension
-// Parse space-separated timetable string into array of non-empty strings
+// Parse space-separated timetable strings.
 val String.timetableComponents: List<String>
     get() = this.split(" ").filter { it.isNotEmpty() }
 
-// MARK: - String Time Format Validation Extension
-// Check if timetable string contains time in both single and double digit formats
+// Check if timetable contains time in single or double digit format.
 fun String.containsTimeInAnyFormat(departureTime: Int): Boolean {
     val existingTimes = this.timetableComponents
     val singleDigitTime = departureTime.toString()
@@ -465,11 +428,10 @@ fun String.containsTimeInAnyFormat(departureTime: Int): Boolean {
     return existingTimes.contains(singleDigitTime) || existingTimes.contains(doubleDigitTime)
 }
 
-// MARK: - Int Choice Copy Time List Extension
-// Generate list of copy time options for hour selection
+// Generate copy-time options for hour selection.
 @Composable
 fun Int.choiceCopyTimeList(context: Context): List<String> {
-    // Note: hour string resource is ":00-"
+    // Note: hour string resource is ":00-".
     val hourString = context.getString(R.string.hour)
     return listOf(
         "${this - 1}$hourString",
@@ -480,8 +442,7 @@ fun Int.choiceCopyTimeList(context: Context): List<String> {
     )
 }
 
-// MARK: - String Other Route Extension
-// Get the other route identifier (back1 <-> back2, go1 <-> go2)
+// Get the other route identifier (back1 <-> back2, go1 <-> go2).
 val String.otherRoute: String get() {
     val lastChar = this.lastOrNull() ?: return this
     return this.dropLast(1) + (if (lastChar == '1') "2" else "1")

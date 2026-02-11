@@ -1,6 +1,5 @@
 package com.mytimetablemaker.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -29,6 +28,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
+// Applies app-wide Material3 theme colors and typography.
 fun MyTransitMakers_JetpackComposeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+

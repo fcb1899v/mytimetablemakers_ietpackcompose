@@ -12,12 +12,11 @@ import java.text.Normalizer
 import java.util.regex.Pattern
 import androidx.core.content.edit
 
-// MARK: - App Constants
-// Core application constants
-// Route direction constants
+// App constants for route direction and preference keys.
+// Shared across route-related extensions.
 val goorbackList = listOf("back1", "back2", "go1", "go2")
 
-// Route direction display names (using string resource keys)
+// Route direction display names (string resource keys).
 val goorbackDisplayNamesRaw = mapOf(
     "back1" to "returnRoute1",
     "back2" to "returnRoute2",
@@ -25,17 +24,16 @@ val goorbackDisplayNamesRaw = mapOf(
     "go2" to "outboundRoute2"
 )
 
-// UserDefault Keys for home and office locations
+// Keys for home/office locations in preferences.
 const val homeKey = "departurepoint"
 const val officeKey = "destination"
 
-// MARK: - String Extensions for Route Data
-// Extension for managing route-specific data and SharedPreferences operations
+// Route data helpers for keys and SharedPreferences access.
 
-// Check if route is return direction
+// Check if the route is a return direction.
 fun String.isBack(): Boolean = this == "back1" || this == "back2"
 
-// Generate SharedPreferences keys
+// SharedPreferences key builders.
 fun String.isShowRoute2Key(): String = "${this}route2flag"
 
 fun String.changeLineKey(): String = "${this}changeline"
@@ -74,7 +72,8 @@ fun String.transportationKey(num: Int): String = if (num == 0) "${this}transport
 
 fun String.transferTimeKey(num: Int): String = if (num == 0) "${this}transfertimee" else "${this}transfertime${num}"
 
-// Calendar tag for UserDefaults keys: weekday, holiday, weekend, sunday, monday, tuesday, wednesday, thursday, friday, saturday
+// Calendar tag used in timetable keys.
+// Supports weekday/holiday/weekend and day-of-week tags.
 fun String.timetableKey(calendarType: ODPTCalendarType, num: Int, hour: Int): String {
     return "${this.lineNameKey(num)}${calendarType.calendarTag()}${hour.addZeroTime()}"
 }
@@ -95,13 +94,9 @@ fun String.operatorLineListKey(num: Int): String = "${this}operatorlinelist${num
 
 fun String.lineStopListKey(num: Int): String = "${this}linestoplist${num + 1}"
 
-// MARK: - SharedPreferences Helper Extensions
+// SharedPreferences read helpers with type fallbacks.
 fun String.userDefaultsValue(sharedPreferences: SharedPreferences, defaultValue: String): String? {
-    return if (sharedPreferences.contains(this)) {
-        sharedPreferences.getString(this, defaultValue)
-    } else {
-        defaultValue
-    }
+    return if (sharedPreferences.contains(this)) sharedPreferences.getString(this, defaultValue) else defaultValue
 }
 
 fun String.userDefaultsInt(sharedPreferences: SharedPreferences, defaultValue: Int): Int {
@@ -128,7 +123,7 @@ fun String.userDefaultsColor(sharedPreferences: SharedPreferences, defaultValue:
     return colorString.safeColor
 }
 
-// MARK: - Route Data Access Extensions
+// Route data accessors with defaults.
 fun String.isShowRoute2(sharedPreferences: SharedPreferences): Boolean {
     return this.isShowRoute2Key().userDefaultsBool(sharedPreferences, false)
 }
@@ -211,7 +206,7 @@ fun String.lineCode(sharedPreferences: SharedPreferences, num: Int): String {
     return this.lineCodeKey(num).userDefaultsValue(sharedPreferences, "") ?: ""
 }
 
-// Get line kind (railway or bus) for a specific line number
+// Get line kind (railway or bus) for a specific line.
 fun String.lineKind(sharedPreferences: SharedPreferences, num: Int): TransportationLineKind {
     val kindString = this.lineKindKey(num).userDefaultsValue(sharedPreferences, "Railway") ?: "Railway"
     return when (kindString.uppercase()) {
@@ -230,7 +225,7 @@ fun String.rideTime(sharedPreferences: SharedPreferences, num: Int): Int {
     return this.rideTimeKey(num).userDefaultsInt(sharedPreferences, 0)
 }
 
-// TODO: Implement TransferType enum
+// TODO: Implement TransferType enum.
 fun String.transportation(sharedPreferences: SharedPreferences, num: Int): String {
     val default = "Walking" // TransferType.walking.rawValue
     return this.transportationKey(num).userDefaultsValue(sharedPreferences, default) ?: default
@@ -240,8 +235,8 @@ fun String.transferTime(sharedPreferences: SharedPreferences, num: Int): Int {
     return this.transferTimeKey(num).userDefaultsInt(sharedPreferences, 0)
 }
 
-// Alternate calendar tag formats for fallback read (legacy/imported data)
-// When displaying only weekday/saturday/holiday, weekday selection should also read monday-friday data
+// Alternate calendar tags for legacy/imported data.
+// Weekday selection also checks Monday-Friday tags.
 private fun alternateCalendarTagsForRead(calendarTag: String): List<String> = when (calendarTag) {
     "weekday" -> listOf(
         "odpt.Calendar:Weekday",
@@ -305,7 +300,7 @@ private fun String.timetableTrainTypeWithFallback(
     return ""
 }
 
-// MARK: - Array Generation Extensions
+// Array builders for route settings.
 fun String.departStationArray(sharedPreferences: SharedPreferences, context: Context? = null): List<String> {
     return (0..2).map { this.departStation(sharedPreferences, it, context) }
 }
@@ -357,17 +352,7 @@ fun String.transferTimeArray(sharedPreferences: SharedPreferences): List<Int> {
     return (0..3).map { this.transferTime(sharedPreferences, it) }
 }
 
-// MARK: - Settings View Data Access
-fun String.settingsDeparturePoint(sharedPreferences: SharedPreferences, context: Context): String {
-    val default = context.getString(com.mytimetablemaker.R.string.notSet)
-    return this.departurePointKey().userDefaultsValue(sharedPreferences, default) ?: default
-}
-
-fun String.settingsDestination(sharedPreferences: SharedPreferences, context: Context): String {
-    val default = context.getString(com.mytimetablemaker.R.string.notSet)
-    return this.destinationKey().userDefaultsValue(sharedPreferences, default) ?: default
-}
-
+// Settings view accessors with localized defaults.
 fun String.settingsDepartStation(sharedPreferences: SharedPreferences, num: Int, context: Context): String {
     val default = context.getString(com.mytimetablemaker.R.string.notSet)
     return this.departStationKey(num).userDefaultsValue(sharedPreferences, default) ?: default
@@ -388,24 +373,9 @@ fun String.settingsLineColorString(sharedPreferences: SharedPreferences, num: In
     return this.lineColorKey(num).userDefaultsValue(sharedPreferences, grayString) ?: grayString
 }
 
-fun String.settingsRideTime(sharedPreferences: SharedPreferences, num: Int, context: Context): String {
-    val rideTime = this.rideTime(sharedPreferences, num)
-    val notSet = context.getString(com.mytimetablemaker.R.string.notSet)
-    val minText = context.getString(com.mytimetablemaker.R.string.minBrackets)
-    return if (rideTime == 0) {
-        notSet
-    } else {
-        "$rideTime$minText"
-    }
-}
-
 fun String.settingsRideTimeColor(sharedPreferences: SharedPreferences, num: Int): Color {
     val rideTime = this.rideTime(sharedPreferences, num)
-    return if (rideTime == 0) {
-        Gray
-    } else {
-        this.lineColorArray(sharedPreferences)[num]
-    }
+    return if (rideTime == 0) Gray else this.lineColorArray(sharedPreferences)[num]
 }
 
 fun String.settingsTransportation(sharedPreferences: SharedPreferences, num: Int, context: Context): String {
@@ -413,23 +383,12 @@ fun String.settingsTransportation(sharedPreferences: SharedPreferences, num: Int
     return this.transportationKey(num).userDefaultsValue(sharedPreferences, default) ?: default
 }
 
-fun String.settingsTransferTime(sharedPreferences: SharedPreferences, num: Int, context: Context): String {
-    val transferTime = this.transferTime(sharedPreferences, num)
-    val notSet = context.getString(com.mytimetablemaker.R.string.notSet)
-    val minText = context.getString(com.mytimetablemaker.R.string.minBrackets)
-    return if (transferTime == 0) {
-        notSet
-    } else {
-        "$transferTime$minText"
-    }
-}
-
-// MARK: - Boolean Extensions for Route Direction
+// Boolean helpers for route direction keys.
 fun Boolean.goOrBack1(): String = if (this) "back1" else "go1"
 
 fun Boolean.goOrBack2(): String = if (this) "back2" else "go2"
 
-// MARK: - Int Extensions for Default Names
+// Default naming helpers for indices.
 fun Int.departStationDefault(context: Context): String {
     val prefix = context.getString(com.mytimetablemaker.R.string.depSt)
     return "$prefix${this + 1}"
@@ -445,11 +404,10 @@ fun Int.lineNameDefault(context: Context): String {
     return "$prefix${this + 1}"
 }
 
-// MARK: - String Localization Extensions
-// REMOVED: String.localized() function has been removed.
-// Use context.getString(R.string.xxx) directly instead of String.localized(context).
+// Localization helpers; `String.localized()` was removed.
+// Use `context.getString(...)` directly instead.
 
-// Normalize string for search (convert to lowercase, handle fullwidth/halfwidth)
+// Normalize for search (trim, NFKC, lowercase).
 fun String.normalizedForSearch(): String {
     var s = this.trim()
     // Convert fullwidth to halfwidth
@@ -457,18 +415,8 @@ fun String.normalizedForSearch(): String {
     return s.lowercase(Locale.getDefault())
 }
 
-// Extract the last component from ODPT identifiers
-// Example: odpt:Operator:JR-East → JR-East
-fun String.odptTail(): String {
-    val components = this.split(":")
-    return components.lastOrNull() ?: this
-}
-
-// MARK: - Bus English Name Extraction
-// Extract English names from ODPT bus identifiers (only for English locale)
-
-// Extract English name from bus route identifier
-// Example: "odpt.Busroute:Toei.Mon33" → "Mon33"
+// Extract English name from an ODPT bus route ID.
+// Example: "odpt.Busroute:Toei.Mon33" -> "Mon33".
 fun String.busRouteEnglishName(): String? {
     val currentLanguage = Locale.getDefault().language
     if (currentLanguage == "ja") return null
@@ -484,7 +432,7 @@ fun String.busRouteEnglishName(): String? {
     return null
 }
 
-// Extract English name from bus stop pole identifier
+// Extract English name from a bus stop pole ID.
 fun String.busStopEnglishName(): String? {
     val currentLanguage = Locale.getDefault().language
     if (currentLanguage == "ja") return null
@@ -496,8 +444,7 @@ fun String.busStopEnglishName(): String? {
     return null
 }
 
-// MARK: - Character Extensions
-// Check if the character is a Japanese character (Hiragana, Katakana, or Kanji)
+// Character helpers for Japanese scripts (Hiragana/Katakana/Kanji).
 fun Char.isJapanese(): Boolean {
     val codePoint = this.code
     return (codePoint in 0x3040..0x309F) || // Hiragana
@@ -505,23 +452,20 @@ fun Char.isJapanese(): Boolean {
            (codePoint in 0x4E00..0x9FAF)    // Kanji
 }
 
-// Check if string contains Japanese characters
+// Check if the string contains Japanese characters.
 fun String.containsJapanese(): Boolean {
     return this.any { it.isJapanese() }
 }
 
-// MARK: - Helper Functions
-// Get display name (split by ":" and return first component for ODPT format)
+// Display name helper for ODPT-style strings.
+// Uses the first component before ":".
 fun String.getDisplayName(): String {
     val components = this.split(":")
     return components.firstOrNull()?.trim() ?: this
 }
 
-// MARK: - Timetable Array Generation
-// Note: otherRoute() extension is now in TimeExtensions.kt
-// Note: addZeroTime() extension is now in TimeExtensions.kt
-// Generate timetable arrays for all lines (0-2)
-// Each line uses its own target calendar type based on date and available calendar types
+// Generate timetable arrays for lines 0-2 with calendar-aware selection.
+// Depends on `otherRoute` and `addZeroTime` in TimeExtensions.kt.
 fun String.timetableArray(
     sharedPreferences: SharedPreferences,
     date: Date
@@ -543,10 +487,8 @@ fun String.timetableArray(
     }
 }
 
-// MARK: - Get Ride Time
-// Get ride time for a specific departure time
-// Uses timetableRideTime if available, otherwise falls back to rideTimeArray[num] or provided fallback
-// Determines calendar type based on date and available calendar types for the line
+// Resolve ride time for a departure using timetable data first.
+// Falls back to defaults based on date and calendar availability.
 fun String.getRideTime(
     sharedPreferences: SharedPreferences,
     date: Date,
@@ -592,48 +534,28 @@ fun String.getRideTime(
     return rideTimeArrayFallback?.getOrNull(num) ?: this.rideTimeArray(sharedPreferences)[num]
 }
 
-// MARK: - Valid Hour Range
-// Note: timeArray() and validHourRange() extensions are now in TimeExtensions.kt
+// Valid hour range helpers (see TimeExtensions.kt for timeArray).
 
-// MARK: - Bus Stop Title Generation
-// Generate LocalizedTitle for bus stops from note and busstopPole
-fun generateBusStopTitle(note: String, busstopPole: String): LocalizedTitle? {
+// Build a LocalizedTitle for bus stops from note/pole data.
+fun generateBusStopTitle(note: String, busStopPole: String): LocalizedTitle? {
     val japaneseName: String? = if (note.isEmpty()) null else note.trim()
-    val englishName: String?
-    
-    if (busstopPole.isNotEmpty()) {
-        val components = busstopPole.split(".")
-        englishName = if (components.size > 2) {
-            components[2].trim()
-        } else {
-            null
-        }
-    } else {
-        englishName = null
-    }
-    
-    return if (japaneseName != null || englishName != null) {
-        LocalizedTitle(ja = japaneseName, en = englishName)
-    } else {
-        null
-    }
+    val englishName = busStopPole
+        .takeIf { it.isNotEmpty() }
+        ?.split(".")
+        ?.getOrNull(2)
+        ?.trim()
+    return if (japaneseName != null || englishName != null) LocalizedTitle(ja = japaneseName, en = englishName) else null
 }
 
-// MARK: - Localization Helper
-// Select localized name based on language code
+// Select a localized name based on language code.
 fun String.selectLocalizedName(ja: String?, en: String?): String {
-    return if (this == "ja") {
-        ja ?: en ?: ""
-    } else {
-        en ?: ja ?: ""
-    }
+    return if (this == "ja") ja ?: en ?: "" else en ?: ja ?: ""
 }
 
-// MARK: - ODPT Dictionary Extensions
-// Extract ODPT-specific data from dictionary structures
+// ODPT dictionary extraction helpers.
 
-// Extract destination station from ODPT data
-// Handles both String and List<String> formats
+// Extract destination station from ODPT data.
+// Handles String and List<String> formats.
 fun Map<String, Any>.odptDestinationStation(): String? {
     return when (val dest = this["odpt:destinationStation"]) {
         is String -> dest
@@ -642,13 +564,13 @@ fun Map<String, Any>.odptDestinationStation(): String? {
     }
 }
 
-// Extract line color from ODPT data
-// Supports both odpt:color (local) and odpt:lineColor (API) fields
+// Extract line color from ODPT data.
+// Supports odpt:color and odpt:lineColor.
 fun Map<String, Any>.odptLineColor(): String? {
     return (this["odpt:lineColor"] as? String) ?: (this["odpt:color"] as? String)
 }
 
-// Extract LocalizedTitle from ODPT railway title dictionary
+// Extract LocalizedTitle from ODPT railway title data.
 @Suppress("UNCHECKED_CAST")
 fun Map<String, Any>.odptRailwayTitle(): LocalizedTitle? {
     val railwayTitleDict = this["odpt:railwayTitle"] as? Map<String, String> ?: return null
@@ -658,11 +580,9 @@ fun Map<String, Any>.odptRailwayTitle(): LocalizedTitle? {
     )
 }
 
-// MARK: - Time String Processing
-// Note: timeString() extension is now in TimeExtensions.kt
+// Time string helpers (see TimeExtensions.kt for `timeString()`).
 
-// MARK: - Station Timetable Data Structure
-// Data class for station timetable data (equivalent to Swift tuple)
+// Station timetable record (Swift tuple equivalent).
 data class StationTimetableData(
     val trainNumber: String,
     val departureTime: String,
@@ -670,8 +590,7 @@ data class StationTimetableData(
     val trainType: String
 )
 
-// MARK: - Station Timetable Data Extensions
-// Extensions for processing arrays of station timetable data
+// Helpers for station timetable lists.
 fun List<StationTimetableData>.trainTypeList(): List<String> {
     return this.mapNotNull { record ->
         val trainType = record.trainType
@@ -688,27 +607,9 @@ fun List<StationTimetableData>.trainTypeList(): List<String> {
     }.distinct().sorted()
 }
 
-fun List<StationTimetableData>.filteredBy(trainType: String): List<StationTimetableData> {
-    return this.filter { record ->
-        val recordTrainType = record.trainType
-        if (recordTrainType.isEmpty()) return@filter false
-        
-        // Extract the actual train type name
-        val actualTrainType = if (recordTrainType.contains(".")) {
-            val components = recordTrainType.split(".")
-            components.lastOrNull() ?: recordTrainType
-        } else {
-            recordTrainType
-        }
-        
-        actualTrainType == trainType
-    }
-}
-
-// MARK: - TransportationTime Array Extensions
-// Extensions for processing arrays of TransportationTime
+// Helpers for TransportationTime lists.
 fun List<TransportationTime>.mergeAndSortTransportationTimes(): List<TransportationTime> {
-    // Use Set to remove exact duplicates (based on departureTime and arrivalTime)
+    // Deduplicate by departure/arrival pair.
     val seenTimes = mutableSetOf<String>()
     val uniqueTimes = mutableListOf<TransportationTime>()
     
@@ -720,7 +621,7 @@ fun List<TransportationTime>.mergeAndSortTransportationTimes(): List<Transportat
         }
     }
     
-    // Sort by departure time
+    // Sort by departure then arrival time.
     return uniqueTimes.sortedWith(compareBy<TransportationTime> { time ->
         time.departureTime.timeToMinutes
     }.thenBy { time ->
@@ -728,8 +629,7 @@ fun List<TransportationTime>.mergeAndSortTransportationTimes(): List<Transportat
     })
 }
 
-// MARK: - TransportationTime Saving Methods
-// Save TransportationTime objects for a specific hour
+// Save TransportationTime data for a specific hour.
 fun String.saveTransportationTimes(
     transportationTimes: List<TransportationTime>,
     calendarType: ODPTCalendarType,
@@ -741,7 +641,7 @@ fun String.saveTransportationTimes(
     val timetableRideTimeKey = this.timetableRideTimeKey(calendarType, num, hour)
     val timetableTrainTypeKey = this.timetableTrainTypeKey(calendarType, num, hour)
     
-    // Clear existing data (always remove to ensure clean state)
+    // Clear existing data to ensure a clean state.
     sharedPreferences.edit {
         remove(timetableKey)
             .remove(timetableRideTimeKey)
@@ -749,22 +649,21 @@ fun String.saveTransportationTimes(
     }
     
     if (transportationTimes.isEmpty()) {
-        android.util.Log.d("LineExtensions", "No TransportationTime objects to save for hour $hour")
         return
     }
     
-    // Prepare data arrays
+    // Prepare data arrays for storage.
     val departureTimes = mutableListOf<String>()
     val rideTimes = mutableListOf<String>()
     val trainTypes = mutableListOf<String>()
     
     for (transportationTime in transportationTimes) {
-        // Convert HH:MM format to minutes format for consistency with manual editing
+        // Convert HH:MM to minutes for consistency with manual edits.
         val departureTimeInMinutes = transportationTime.departureTime.minutesOnlyInt
         departureTimes.add(departureTimeInMinutes.toString())
         rideTimes.add(transportationTime.rideTime.toString())
         
-        // Use trainType if available (only for TrainTime), otherwise empty string
+        // Store trainType for TrainTime, else empty string.
         val trainType = if (transportationTime is TrainTime) {
             transportationTime.trainType ?: ""
         } else {
@@ -773,7 +672,7 @@ fun String.saveTransportationTimes(
         trainTypes.add(trainType)
     }
     
-    // Save to SharedPreferences
+    // Save to SharedPreferences.
     val timetableString = departureTimes.joinToString(" ")
     val timetableRideTimeString = rideTimes.joinToString(" ")
     val timetableTrainTypeString = trainTypes.joinToString(" ")
@@ -785,8 +684,7 @@ fun String.saveTransportationTimes(
     }
 }
 
-// MARK: - Save Train Type List
-// Save unique train types list for the entire timetable
+// Save a unique train type list for the timetable.
 fun String.saveTrainTypeList(
     transportationTimes: List<TransportationTime>,
     calendarType: ODPTCalendarType,
@@ -795,7 +693,7 @@ fun String.saveTrainTypeList(
 ) {
     val trainTypeListKey = this.trainTypeListKey(calendarType, num)
     
-    // Extract all train types from all transportation times
+    // Extract train types across all transportation times.
     val allTrainTypes = transportationTimes.mapNotNull { transportationTime ->
         if (transportationTime is TrainTime) {
             transportationTime.trainType
@@ -811,19 +709,16 @@ fun String.saveTrainTypeList(
         }
     }
     
-    // Remove duplicates and sort
+    // Remove duplicates and sort.
     val uniqueTrainTypes = allTrainTypes.distinct().sorted()
     val trainTypeListString = uniqueTrainTypes.joinToString(" ")
     
     sharedPreferences.edit {
         putString(trainTypeListKey, trainTypeListString)
     }
-    
-    android.util.Log.d("LineExtensions", "Train type list saved: $uniqueTrainTypes")
 }
 
-// MARK: - TransportationLineKind Extensions
-// Extension for String to convert to TransportationLineKind
+// Convert String to TransportationLineKind.
 fun String.fromString(): TransportationLineKind? {
     return when (this.uppercase()) {
         "RAILWAY", "RAIL" -> TransportationLineKind.RAILWAY
@@ -832,17 +727,15 @@ fun String.fromString(): TransportationLineKind? {
     }
 }
 
-// MARK: - TransportationLine Extensions
-// Extension for TransportationLine to extract English name from bus route
+// Extract English bus route name from TransportationLine.
 fun TransportationLine.busRouteEnglishName(): String? {
     val busRoute = this.busRoute ?: return null
     return busRoute.busRouteEnglishName()
 }
 
-// MARK: - Timetable Content Extensions
-// Extensions for timetable content view functionality
+// Timetable content loading helpers.
 
-// Load transportation times for a specific calendar type, line number, and hour
+// Load transportation times for a calendar type, line, and hour.
 fun String.loadTransportationTimes(
     calendarType: ODPTCalendarType,
     num: Int,
@@ -871,7 +764,7 @@ fun String.loadTransportationTimes(
         val trainType = if (index < trainTypes.size && trainTypes[index].isNotEmpty()) trainTypes[index] else null
         
         if (trainType == null) {
-            // Bus data (no trainType)
+            // Bus data (no trainType).
             val busTime = BusTime(
                 departureTime = departureTimeString,
                 arrivalTime = "",
@@ -881,7 +774,7 @@ fun String.loadTransportationTimes(
             )
             transportationTimes.add(busTime)
         } else {
-            // Train data (has trainType)
+            // Train data (has trainType).
             val trainTime = TrainTime(
                 departureTime = departureTimeString,
                 arrivalTime = "",
@@ -895,7 +788,7 @@ fun String.loadTransportationTimes(
     return transportationTimes
 }
 
-// Calculate valid hour range for timetable data
+// Calculate valid hour range for timetable data.
 fun String.validHourRange(
     calendarType: ODPTCalendarType,
     num: Int,
@@ -903,13 +796,13 @@ fun String.validHourRange(
 ): List<Int> {
     val allHours = (4..25).toList()
 
-    // Find hours with transportation times
+    // Find hours that have data.
     val hoursWithData = allHours.filter { hour ->
         val times = this.loadTransportationTimes(calendarType, num, hour, sharedPreferences)
         times.isNotEmpty()
     }
     
-    // Return range from first to last hour with data
+    // Return range from first to last hour with data.
     if (hoursWithData.isEmpty()) {
         return emptyList()
     }
@@ -920,7 +813,7 @@ fun String.validHourRange(
     return (firstHour..lastHour).toList()
 }
 
-// Check if timetable data exists for the specified calendar type and line
+// Check if timetable data exists for a calendar type and line.
 fun String.hasTimetableDataForType(
     calendarType: ODPTCalendarType,
     num: Int,
@@ -939,7 +832,7 @@ fun String.hasTimetableDataForType(
     return false
 }
 
-// Get train times count for each hour in the valid range
+// Get train time counts per hour in the valid range.
 fun String.getTrainTimesCounts(
     calendarType: ODPTCalendarType,
     num: Int,
@@ -954,7 +847,7 @@ fun String.getTrainTimesCounts(
     return counts
 }
 
-// Load train type list for a specific calendar type and line
+// Load train type list for a calendar type and line.
 fun String.loadTrainTypeList(
     calendarType: ODPTCalendarType,
     num: Int,
@@ -962,7 +855,7 @@ fun String.loadTrainTypeList(
 ): List<String> {
     val calendarTag = calendarType.calendarTag()
     
-    // First, try to load from trainTypeListKey (with fallback for alternate key formats)
+    // First, try trainTypeListKey with alternate key fallbacks.
     var trainTypeListString = sharedPreferences.getString(this.trainTypeListKey(calendarType, num), null)
     if (trainTypeListString.isNullOrEmpty()) {
         for (alt in alternateCalendarTagsForRead(calendarTag)) {
@@ -973,13 +866,13 @@ fun String.loadTrainTypeList(
     }
     if (!trainTypeListString.isNullOrEmpty()) {
         val trainTypes = trainTypeListString.split(" ").filter { it.isNotEmpty() }.distinct()
-        // Sort by color priority
+        // Sort by color priority.
         return trainTypes.sortedWith(compareBy<String> { trainType ->
             colorForTrainType(trainType).priorityValue
         }.thenBy { it })
     }
     
-    // If trainTypeListKey doesn't exist, collect from individual hour data
+    // If no list key, collect from per-hour data.
     val validHours = this.validHourRange(calendarType, num, sharedPreferences)
     val allTransportationTimes = mutableListOf<TransportationTime>()
     for (hour in validHours) {
@@ -987,7 +880,7 @@ fun String.loadTrainTypeList(
         allTransportationTimes.addAll(times)
     }
     
-    // Extract train types from transportation times
+    // Extract train types from transportation times.
     val allTrainTypes = allTransportationTimes.mapNotNull { transportationTime ->
         if (transportationTime is TrainTime) {
             transportationTime.trainType
@@ -1003,12 +896,12 @@ fun String.loadTrainTypeList(
         }
     }
     
-    // Remove duplicates and sort
+    // Remove duplicates and sort.
     val uniqueTrainTypes = allTrainTypes.distinct().sortedWith(compareBy<String> { trainType ->
         colorForTrainType(trainType).priorityValue
     }.thenBy { it })
     
-    // Save the collected train types to trainTypeListKey for future use
+    // Save collected train types for future use.
     if (uniqueTrainTypes.isNotEmpty()) {
         val listKey = this.trainTypeListKey(calendarType, num)
         val listString = uniqueTrainTypes.joinToString(" ")
@@ -1017,19 +910,17 @@ fun String.loadTrainTypeList(
         }
     }
     
-    android.util.Log.d("LineExtensions", "Train types loaded: ${uniqueTrainTypes.size} types")
     return uniqueTrainTypes
 }
 
-// MARK: - Choice Copy Time Key Array
-// Generate array of keys for copying timetable from other hours or routes
+// Key array for copying timetable data from other hours/routes.
 fun String.choiceCopyTimeKeyArray(
     calendarType: ODPTCalendarType,
     num: Int,
     hour: Int
 ): List<String> {
     val oppositeCalendarType = if (calendarType.calendarTag() == "weekday") ODPTCalendarType.Holiday else ODPTCalendarType.Weekday
-    // Use otherroute extension function
+    // Use `otherRoute` extension function.
     val otherroute = this.otherRoute
     
     return listOf(
@@ -1042,8 +933,7 @@ fun String.choiceCopyTimeKeyArray(
     )
 }
 
-// MARK: - Choice Copy Time
-// Get timetable string from another hour or route for copying
+// Get timetable string from another hour or route.
 fun String.choiceCopyTime(
     calendarType: ODPTCalendarType,
     num: Int,
@@ -1058,8 +948,7 @@ fun String.choiceCopyTime(
     return sharedPreferences.getString(keyArray[index], null) ?: ""
 }
 
-// MARK: - Operator Line List Persistence
-// Save operator line list to SharedPreferences after operator selection
+// Save operator line list to SharedPreferences.
 fun String.saveOperatorLineList(
     lines: List<TransportationLine>,
     num: Int,
@@ -1073,7 +962,7 @@ fun String.saveOperatorLineList(
     }
 }
 
-// Load operator line list from SharedPreferences
+// Load operator line list from SharedPreferences.
 fun String.loadOperatorLineList(
     num: Int,
     sharedPreferences: SharedPreferences
@@ -1090,8 +979,7 @@ fun String.loadOperatorLineList(
     }
 }
 
-// MARK: - Line Stop List Persistence
-// Save line stop list to SharedPreferences after line selection
+// Save line stop list to SharedPreferences.
 fun String.saveLineStopList(
     stops: List<TransportationStop>,
     num: Int,
@@ -1105,7 +993,7 @@ fun String.saveLineStopList(
     }
 }
 
-// Load line stop list from SharedPreferences
+// Load line stop list from SharedPreferences.
 fun String.loadLineStopList(
     num: Int,
     sharedPreferences: SharedPreferences
@@ -1121,4 +1009,3 @@ fun String.loadLineStopList(
         null
     }
 }
-

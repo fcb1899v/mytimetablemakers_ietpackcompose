@@ -1,31 +1,23 @@
 package com.mytimetablemaker.models
 
-import android.content.Context
-import com.mytimetablemaker.extensions.busStopEnglishName
 import com.mytimetablemaker.extensions.selectLocalizedName
+import com.mytimetablemaker.extensions.busStopEnglishName
 import java.util.Locale
 
-// MARK: - Localized Title Model
-// Common structure for multi-language support across all transportation entities
+// Localized title for multi-language display.
 data class LocalizedTitle(
     val ja: String?,
     val en: String?
 ) {
-    // Get localized name based on current language
-    fun getLocalizedName(context: Context): String {
+    // Resolve localized name with a fallback.
+    fun getLocalizedName(fallbackTo: String = ""): String {
         val currentLanguage = Locale.getDefault().language
-        return currentLanguage.selectLocalizedName(ja, en)
-    }
-    
-    // Get localized name with fallback to a base name
-    fun getLocalizedName(context: Context, fallbackTo: String): String {
-        val localizedName = getLocalizedName(context)
-        return localizedName.ifEmpty { fallbackTo }
+        val localized = currentLanguage.selectLocalizedName(ja, en)
+        return localized.ifEmpty { fallbackTo }
     }
 }
 
-// MARK: - Transportation Time Interface
-// Common interface for all transportation time data
+// Common interface for transportation time data.
 interface TransportationTime {
     val departureTime: String
     val arrivalTime: String
@@ -34,8 +26,7 @@ interface TransportationTime {
     val isValid: Boolean
 }
 
-// MARK: - Train Time Model
-// Represents train time information with departure, arrival, and ride time data
+// Train time record with departure/arrival and ride time.
 data class TrainTime(
     override val departureTime: String,
     override val arrivalTime: String,
@@ -43,17 +34,16 @@ data class TrainTime(
     val trainType: String? = null,
     override val rideTime: Int
 ) : TransportationTime {
-    // Calculate ride time from departure and arrival times
+    // Calculate ride time from departure and arrival.
     override val calculatedRideTime: Int
         get() = departureTime.calculateRideTime(arrivalTime)
     
-    // Check if this train time has valid data
+    // Check if this train time is valid.
     override val isValid: Boolean
         get() = departureTime.isNotEmpty() && arrivalTime.isNotEmpty() && rideTime > 0
 }
 
-// MARK: - Bus Time Model
-// Represents bus time information with departure, arrival, and ride time data
+// Bus time record with departure/arrival and ride time.
 data class BusTime(
     override val departureTime: String,
     override val arrivalTime: String,
@@ -61,22 +51,21 @@ data class BusTime(
     val routePattern: String? = null,
     override val rideTime: Int
 ) : TransportationTime {
-    // Calculate ride time from departure and arrival times
+    // Calculate ride time from departure and arrival.
     override val calculatedRideTime: Int
         get() = departureTime.calculateRideTime(arrivalTime)
     
-    // Check if this bus time has valid data
+    // Check if this bus time is valid.
     override val isValid: Boolean
         get() = departureTime.isNotEmpty() && arrivalTime.isNotEmpty() && rideTime > 0
 }
 
-// MARK: - Helper Functions
-// Calculate ride time in minutes between departure and arrival times
+// Calculate ride time in minutes between departure and arrival.
 fun String.calculateRideTime(arrivalTime: String): Int {
-    val departureComponents = this.split(":")
-    val arrivalComponents = arrivalTime.split(":")
+    val departureComponents = this.trim().split(":")
+    val arrivalComponents = arrivalTime.trim().split(":")
     
-    if (departureComponents.size != 2 || arrivalComponents.size != 2) {
+    if (departureComponents.size < 2 || arrivalComponents.size < 2) {
         return 0
     }
     
@@ -93,18 +82,13 @@ fun String.calculateRideTime(arrivalTime: String): Int {
     val departureTotalMinutes = departureHour * 60 + departureMinute
     val arrivalTotalMinutes = arrivalHour * 60 + arrivalMinute
     
-    // Handle day rollover (arrival time is next day)
-    val rideTimeMinutes = if (arrivalTotalMinutes >= departureTotalMinutes) {
-        arrivalTotalMinutes - departureTotalMinutes
-    } else {
-        (24 * 60) - departureTotalMinutes + arrivalTotalMinutes
-    }
+    // Handle day rollover to next day.
+    val rideTimeMinutes = if (arrivalTotalMinutes >= departureTotalMinutes) arrivalTotalMinutes - departureTotalMinutes else (24 * 60) - departureTotalMinutes + arrivalTotalMinutes
     
     return rideTimeMinutes
 }
 
-// MARK: - Transportation Line Kind Enum
-// Defines transportation line types
+// Transportation line types.
 enum class TransportationLineKind {
     RAILWAY,
     BUS;
@@ -116,8 +100,7 @@ enum class TransportationLineKind {
     }
 }
 
-// MARK: - Transportation Line Model
-// Core data structure representing a railway and bus line or transportation route
+// Transportation line model for rail and bus routes.
 data class TransportationLine(
     val id: String,
     val kind: TransportationLineKind,
@@ -139,12 +122,48 @@ data class TransportationLine(
     val busRoute: String? = null,
     val pattern: String? = null,
     val busDirection: String? = null,
-    val busstopPoleOrder: List<TransportationStop>? = null,
+    val busStopPoleOrder: List<TransportationStop>? = null,
     val title: String? = null
-)
+) {
+    // Get localized display name with locale-aware fallback.
+    fun displayName(): String {
+        val currentLanguage = Locale.getDefault().language
 
-// MARK: - Transportation Stop Model
-// Unified model for both railway stations and bus stops
+        if (kind == TransportationLineKind.BUS) {
+            // Bus line display with locale-aware precedence.
+            val titleJa = railwayTitle?.ja?.trim().orEmpty()
+            val titleEn = railwayTitle?.en?.trim().orEmpty()
+            val nameValue = name.trim()
+            val titleValue = title?.trim().orEmpty()
+
+            val displayName: String = if (currentLanguage == "ja") {
+                when {
+                    titleJa.isNotEmpty() -> titleJa
+                    titleValue.isNotEmpty() -> titleValue
+                    nameValue.isNotEmpty() -> nameValue
+                    titleEn.isNotEmpty() -> titleEn
+                    else -> nameValue
+                }
+            } else {
+                when {
+                    titleEn.isNotEmpty() -> titleEn
+                    nameValue.isNotEmpty() -> nameValue
+                    titleValue.isNotEmpty() -> titleValue
+                    titleJa.isNotEmpty() -> titleJa
+                    else -> nameValue
+                }
+            }
+            
+            // Fix trailing "行行" to "行".
+            return if (displayName.endsWith("行行")) displayName.dropLast(1) else displayName
+        } else {
+            // Railway line: use railwayTitle with fallback to name.
+            return railwayTitle?.getLocalizedName(fallbackTo = name) ?: name
+        }
+    }
+}
+
+// Transportation stop model for stations and bus stops.
 data class TransportationStop(
     val kind: TransportationLineKind,
     val name: String,
@@ -154,32 +173,44 @@ data class TransportationStop(
     val title: LocalizedTitle? = null,
     // Bus-specific properties
     val note: String? = null,
-    val busstopPole: String? = null
+    val busStopPole: String? = null
 ) {
-    // Display name with localization support
-    fun displayName(context: Context): String {
-        val baseName = when {
-            title != null -> {
-                val localizedName = title.getLocalizedName(context)
-                localizedName.takeIf { it.isNotEmpty() } ?: name
-            }
-            kind == TransportationLineKind.BUS && 
-            Locale.getDefault().language != "ja" -> {
-                busstopPole?.takeIf { it.isNotEmpty() }
-                    ?.split(".")
-                    ?.takeIf { it.size > 2 }
-                    ?.get(2)
-                    ?.trim()
-                    ?: name
-            }
-            else -> name
-        }
+    // Display name with localization and bus stop English fallback.
+    fun displayName(): String {
+        val currentLanguage = Locale.getDefault().language
+        val titleJa = title?.ja?.trim().orEmpty()
+        val titleEn = title?.en?.trim().orEmpty()
+        val noteValue = note?.trim().orEmpty()
+        val nameValue = name.trim()
         
-        // Split by ":" and return first component for ODPT format
+        // Use busStopEnglishName for English bus stop names.
+        val englishFromPole = busStopPole?.busStopEnglishName().orEmpty()
+
+        val baseName = if (currentLanguage == "ja") {
+            when {
+                titleJa.isNotEmpty() -> titleJa
+                noteValue.isNotEmpty() -> noteValue
+                nameValue.isNotEmpty() -> nameValue
+                titleEn.isNotEmpty() -> titleEn
+                englishFromPole.isNotEmpty() -> englishFromPole
+                else -> ""
+            }
+        } else {
+            when {
+                titleEn.isNotEmpty() -> titleEn
+                englishFromPole.isNotEmpty() -> englishFromPole
+                nameValue.isNotEmpty() -> nameValue
+                titleJa.isNotEmpty() -> titleJa
+                noteValue.isNotEmpty() -> noteValue
+                else -> ""
+            }
+        }
+
+        // Split by ":" and return the first component for ODPT format.
         return baseName.split(":").firstOrNull()?.trim() ?: baseName
     }
-    
-    // Get bus stop English name from busstopPole identifier
-    val busStopEnglishName: String?
-        get() = busstopPole?.busStopEnglishName()
+
+    // Cleaned name for matching (bus stops prefer note).
+    fun cleanedName(): String =
+        if (kind == TransportationLineKind.BUS && !note.isNullOrBlank()) note.trim() else name
 }

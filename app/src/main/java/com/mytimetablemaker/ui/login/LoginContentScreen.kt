@@ -10,7 +10,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -28,8 +27,6 @@ import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.ScreenSize
 import com.mytimetablemaker.ui.common.AdMobBannerView
 import com.mytimetablemaker.ui.common.CommonComponents
-import com.mytimetablemaker.ui.main.MainViewModel
-import com.mytimetablemaker.ui.settings.FirestoreViewModel
 import com.mytimetablemaker.ui.theme.*
 
 // MARK: - Login Content Screen
@@ -37,19 +34,14 @@ import com.mytimetablemaker.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginContentScreen(
-    mainViewModel: MainViewModel,
     loginViewModel: LoginViewModel,
-    firestoreViewModel: FirestoreViewModel,
     onNavigateBack: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
-    val context = LocalContext.current
-    
     // MARK: - State Variables
     var showSignUpSheet by remember { mutableStateOf(false) }
     var showResetAlert by remember { mutableStateOf(false) }
     var showLoginResultAlert by remember { mutableStateOf(false) }
-    var resetEmail by remember { mutableStateOf("") }
     
     // Observe ViewModel state
     val isLoading by loginViewModel.isLoading.collectAsState()
@@ -60,6 +52,7 @@ fun LoginContentScreen(
     val alertMessage by loginViewModel.alertMessage.collectAsState()
     val email by loginViewModel.email.collectAsState()
     val password by loginViewModel.password.collectAsState()
+    val resetEmail by loginViewModel.resetEmail.collectAsState()
     
     // Clear fields on appear (updateAlert=false to avoid overwriting logout message with signUpCheck validation)
     LaunchedEffect(Unit) {
@@ -303,13 +296,18 @@ fun LoginContentScreen(
             title = stringResource(R.string.passwordReset),
             alertMessage = stringResource(R.string.resetYourPassword),
             confirmButtonText = stringResource(R.string.ok),
+            dismissButtonText = stringResource(R.string.cancel),
             textContent = {
                 Column {
-                    Text(text = stringResource(R.string.resetYourPassword), fontSize = ScreenSize.alertDialogTextFontSize().value.sp, color = Black)
+                    Text(
+                        text = stringResource(R.string.resetYourPassword),
+                        fontSize = ScreenSize.alertDialogTextFontSize().value.sp,
+                        color = Black
+                    )
                     Spacer(modifier = Modifier.height(ScreenSize.loginSpacingSmall()))
                     CommonComponents.CustomLoginTextField(
                         value = resetEmail,
-                        onValueChange = { resetEmail = it },
+                        onValueChange = { loginViewModel.updateResetEmail(it) },
                         placeholder = stringResource(R.string.email),
                         modifier = Modifier.fillMaxWidth(),
                         keyboardType = KeyboardType.Email
@@ -317,12 +315,9 @@ fun LoginContentScreen(
                 }
             },
             onConfirmClick = {
-                loginViewModel.updateEmail(resetEmail)
                 loginViewModel.reset()
                 showResetAlert = false
             },
-            dismissButtonText = stringResource(R.string.cancel),
-            onDismissClick = { showResetAlert = false }
         )
     }
 }

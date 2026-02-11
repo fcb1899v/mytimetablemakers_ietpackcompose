@@ -28,7 +28,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -37,7 +36,6 @@ import com.mytimetablemaker.extensions.*
 import com.mytimetablemaker.extensions.ScreenSize
 import com.mytimetablemaker.models.TransportationLineKind
 import com.mytimetablemaker.models.TransferType
-import com.mytimetablemaker.ui.settings.FirestoreViewModel
 import com.mytimetablemaker.ui.theme.*
 import com.mytimetablemaker.ui.common.AdMobBannerView
 import com.mytimetablemaker.ui.common.CommonComponents
@@ -59,7 +57,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun MainContentScreen(
     viewModel: MainViewModel? = null,
-    firestoreViewModel: FirestoreViewModel? = null,
     onNavigateToSettings: () -> Unit = {},
     onNavigateToLineSheet: (String, Int) -> Unit = { _, _ -> },
     onNavigateToTransferSheet: () -> Unit = {}
@@ -69,8 +66,7 @@ fun MainContentScreen(
     
     // Create ViewModels if not provided
     val mainViewModel = viewModel ?: remember { MainViewModel(application) }
-    val firestoreVm = firestoreViewModel ?: remember { FirestoreViewModel(application) }
-    
+
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
     // State for sheet management
@@ -102,26 +98,10 @@ fun MainContentScreen(
     val lineCodeArray2 = mainViewModel.lineCodeArray2
     val lineKindArray1 = mainViewModel.lineKindArray1
     val lineKindArray2 = mainViewModel.lineKindArray2
-    // Read route2 display settings directly from SharedPreferences
-    var isShowRoute2 by remember { mutableStateOf(false) }
-    
-    // Load Route 2 display settings from SharedPreferences when screen appears
-    LaunchedEffect(Unit) {
-        isShowRoute2 = if (isBack) {
-            "back2".isShowRoute2(sharedPreferences)
-        } else {
-            "go2".isShowRoute2(sharedPreferences)
-        }
-    }
-    
-    // Reload route 2 settings when isBack changes
+    val isShowRoute2 = mainViewModel.isShowRoute2
+
+    // Reload data when isBack changes
     LaunchedEffect(isBack) {
-        isShowRoute2 = if (isBack) {
-            "back2".isShowRoute2(sharedPreferences)
-        } else {
-            "go2".isShowRoute2(sharedPreferences)
-        }
-        // Also update all data when isBack changes
         mainViewModel.updateAllDataFromUserDefaults()
     }
     
@@ -137,13 +117,9 @@ fun MainContentScreen(
                 mainViewModel.updateAllDataFromUserDefaults()
             }
             
-            // Update isShowRoute2 when route2 flag changes
+            // Update route2 flags when route2 setting changes
             if (key == "back2".isShowRoute2Key() || key == "go2".isShowRoute2Key()) {
-                isShowRoute2 = if (isBack) {
-                    "back2".isShowRoute2(sharedPreferences)
-                } else {
-                    "go2".isShowRoute2(sharedPreferences)
-                }
+                mainViewModel.updateAllDataFromUserDefaults()
             }
         }
         sharedPreferences.registerOnSharedPreferenceChangeListener(listener)
@@ -526,7 +502,7 @@ fun MainContentScreen(
 
                     Column(
                         modifier = Modifier
-                            .width(ScreenSize.routeWidth(isShowRoute2))
+                            .width(ScreenSize.routeDoubleWidth())
                             .padding(horizontal = ScreenSize.routeSidePadding())
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -675,7 +651,6 @@ fun MainContentScreen(
     LaunchedEffect(isShowingTransferSheet) {
         if (isShowingTransferSheet) {
             onNavigateToTransferSheet()
-            isShowingTransferSheet = false
         }
     }
 }
@@ -692,11 +667,7 @@ private fun HomeOfficeView(
 ) {
     val context = LocalContext.current
     val time = if (num == 0) timeArray.getOrNull(0) ?: "" else timeArray.getOrNull(1) ?: ""
-    val stationName = if (num == 0) {
-        goorback.destination(sharedPreferences, context)
-    } else {
-        goorback.departurePoint(sharedPreferences, context)
-    }
+    val stationName = if (num == 0) goorback.destination(sharedPreferences, context) else goorback.departurePoint(sharedPreferences, context)
     
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -941,21 +912,9 @@ private fun LineTimeImage(
             }
         }
     }
-    val lineCode = if (isTransfer) {
-        ""
-    } else {
-        lineCodeArray.getOrNull(num) ?: goorback.lineCode(sharedPreferences, num)
-    }
-    val transportation = if (isTransfer) {
-        transportationArray.getOrNull(num) ?: ""
-    } else {
-        ""
-    }
-    val transportationKind = if (isTransfer) {
-        null
-    } else {
-        lineKindArray.getOrNull(num) ?: goorback.lineKind(sharedPreferences, num)
-    }
+    val lineCode = if (isTransfer) "" else lineCodeArray.getOrNull(num) ?: goorback.lineCode(sharedPreferences, num)
+    val transportation = if (isTransfer) transportationArray.getOrNull(num) ?: "" else ""
+    val transportationKind = if (isTransfer) null else lineKindArray.getOrNull(num) ?: goorback.lineKind(sharedPreferences, num)
     
     // Determine icon based on transfer type and transportation kind
     val icon = when {

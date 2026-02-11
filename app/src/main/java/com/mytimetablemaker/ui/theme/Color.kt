@@ -32,11 +32,11 @@ const val AccentString = "#03DAC5"
 // MARK: - CustomColor Extension
 // Convert CustomColor enum to Color object
 fun CustomColor.color(): Color {
-    return Color(this.RGB().toColorInt())
+    return Color(this.rgb().toColorInt())
 }
 
 // Get RGB hex string value for CustomColor
-fun CustomColor.RGB(): String {
+fun CustomColor.rgb(): String {
     return when (this) {
         CustomColor.RED -> "#E60012"
         CustomColor.DARK_RED -> "#A22041"
@@ -45,7 +45,7 @@ fun CustomColor.RGB(): String {
         CustomColor.YELLOW -> "#FFD400"
         CustomColor.BEIGE -> "#C1A470"
         CustomColor.YELLOW_GREEN -> "#9ACD32"
-        CustomColor.ORIVE -> "#9FB01C"
+        CustomColor.OLIVE -> "#9FB01C"
         CustomColor.GREEN -> "#009739"
         CustomColor.DARK_GREEN -> "#004E2E"
         CustomColor.BLUE_GREEN -> "#00AC9A"

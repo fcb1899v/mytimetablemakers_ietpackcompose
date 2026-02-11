@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.ads.MobileAds
 import com.mytimetablemaker.ui.login.LoginViewModel
 import com.mytimetablemaker.ui.login.LoginContentScreen
 import com.mytimetablemaker.ui.main.MainContentScreen
@@ -34,6 +35,7 @@ class MainActivity : ComponentActivity() {
         // Apply saved language setting before super.onCreate
         applySavedLanguageSetting()
         super.onCreate(savedInstanceState)
+        MobileAds.initialize(this) {}
         enableEdgeToEdge()
         setContent {
             MyTransitMakers_JetpackComposeTheme {
@@ -87,8 +89,6 @@ fun AppNavigation() {
         // Initial screen shown when app launches
         composable("splash") {
             SplashContentScreen(
-                mainViewModel = mainViewModel,
-                firestoreViewModel = firestoreViewModel,
                 onNavigateToMain = {
                     navController.navigate("main") {
                         // Clear splash screen from back stack
@@ -103,7 +103,6 @@ fun AppNavigation() {
         composable("main") {
             MainContentScreen(
                 viewModel = mainViewModel,
-                firestoreViewModel = firestoreViewModel,
                 onNavigateToSettings = {
                     navController.navigate("settings")
                 },
@@ -120,9 +119,7 @@ fun AppNavigation() {
         // User authentication and account management
         composable("login") {
             LoginContentScreen(
-                mainViewModel = mainViewModel,
                 loginViewModel = loginViewModel,
-                firestoreViewModel = firestoreViewModel,
                 onNavigateBack = {
                     navController.popBackStack()
                 },
@@ -176,7 +173,7 @@ fun AppNavigation() {
         
         // MARK: - Transfer Settings Screen
         // Configure transfer time and transportation methods
-        composable("transfer_settings/{goorback}") { backStackEntry ->
+        composable("transfer_settings/{goorback}") { _ ->
             SettingsTransferSheetScreen(
                 onNavigateBack = {
                     navController.popBackStack()

@@ -10,7 +10,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -23,7 +22,6 @@ import androidx.compose.ui.zIndex
 import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.ScreenSize
 import com.mytimetablemaker.services.SharedDataManager
-import com.mytimetablemaker.ui.settings.FirestoreViewModel
 import com.mytimetablemaker.ui.theme.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,16 +33,10 @@ import kotlinx.coroutines.launch
 // Main screen that manages app navigation and core functionality
 @Composable
 fun SplashContentScreen(
-    mainViewModel: MainViewModel? = null,
-    firestoreViewModel: FirestoreViewModel? = null,
     onNavigateToMain: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val application = context.applicationContext as android.app.Application
-    
-    // Create ViewModels if not provided
-    val mainVm = mainViewModel ?: remember { MainViewModel(application) }
-    val firestoreVm = firestoreViewModel ?: remember { FirestoreViewModel(application) }
     
     // Loading state
     var isLoading by remember { mutableStateOf(false) }
@@ -63,7 +55,6 @@ fun SplashContentScreen(
         isLoading = true
         
         // Preload ads during splash screen (TODO: Implement AdMob preload)
-        println("🚀 Splash screen appeared - starting initialization")
         // adBannerView = AdMobBannerView.preloadAds()
         
         // Run initialization in background - DO NOT block navigation (prevents ANR)
@@ -74,7 +65,7 @@ fun SplashContentScreen(
                 val sharedDataManager = SharedDataManager.getInstance(application)
                 sharedDataManager.performSplashInitialization()
             } catch (e: Exception) {
-                android.util.Log.w("SplashContentScreen", "Splash initialization failed: ${e.message}", e)
+                android.util.Log.d("SplashContentScreen", "Splash initialization failed: ${e.message}", e)
             }
         }
         
@@ -83,9 +74,7 @@ fun SplashContentScreen(
         
         // Navigate to main content - init continues in background
         isLoading = false
-        delay(500) // Small delay to ensure smooth transition
-        isFinishSplash = true
-        delay(500) // Wait for animation
+        delay(1000) // Small delay to ensure smooth transition
         onNavigateToMain()
     }
     

@@ -17,10 +17,11 @@ import kotlinx.coroutines.tasks.await
 
 // MARK: - Authentication View Model
 // Handles user authentication, registration, and account management
-class LoginViewModel(private val context: Context) : ViewModel() {
+class LoginViewModel(context: Context) : ViewModel() {
+    private val appContext = context.applicationContext
     // Lazy init so Firebase Auth is not touched at ViewModel creation (avoids crash on DEVELOPER_ERROR at app start)
     private val auth by lazy { FirebaseAuth.getInstance() }
-    private val sharedPreferences: SharedPreferences = context.getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE)
+    private val sharedPreferences: SharedPreferences = appContext.getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE)
     
     // MARK: - State Variables
     // User input and authentication state
@@ -45,10 +46,10 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     private val _isShowMessage = MutableStateFlow(false)
     val isShowMessage: StateFlow<Boolean> = _isShowMessage.asStateFlow()
     
-    private val _alertTitle = MutableStateFlow(ValidationMessages.inputError(context))
+    private val _alertTitle = MutableStateFlow(ValidationMessages.inputError(appContext))
     val alertTitle: StateFlow<String> = _alertTitle.asStateFlow()
     
-    private val _alertMessage = MutableStateFlow(ValidationMessages.enterEmail(context))
+    private val _alertMessage = MutableStateFlow(ValidationMessages.enterEmail(appContext))
     val alertMessage: StateFlow<String> = _alertMessage.asStateFlow()
     
     private val _isValidLogin = MutableStateFlow(false)
@@ -82,6 +83,11 @@ class LoginViewModel(private val context: Context) : ViewModel() {
         _passwordConfirm.value = value
         signUpCheck(updateAlert = updateAlert)
     }
+
+    // Update reset email value
+    fun updateResetEmail(value: String) {
+        _resetEmail.value = value
+    }
     
     // MARK: - Logout Function
     // Signs out current user and updates login state
@@ -89,7 +95,7 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     fun logOut(preserveMessage: Boolean = false) {
         _isShowMessage.value = false
         if (!preserveMessage) {
-            _alertTitle.value = ValidationMessages.logoutErrorTitle(context)
+            _alertTitle.value = ValidationMessages.logoutErrorTitle(appContext)
             _alertMessage.value = ""
         }
         if (_isLoginSuccess.value) {
@@ -98,7 +104,7 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                 try {
                     auth.signOut()
                     if (!preserveMessage) {
-                        _alertTitle.value = ValidationMessages.logoutSuccess(context)
+                        _alertTitle.value = ValidationMessages.logoutSuccess(appContext)
                         _alertMessage.value = ""
                     }
                     sharedPreferences.edit {
@@ -109,7 +115,7 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                     _isShowMessage.value = true
                 } catch (_: Exception) {
                     if (!preserveMessage) {
-                        _alertTitle.value = ValidationMessages.logoutErrorTitle(context)
+                        _alertTitle.value = ValidationMessages.logoutErrorTitle(appContext)
                         _alertMessage.value = ""
                     }
                     sharedPreferences.edit {
@@ -129,7 +135,7 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     // Validates login form inputs before authentication
     // updateAlert: when false, only updates isValidLogin without overwriting alert (used on screen open to avoid overwriting logout message etc.)
     fun loginCheck(updateAlert: Boolean = true) {
-        val validation = ValidationMessages.loginValidationMessage(context, _email.value, _password.value)
+        val validation = ValidationMessages.loginValidationMessage(appContext, _email.value, _password.value)
         if (updateAlert) {
             _alertTitle.value = validation.first
             _alertMessage.value = validation.second
@@ -152,7 +158,7 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                     val user = result.user
                     if (user != null) {
                         if (user.isEmailVerified) {
-                            _alertTitle.value = ValidationMessages.loginSuccess(context)
+                            _alertTitle.value = ValidationMessages.loginSuccess(appContext)
                             sharedPreferences.edit {
                                 putBoolean("Login", true)
                             }
@@ -160,20 +166,17 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                             _isLoading.value = false
                             _isShowMessage.value = true
                         } else {
-                            _alertTitle.value = ValidationMessages.notVerifiedAccount(context)
-                            _alertMessage.value = ValidationMessages.confirmEmail(context)
+                            _alertTitle.value = ValidationMessages.notVerifiedAccount(appContext)
+                            _alertMessage.value = ValidationMessages.confirmEmail(appContext)
                             _isLoading.value = false
                             _isShowMessage.value = true
                         }
                     }
                 } catch (e: Exception) {
                     val authException = e as? FirebaseAuthException
-                    _alertTitle.value = ValidationMessages.loginErrorTitle(context)
-                    _alertMessage.value = if (authException != null) {
-                        authException.getLocalizedMessage(context)
-                    } else {
-                        ValidationMessages.loginErrorTitle(context)
-                    }
+                    _alertTitle.value = ValidationMessages.loginErrorTitle(appContext)
+                    _alertMessage.value = authException?.getLocalizedMessage(appContext)
+                        ?: ValidationMessages.loginErrorTitle(appContext)
                     _isLoading.value = false
                     _isShowMessage.value = true
                 }
@@ -188,7 +191,7 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     // updateAlert: when false, only updates isValidSignUp without overwriting alert (used on screen open to avoid overwriting logout message etc.)
     fun signUpCheck(updateAlert: Boolean = true) {
         val validation = ValidationMessages.signUpValidationMessage(
-            context,
+            appContext,
             _email.value,
             _password.value,
             _passwordConfirm.value,
@@ -217,26 +220,23 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                     if (user != null) {
                         try {
                             user.sendEmailVerification().await()
-                            _alertTitle.value = ValidationMessages.signUpSuccess(context)
-                            _alertMessage.value = ValidationMessages.verificationEmailSent(context)
+                            _alertTitle.value = ValidationMessages.signUpSuccess(appContext)
+                            _alertMessage.value = ValidationMessages.verificationEmailSent(appContext)
                             _isSignUpSuccess.value = true
                             _isLoading.value = false
                             _isShowMessage.value = true
                         } catch (_: Exception) {
-                            _alertTitle.value = ValidationMessages.signUpErrorTitle(context)
-                            _alertMessage.value = ValidationMessages.signUpErrorTitle(context)
+                            _alertTitle.value = ValidationMessages.signUpErrorTitle(appContext)
+                            _alertMessage.value = ValidationMessages.signUpErrorTitle(appContext)
                             _isLoading.value = false
                             _isShowMessage.value = true
                         }
                     }
                 } catch (e: Exception) {
                     val authException = e as? FirebaseAuthException
-                    _alertTitle.value = ValidationMessages.signUpErrorTitle(context)
-                    _alertMessage.value = if (authException != null) {
-                        authException.getLocalizedMessage(context)
-                    } else {
-                        ValidationMessages.signUpErrorTitle(context)
-                    }
+                    _alertTitle.value = ValidationMessages.signUpErrorTitle(appContext)
+                    _alertMessage.value = authException?.getLocalizedMessage(appContext)
+                        ?: ValidationMessages.signUpErrorTitle(appContext)
                     _isLoading.value = false
                     _isShowMessage.value = true
                 }
@@ -257,27 +257,23 @@ class LoginViewModel(private val context: Context) : ViewModel() {
             viewModelScope.launch {
                 try {
                     auth.sendPasswordResetEmail(_resetEmail.value).await()
-                    _alertTitle.value = ValidationMessages.passwordResetTitle(context)
-                    _alertMessage.value = ValidationMessages.passwordResetSent(context)
+                    _alertTitle.value = ValidationMessages.passwordResetTitle(appContext)
+                    _alertMessage.value = ValidationMessages.passwordResetSent(appContext)
                     _isLoading.value = false
                     _isShowMessage.value = true
                 } catch (e: Exception) {
                     val authException = e as? FirebaseAuthException
-                    _alertTitle.value = ValidationMessages.passwordResetErrorTitle(context)
+                    _alertTitle.value = ValidationMessages.passwordResetErrorTitle(appContext)
                     _alertMessage.value = if (authException != null && authException.errorCode == "ERROR_USER_NOT_FOUND") {
-                        ValidationMessages.incorrectEmail(context)
-                    } else if (authException != null) {
-                        authException.getLocalizedMessage(context)
-                    } else {
-                        ValidationMessages.signUpErrorTitle(context)
-                    }
+                        ValidationMessages.incorrectEmail(appContext)
+                    } else authException?.getLocalizedMessage(appContext) ?: ValidationMessages.signUpErrorTitle(appContext)
                     _isLoading.value = false
                     _isShowMessage.value = true
                 }
             }
         } else {
-            _alertTitle.value = ValidationMessages.inputError(context)
-            _alertMessage.value = ValidationMessages.enterEmailAgain(context)
+            _alertTitle.value = ValidationMessages.inputError(appContext)
+            _alertMessage.value = ValidationMessages.enterEmailAgain(appContext)
             _isLoading.value = false
             _isShowMessage.value = true
         }
@@ -310,20 +306,20 @@ class LoginViewModel(private val context: Context) : ViewModel() {
     fun delete(password: String) {
         _isShowMessage.value = false
         if (password.isBlank()) {
-            _alertTitle.value = ValidationMessages.inputError(context)
-            _alertMessage.value = ValidationMessages.enterPassword(context)
+            _alertTitle.value = ValidationMessages.inputError(appContext)
+            _alertMessage.value = ValidationMessages.enterPassword(appContext)
             _isShowMessage.value = true
             return
         }
         _isLoading.value = true
-        _alertTitle.value = ValidationMessages.deleteAccountErrorTitle(context)
-        _alertMessage.value = ValidationMessages.accountNotDeleted(context)
+        _alertTitle.value = ValidationMessages.deleteAccountErrorTitle(appContext)
+        _alertMessage.value = ValidationMessages.accountNotDeleted(appContext)
         viewModelScope.launch {
             try {
                 val user = auth.currentUser
                 if (user == null || user.email.isNullOrEmpty()) {
-                    _alertTitle.value = ValidationMessages.deleteAccountErrorTitle(context)
-                    _alertMessage.value = ValidationMessages.accountNotDeleted(context)
+                    _alertTitle.value = ValidationMessages.deleteAccountErrorTitle(appContext)
+                    _alertMessage.value = ValidationMessages.accountNotDeleted(appContext)
                     _isLoading.value = false
                     _isShowMessage.value = true
                     return@launch
@@ -331,17 +327,14 @@ class LoginViewModel(private val context: Context) : ViewModel() {
                 val credential = EmailAuthProvider.getCredential(user.email!!, password)
                 user.reauthenticate(credential).await()
                 user.delete().await()
-                _alertTitle.value = ValidationMessages.deleteAccountSuccess(context)
-                _alertMessage.value = ValidationMessages.accountDeletedSuccess(context)
+                _alertTitle.value = ValidationMessages.deleteAccountSuccess(appContext)
+                _alertMessage.value = ValidationMessages.accountDeletedSuccess(appContext)
                 logOut(preserveMessage = true)
             } catch (e: Exception) {
                 val authException = e as? FirebaseAuthException
-                _alertTitle.value = ValidationMessages.deleteAccountErrorTitle(context)
-                _alertMessage.value = if (authException != null) {
-                    authException.getLocalizedMessage(context)
-                } else {
-                    ValidationMessages.accountNotDeleted(context)
-                }
+                _alertTitle.value = ValidationMessages.deleteAccountErrorTitle(appContext)
+                _alertMessage.value = authException?.getLocalizedMessage(appContext)
+                    ?: ValidationMessages.accountNotDeleted(appContext)
                 _isLoading.value = false
                 _isShowMessage.value = true
             }

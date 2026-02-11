@@ -9,8 +9,6 @@ import com.mytimetablemaker.services.GTFSDataService
 import com.mytimetablemaker.services.ODPTDataService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import androidx.core.content.edit
 import com.mytimetablemaker.BuildConfig
@@ -25,12 +23,9 @@ interface SettingsLineViewModelInterface {
     val selectedLine: TransportationLine?
     val selectedDepartureStop: TransportationStop?
     val selectedArrivalStop: TransportationStop?
-    val selectedRideTime: Int
     val lineStops: List<TransportationStop>
     val lineSuggestions: List<TransportationLine>
-    val selectedGoorback: String
     val selectedLineNumber: Int
-    val isAllNotEmpty: Boolean
     var isLoadingTimetable: Boolean
     var loadingMessage: String?
     
@@ -51,25 +46,16 @@ class SettingsTimetableViewModel(
     
     // MARK: - Published Properties
     // Loading state for timetable generation
-    private val _isLoadingTimetable = MutableStateFlow(false)
-    val isLoadingTimetable: StateFlow<Boolean> = _isLoadingTimetable.asStateFlow()
-    
-    private val _loadingMessage = MutableStateFlow<String?>(null)
-    val loadingMessage: StateFlow<String?> = _loadingMessage.asStateFlow()
-    
+    private val isLoadingTimetable = MutableStateFlow(false)
+    private val loadingMessage = MutableStateFlow<String?>(null)
+
     // MARK: - Configuration Properties
     private val gtfsService = GTFSDataService(application)
     private val odptService = ODPTDataService(application)
-    private val consumerKey: String
-    private val challengeKey: String
-    
-    init {
-        // Get ODPT access token and challenge token from BuildConfig
-        consumerKey = BuildConfig.ODPT_ACCESS_TOKEN
-        challengeKey = BuildConfig.ODPT_CHALLENGE_TOKEN
-        android.util.Log.d("SettingsTimetableViewModel", "Initialized: consumerKey length=${consumerKey.length}, challengeKey length=${challengeKey.length}")
-    }
-    
+    // Get ODPT access token and challenge token from BuildConfig
+    private val consumerKey: String = BuildConfig.ODPT_ACCESS_TOKEN
+    private val challengeKey: String = BuildConfig.ODPT_CHALLENGE_TOKEN
+
     // MARK: - Helper Properties
     // Access line view model properties through computed properties
     private val goorback: String
@@ -87,23 +73,14 @@ class SettingsTimetableViewModel(
     private val selectedArrivalStop: TransportationStop?
         get() = lineViewModel?.selectedArrivalStop
     
-    private val selectedRideTime: Int
-        get() = lineViewModel?.selectedRideTime ?: 0
-    
     private val lineStops: List<TransportationStop>
         get() = lineViewModel?.lineStops ?: emptyList()
     
     private val lineSuggestions: List<TransportationLine>
         get() = lineViewModel?.lineSuggestions ?: emptyList()
     
-    private val selectedGoorback: String
-        get() = lineViewModel?.selectedGoorback ?: "back1"
-    
     private val selectedLineNumber: Int
         get() = lineViewModel?.selectedLineNumber ?: 1
-    
-    private val isAllNotEmpty: Boolean
-        get() = lineViewModel?.isAllNotEmpty ?: false
     
     // MARK: - Data Clearing
     // Clear timetable data for current route and line number for all calendar types
@@ -129,23 +106,36 @@ class SettingsTimetableViewModel(
     // MARK: - Unified Timetable Data Processing
     // Get timetable data and extract departure/arrival times for selected stops/stations
     suspend fun getTimeTableData(): Map<ODPTCalendarType, List<TransportationTime>> {
-        // Skip timetable generation if not all required fields are filled
-        if (!isAllNotEmpty || selectedLine == null) {
+        // Skip timetable generation if required selections are missing
+        val hasStops = selectedDepartureStop != null && selectedArrivalStop != null
+        if (selectedLine == null || !hasStops) {
+            android.util.Log.d(
+                "SettingsTimetableViewModel",
+                "getTimeTableData: skipped (line=${selectedLine?.code}, hasStops=$hasStops)"
+            )
             return emptyMap()
         }
         
-        _isLoadingTimetable.value = true
+        isLoadingTimetable.value = true
         val loadingText = getApplication<Application>().getString(R.string.generatingTimetable)
-        _loadingMessage.value = loadingText
+        loadingMessage.value = loadingText
         lineViewModel?.isLoadingTimetable = true
         lineViewModel?.loadingMessage = loadingText
         
         try {
+            android.util.Log.d(
+                "SettingsTimetableViewModel",
+                "getTimeTableData: begin line=${selectedLine?.code} kind=${selectedLine?.kind} dep=${selectedDepartureStop?.code} arr=${selectedArrivalStop?.code}"
+            )
             // Clear existing timetable data for all calendar types before generating new data
             clearAllTimetableData()
             
             // Get available calendar types for this line
             val availableCalendarTypes = getAvailableCalendarTypes()
+            android.util.Log.d(
+                "SettingsTimetableViewModel",
+                "getTimeTableData: calendarTypes=${availableCalendarTypes.map { it.rawValue }}"
+            )
             
             // Process data for each calendar type first (create timetables individually)
             val allTimes = mutableMapOf<ODPTCalendarType, List<TransportationTime>>()
@@ -153,37 +143,21 @@ class SettingsTimetableViewModel(
             // For GTFS routes, fetch all calendar types at once for better performance
             val selectedLine = this.selectedLine
             if (selectedLine?.kind == TransportationLineKind.BUS) {
+                android.util.Log.d("SettingsTimetableViewModel", "getTimeTableData: branch=BUS")
                 val operatorCode = selectedLine.operatorCode
                 val selectedOperator = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode }
-                if (selectedOperator?.apiType() == ODPTAPIType.GTFS) {
-                    val departureStop = selectedDepartureStop
-                    val arrivalStop = selectedArrivalStop
-                    if (departureStop != null && arrivalStop != null) {
-                        // Fetch all calendar types at once
-                        try {
-                        // TODO: Implement fetchGTFSBusTimetableForAllCalendarTypes in GTFSDataService
-                        // For now, fallback to individual processing
-                        for (calendarType in availableCalendarTypes) {
-                            val times = processBusTimetableData(calendarType)
-                            allTimes[calendarType] = times
-                        }
-                        } catch (e: Exception) {
-                            android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch GTFS bus timetable for all calendar types: ${e.message}", e)
-                            // Fallback to individual processing
-                            for (calendarType in availableCalendarTypes) {
-                                val times = processBusTimetableData(calendarType)
-                                allTimes[calendarType] = times
-                            }
-                        }
-                    }
-                } else {
-                    // For non-GTFS routes, process each calendar type individually
-                    for (calendarType in availableCalendarTypes) {
-                        val times = processBusTimetableData(calendarType)
-                        allTimes[calendarType] = times
-                    }
+                // For bus routes, process each calendar type individually
+                // GTFS routes are handled inside processBusTimetableData
+                for (calendarType in availableCalendarTypes) {
+                    android.util.Log.d(
+                        "SettingsTimetableViewModel",
+                        "getTimeTableData: bus calendar=${calendarType.rawValue} apiType=${selectedOperator?.apiType()}"
+                    )
+                    val times = processBusTimetableData(calendarType)
+                    allTimes[calendarType] = times
                 }
             } else {
+                android.util.Log.d("SettingsTimetableViewModel", "getTimeTableData: branch=RAILWAY")
                 // For railway routes, process each calendar type individually
                 for (calendarType in availableCalendarTypes) {
                     val times = processTrainTimetableData(calendarType)
@@ -273,8 +247,8 @@ class SettingsTimetableViewModel(
             
             return mergedTimes
         } finally {
-            _isLoadingTimetable.value = false
-            _loadingMessage.value = null
+            isLoadingTimetable.value = false
+            loadingMessage.value = null
             lineViewModel?.isLoadingTimetable = false
             lineViewModel?.loadingMessage = null
         }
@@ -294,7 +268,6 @@ class SettingsTimetableViewModel(
         if (cachedTypes != null && cachedTypes.isNotEmpty()) {
             val cachedCalendarTypes = cachedTypes.mapNotNull { ODPTCalendarType.fromRawValue(it) }
             if (cachedCalendarTypes.isNotEmpty()) {
-                android.util.Log.d("SettingsTimetableViewModel", "Found cached calendar types: ${cachedCalendarTypes.joinToString { it.displayName(getApplication()) }}")
                 return cachedCalendarTypes
             }
         }
@@ -313,11 +286,8 @@ class SettingsTimetableViewModel(
         
         // Ensure we have at least weekday and saturdayHoliday as fallback
         if (availableTypes.isEmpty()) {
-            android.util.Log.d("SettingsTimetableViewModel", "No calendar types found, using fallback: [weekday, saturdayHoliday]")
             return listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
         }
-        
-        android.util.Log.d("SettingsTimetableViewModel", "Found calendar types: ${availableTypes.joinToString { it.displayName(getApplication()) }}")
         return availableTypes
     }
     
@@ -342,7 +312,6 @@ class SettingsTimetableViewModel(
                 // TODO: Implement fetchGTFSCalendarTypes in GTFSDataService
                 // For now, return default calendar types
                 val calendarTypes = listOf(ODPTCalendarType.Weekday, ODPTCalendarType.SaturdayHoliday)
-                android.util.Log.d("SettingsTimetableViewModel", "GTFS Calendar Types: ${calendarTypes.joinToString { it.displayName(getApplication()) }}")
                 return calendarTypes
             } catch (e: Exception) {
                 android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch GTFS calendar types: ${e.message}", e)
@@ -362,16 +331,9 @@ class SettingsTimetableViewModel(
                 return emptyList()
             }
             
-            android.util.Log.d("SettingsTimetableViewModel", "Fetch URL: $apiLink")
-            
             try {
                 // Use challengeKey for CHALLENGE API type, otherwise use consumerKey
-                val authKey = if (dataSource.apiType() == ODPTAPIType.CHALLENGE) {
-                    challengeKey
-                } else {
-                    consumerKey
-                }
-                val (data, response) = odptService.fetchODPTDataWithAuth(apiLink, authKey)
+                val (data, response) = odptService.fetchODPTData(apiLink)
                 
                 if (response.code != 200) {
                     android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch calendar types - status: ${response.code}")
@@ -391,7 +353,7 @@ class SettingsTimetableViewModel(
                 }
                 
                 // Convert to ODPTCalendarType array and process
-                return processCalendarTypes(foundCalendarTypes, apiTypeName)
+                return processCalendarTypes(foundCalendarTypes)
                 
             } catch (e: Exception) {
                 android.util.Log.d("SettingsTimetableViewModel", "Error fetching calendar types from $apiTypeName: ${e.message}", e)
@@ -415,16 +377,9 @@ class SettingsTimetableViewModel(
         if (ascendingDirection.isNotEmpty()) {
             val ascendingLink = "${dataSource.apiLink(APIDataType.STOP_TIMETABLE)}&odpt:station=$stationCode&odpt:railDirection=$ascendingDirection"
             
-            android.util.Log.d("SettingsTimetableViewModel", "Fetch URL (ascending): $ascendingLink")
-            
             try {
                 // Use challengeKey for CHALLENGE API type, otherwise use consumerKey
-                val authKey = if (dataSource.apiType() == ODPTAPIType.CHALLENGE) {
-                    challengeKey
-                } else {
-                    consumerKey
-                }
-                val (data, response) = odptService.fetchODPTDataWithAuth(ascendingLink, authKey)
+                val (data, response) = odptService.fetchODPTData(ascendingLink)
                 
                 if (response.code == 200) {
                     val json = odptService.parseJSONArray(data)
@@ -436,7 +391,6 @@ class SettingsTimetableViewModel(
                         }
                     }
                     ascendingSuccess = true
-                    android.util.Log.d("SettingsTimetableViewModel", "Successfully fetched calendar types from ascending direction")
                 } else {
                     android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch calendar types from ascending direction - status: ${response.code}")
                 }
@@ -449,16 +403,9 @@ class SettingsTimetableViewModel(
         if (!ascendingSuccess && descendingDirection.isNotEmpty() && descendingDirection != ascendingDirection) {
             val descendingLink = "${dataSource.apiLink(APIDataType.STOP_TIMETABLE)}&odpt:station=$stationCode&odpt:railDirection=$descendingDirection"
             
-            android.util.Log.d("SettingsTimetableViewModel", "Fetch URL (descending): $descendingLink")
-            
             try {
                 // Use challengeKey for CHALLENGE API type, otherwise use consumerKey
-                val authKey = if (dataSource.apiType() == ODPTAPIType.CHALLENGE) {
-                    challengeKey
-                } else {
-                    consumerKey
-                }
-                val (data, response) = odptService.fetchODPTDataWithAuth(descendingLink, authKey)
+                val (data, response) = odptService.fetchODPTData(descendingLink)
                 
                 if (response.code == 200) {
                     val json = odptService.parseJSONArray(data)
@@ -469,7 +416,6 @@ class SettingsTimetableViewModel(
                             allCalendarTypes.add(calendar)
                         }
                     }
-                    android.util.Log.d("SettingsTimetableViewModel", "Successfully fetched calendar types from descending direction")
                 } else {
                     android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch calendar types from descending direction - status: ${response.code}")
                 }
@@ -479,11 +425,11 @@ class SettingsTimetableViewModel(
         }
         
         // Convert to ODPTCalendarType array and process
-        return processCalendarTypes(allCalendarTypes, apiTypeName)
+        return processCalendarTypes(allCalendarTypes)
     }
     
     // Process calendar types: remove duplicates and preserve .specific types
-    private fun processCalendarTypes(foundCalendarTypes: Set<String>, apiTypeName: String): List<ODPTCalendarType> {
+    private fun processCalendarTypes(foundCalendarTypes: Set<String>): List<ODPTCalendarType> {
         // Convert to ODPTCalendarType array
         val allTypes = foundCalendarTypes.mapNotNull { ODPTCalendarType.fromRawValue(it) }
         
@@ -513,12 +459,6 @@ class SettingsTimetableViewModel(
         
         val result = uniqueTypes.sortedBy { it.rawValue }
         
-        if (result.isNotEmpty()) {
-            android.util.Log.d("SettingsTimetableViewModel", "$apiTypeName: Found calendar types: ${result.joinToString { it.displayName(getApplication()) }}")
-        } else {
-            android.util.Log.d("SettingsTimetableViewModel", "$apiTypeName: No calendar types found")
-        }
-        
         return result
     }
     
@@ -527,20 +467,42 @@ class SettingsTimetableViewModel(
     private suspend fun processBusTimetableData(calendarType: ODPTCalendarType): List<TransportationTime> {
         // Check if this is a GTFS route
         val selectedLine = this.selectedLine ?: return emptyList()
+        android.util.Log.d(
+            "SettingsTimetableViewModel",
+            "processBusTimetableData: start calendar=${calendarType.rawValue} line=${selectedLine.code} dep=${selectedDepartureStop?.busStopPole} arr=${selectedArrivalStop?.busStopPole}"
+        )
         val operatorCode = selectedLine.operatorCode ?: return emptyList()
         val selectedOperator = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode }
             ?: return emptyList()
+        android.util.Log.d(
+            "SettingsTimetableViewModel",
+            "processBusTimetableData: operator=${selectedOperator.name} apiType=${selectedOperator.apiType()}"
+        )
         
         // For GTFS routes, fetch timetable data from GTFS files
         if (selectedOperator.apiType() == ODPTAPIType.GTFS) {
             val departureStop = selectedDepartureStop ?: return emptyList()
             val arrivalStop = selectedArrivalStop ?: return emptyList()
+            val departureStopId = departureStop.busStopPole ?: departureStop.code ?: return emptyList()
+            val arrivalStopId = arrivalStop.busStopPole ?: arrivalStop.code ?: return emptyList()
             
             try {
-                // TODO: Implement fetchGTFSBusTimetable in GTFSDataService
-                // For now, return empty list
-                val busTimes = emptyList<TransportationTime>()
-                android.util.Log.d("SettingsTimetableViewModel", "Fetched ${busTimes.size} GTFS bus times for ${calendarType.displayName(getApplication())}")
+                android.util.Log.d(
+                    "SettingsTimetableViewModel",
+                    "processBusTimetableData: GTFS routeId=${selectedLine.code} dep=$departureStopId arr=$arrivalStopId"
+                )
+                val busTimes = gtfsService.fetchGTFSTimetableForRoute(
+                    routeId = selectedLine.code,
+                    departureStopId = departureStopId,
+                    arrivalStopId = arrivalStopId,
+                    calendarType = calendarType,
+                    transportOperator = selectedOperator,
+                    consumerKey = consumerKey
+                )
+                android.util.Log.d(
+                    "SettingsTimetableViewModel",
+                    "processBusTimetableData: GTFS generated=${busTimes.size} calendar=${calendarType.rawValue}"
+                )
                 return busTimes
             } catch (e: Exception) {
                 android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch GTFS bus timetable: ${e.message}", e)
@@ -551,45 +513,70 @@ class SettingsTimetableViewModel(
         // For ODPT routes, use existing API-based processing
         // Fetch bus timetable data from API
         val busTimetableData = fetchBusTimetableData(calendarType)
+        android.util.Log.d(
+            "SettingsTimetableViewModel",
+            "processBusTimetableData: fetched timetables=${busTimetableData.size} (calendar=${calendarType.rawValue})"
+        )
+        val totalTimetables = busTimetableData.size
+        if (totalTimetables == 0) {
+            android.util.Log.d(
+                "SettingsTimetableViewModel",
+                "processBusTimetableData: empty API data (calendar=${calendarType.rawValue}, line=${selectedLine.code})"
+            )
+        }
         
         // Extract bus information and timetable objects in a single loop
         val transportationTimes = mutableListOf<TransportationTime>()
         
+        var totalObjects = 0
+        var matchedDeparture = 0
+        var matchedArrival = 0
         for (timetable in busTimetableData) {
             val busTimetableObjects = timetable["odpt:busTimetableObject"] as? List<*>
-                ?: continue
+                ?: run {
+                    android.util.Log.d(
+                        "SettingsTimetableViewModel",
+                        "processBusTimetableData: missing odpt:busTimetableObject"
+                    )
+                    continue
+                }
+            totalObjects += busTimetableObjects.size
             
             var departureTime: String? = null
             var arrivalTime: String? = null
             
             for (timetableObject in busTimetableObjects) {
                 val timetableObj = timetableObject as? Map<*, *> ?: continue
-                val currentBusstopPole = timetableObj["odpt:busstopPole"] as? String ?: ""
+                val currentBusStopPole = timetableObj["odpt:busstopPole"] as? String ?: ""
                 val currentDepartureTime = timetableObj["odpt:departureTime"] as? String ?: ""
                 val currentArrivalTime = timetableObj["odpt:arrivalTime"] as? String ?: ""
                 
-                // Check departure stop match using busstopPole
+                // Check departure stop match using busStopPole
                 val selectedDepartureStop = this.selectedDepartureStop
                 if (selectedDepartureStop != null) {
-                    val departureStop = selectedDepartureStop.busstopPole
-                    if (departureStop != null && currentBusstopPole == departureStop) {
+                    val departureStop = selectedDepartureStop.busStopPole
+                    if (departureStop != null && currentBusStopPole == departureStop) {
                         if (currentDepartureTime.isNotEmpty()) {
                             departureTime = currentDepartureTime
+                            matchedDeparture++
                         } else if (currentArrivalTime.isNotEmpty()) {
                             departureTime = currentArrivalTime
+                            matchedDeparture++
                         }
                     }
                 }
                 
-                // Check arrival stop match using busstopPole
+                // Check arrival stop match using busStopPole
                 val selectedArrivalStop = this.selectedArrivalStop
                 if (selectedArrivalStop != null) {
-                    val arrivalStop = selectedArrivalStop.busstopPole
-                    if (arrivalStop != null && currentBusstopPole == arrivalStop) {
+                    val arrivalStop = selectedArrivalStop.busStopPole
+                    if (arrivalStop != null && currentBusStopPole == arrivalStop) {
                         if (currentArrivalTime.isNotEmpty()) {
                             arrivalTime = currentArrivalTime
+                            matchedArrival++
                         } else if (currentDepartureTime.isNotEmpty()) {
                             arrivalTime = currentDepartureTime
+                            matchedArrival++
                         }
                     }
                 }
@@ -616,6 +603,17 @@ class SettingsTimetableViewModel(
                 }
             }
         }
+        if (transportationTimes.isEmpty()) {
+            android.util.Log.d(
+                "SettingsTimetableViewModel",
+                "processBusTimetableData: no matched times (calendar=${calendarType.rawValue}, line=${selectedLine.code}, timetables=$totalTimetables, objects=$totalObjects, depMatches=$matchedDeparture, arrMatches=$matchedArrival)"
+            )
+        } else {
+            android.util.Log.d(
+                "SettingsTimetableViewModel",
+                "processBusTimetableData: generated=${transportationTimes.size} (calendar=${calendarType.rawValue}, timetables=$totalTimetables, objects=$totalObjects, depMatches=$matchedDeparture, arrMatches=$matchedArrival)"
+            )
+        }
         
         return transportationTimes
     }
@@ -632,23 +630,31 @@ class SettingsTimetableViewModel(
         if (selectedOperator.apiType() == ODPTAPIType.GTFS) {
             // For GTFS routes, return empty array
             // GTFS timetable data will be fetched separately using GTFS files
-            android.util.Log.d("SettingsTimetableViewModel", "GTFS routes don't use ODPT API for timetable data")
             return emptyList()
         }
         
         // Use bus-specific timetable API (force bus API regardless of transportationType)
         val apiLink = "${selectedOperator.apiLink(APIDataType.TIMETABLE, TransportationKind.BUS)}&dc:title=$selectedLineTitle&odpt:calendar=${calendarType.rawValue}"
+        android.util.Log.d(
+            "SettingsTimetableViewModel",
+            "fetchBusTimetableData: calendar=${calendarType.rawValue} title=$selectedLineTitle link=$apiLink"
+        )
         
         try {
-            android.util.Log.d("SettingsTimetableViewModel", "Fetch URL: $apiLink")
             // Use challengeKey for CHALLENGE API type, otherwise use consumerKey
-            val authKey = if (selectedOperator.apiType() == ODPTAPIType.CHALLENGE) {
-                challengeKey
-            } else {
-                consumerKey
+            val (data, response) = odptService.fetchODPTData(apiLink)
+            if (response.code != 200) {
+                android.util.Log.d(
+                    "SettingsTimetableViewModel",
+                    "fetchBusTimetableData: HTTP ${response.code}"
+                )
+                return emptyList()
             }
-            val (data, _) = odptService.fetchODPTDataWithAuth(apiLink, authKey)
             val json = odptService.parseJSONArray(data)
+            android.util.Log.d(
+                "SettingsTimetableViewModel",
+                "fetchBusTimetableData: received ${json.size} timetables"
+            )
             return json.map { it }
         } catch (e: Exception) {
             android.util.Log.d("SettingsTimetableViewModel", "Error fetching bus timetable data: ${e.message}", e)
@@ -659,8 +665,6 @@ class SettingsTimetableViewModel(
     // Process train timetable data for specific day type
     private suspend fun processTrainTimetableData(calendarType: ODPTCalendarType): List<TransportationTime> {
         val selectedLine = this.selectedLine ?: return emptyList()
-        
-        android.util.Log.d("SettingsTimetableViewModel", "processTrainTimetableData: calendarType=${calendarType.rawValue}, departureStop=${selectedDepartureStop?.code}, arrivalStop=${selectedArrivalStop?.code}")
         
         // Get actual directions from JSON data with fallback
         val actualDirection = selectedLine.lineDirection ?: ""
@@ -674,33 +678,9 @@ class SettingsTimetableViewModel(
         for (direction in directions) {
             // Fetch train timetable data from API for this direction
             val trainTimetableData = fetchTrainTimetableData(calendarType, direction)
-            android.util.Log.d("SettingsTimetableViewModel", "Fetched ${trainTimetableData.size} train timetable entries for direction=$direction")
             
             // Extract train information and timetable objects in a single loop
             val transportationTimes = mutableListOf<TransportationTime>()
-            
-            // Log first few timetable entries for debugging
-            if (trainTimetableData.isNotEmpty()) {
-                val firstTimetable = trainTimetableData.firstOrNull()
-                val firstTimetableObjectsRaw = firstTimetable?.get("odpt:trainTimetableObject")
-                android.util.Log.d("SettingsTimetableViewModel", "First timetable raw: trainNumber=${firstTimetable?.get("odpt:trainNumber")}, trainTimetableObject type=${firstTimetableObjectsRaw?.javaClass?.simpleName}")
-                
-                val firstTimetableObjects = when (firstTimetableObjectsRaw) {
-                    is List<*> -> firstTimetableObjectsRaw
-                    is Map<*, *> -> listOf(firstTimetableObjectsRaw)
-                    else -> null
-                }
-                
-                if (firstTimetableObjects != null && firstTimetableObjects.isNotEmpty()) {
-                    val firstObject = firstTimetableObjects.firstOrNull() as? Map<*, *>
-                    android.util.Log.d("SettingsTimetableViewModel", "First timetable object sample: departureStation=${firstObject?.get("odpt:departureStation")}, arrivalStation=${firstObject?.get("odpt:arrivalStation")}, departureTime=${firstObject?.get("odpt:departureTime")}, keys=${firstObject?.keys}")
-                } else {
-                    android.util.Log.d("SettingsTimetableViewModel", "First timetable object is null or empty")
-                }
-            }
-            
-            var matchedCount = 0
-            var unmatchedCount = 0
             
             for (timetable in trainTimetableData) {
                 val trainNumber = timetable["odpt:trainNumber"] as? String ?: continue
@@ -712,7 +692,6 @@ class SettingsTimetableViewModel(
                     is List<*> -> trainTimetableObjectsRaw
                     is Map<*, *> -> listOf(trainTimetableObjectsRaw)
                     else -> {
-                        android.util.Log.d("SettingsTimetableViewModel", "trainTimetableObject is not List or Map: ${trainTimetableObjectsRaw?.javaClass?.simpleName}")
                         continue
                     }
                 }
@@ -745,18 +724,6 @@ class SettingsTimetableViewModel(
                     }
                 }
                 
-                // Debug: log why times are not matched
-                if (departureTime == null || arrivalTime == null) {
-                    unmatchedCount++
-                    if (unmatchedCount <= 3) {
-                        // Log first few unmatched entries for debugging
-                        val sampleObjects = trainTimetableObjects.take(3).mapNotNull { it as? Map<*, *> }
-                        android.util.Log.d("SettingsTimetableViewModel", "Unmatched train $trainNumber: looking for departure=${selectedDepartureStop?.code}, arrival=${selectedArrivalStop?.code}, found stations=${sampleObjects.map { it["odpt:departureStation"] }}")
-                    }
-                } else {
-                    matchedCount++
-                }
-                
                 // Only append if arrival time is later than departure time
                 if (departureTime != null && arrivalTime != null) {
                     // Convert time strings to minutes for comparison
@@ -778,7 +745,12 @@ class SettingsTimetableViewModel(
             }
             
             directionResults.add(transportationTimes)
-            android.util.Log.d("SettingsTimetableViewModel", "Processed ${transportationTimes.size} transportation times for direction=$direction (matched=$matchedCount, unmatched=$unmatchedCount)")
+            if (transportationTimes.isEmpty()) {
+                android.util.Log.d(
+                    "SettingsTimetableViewModel",
+                    "processTrainTimetableData: no matched times (calendar=${calendarType.rawValue}, line=${selectedLine.code}, direction=$direction)"
+                )
+            }
         }
         
         // Filter out empty results (directions that didn't generate a list)
@@ -787,21 +759,16 @@ class SettingsTimetableViewModel(
         // Choose the direction with smaller average ride time
         // For loop lines, both directions may have data, so compare average ride times
         val result = if (validResults.isEmpty()) {
-            android.util.Log.d("SettingsTimetableViewModel", "No valid results for calendarType=${calendarType.rawValue}")
             emptyList()
         } else if (validResults.size == 1) {
-            android.util.Log.d("SettingsTimetableViewModel", "Returning ${validResults[0].size} times from single direction")
             validResults[0]
         } else {
             // Both directions have data (e.g., loop line), choose the one with smaller average ride time
             val selectedResult = validResults.minByOrNull {
                 if (it.isEmpty()) Int.MAX_VALUE else it.sumOf { time -> time.rideTime } / it.size
             } ?: emptyList()
-            android.util.Log.d("SettingsTimetableViewModel", "Returning ${selectedResult.size} times from best direction")
             selectedResult
         }
-        
-        android.util.Log.d("SettingsTimetableViewModel", "processTrainTimetableData result: ${result.size} times for calendarType=${calendarType.rawValue}")
         return result
     }
     
@@ -816,39 +783,31 @@ class SettingsTimetableViewModel(
         // Build API link with direction parameter if direction is not empty
         // apiLink method will automatically use challengeKey for CHALLENGE API type
         // Ensure challengeKey is not empty for CHALLENGE API type
-        val effectiveChallengeKey = if (selectedOperator.apiType() == ODPTAPIType.CHALLENGE && challengeKey.isEmpty()) {
+        if (selectedOperator.apiType() == ODPTAPIType.CHALLENGE && challengeKey.isEmpty()) {
             android.util.Log.d("SettingsTimetableViewModel", "challengeKey is empty for CHALLENGE API type!")
-            consumerKey // Fallback to consumerKey if challengeKey is empty
-        } else {
-            challengeKey
         }
         var apiLink = "${selectedOperator.apiLink(APIDataType.TIMETABLE)}&odpt:railway=$selectedLineCode&odpt:calendar=${calendarType.rawValue}"
-        android.util.Log.d("SettingsTimetableViewModel", "Built API link: $apiLink (challengeKey length=${effectiveChallengeKey.length})")
         if (direction.isNotEmpty()) {
             apiLink += "&odpt:railDirection=$direction"
         }
+        android.util.Log.d(
+            "SettingsTimetableViewModel",
+            "fetchTrainTimetableData: calendar=${calendarType.rawValue} direction=$direction link=$apiLink"
+        )
         
         try {
-            android.util.Log.d("SettingsTimetableViewModel", "Fetch URL: $apiLink")
             // Use challengeKey for CHALLENGE API type, otherwise use consumerKey
-            val authKey = if (selectedOperator.apiType() == ODPTAPIType.CHALLENGE) {
-                challengeKey
-            } else {
-                consumerKey
-            }
-            val (data, response) = odptService.fetchODPTDataWithAuth(apiLink, authKey)
+            val (data, response) = odptService.fetchODPTData(apiLink)
             
             if (response.code != 200) {
                 android.util.Log.d("SettingsTimetableViewModel", "HTTP error ${response.code} for train timetable: $apiLink")
                 return emptyList()
             }
-            
-            // Log response for debugging
-            val responseString = String(data)
-            android.util.Log.d("SettingsTimetableViewModel", "Response length: ${responseString.length}, first 200 chars: ${responseString.take(200)}")
-            
             val json = odptService.parseJSONArray(data)
-            android.util.Log.d("SettingsTimetableViewModel", "Parsed ${json.size} timetable entries")
+            android.util.Log.d(
+                "SettingsTimetableViewModel",
+                "fetchTrainTimetableData: received ${json.size} timetables"
+            )
             return json.map { it }
         } catch (e: Exception) {
             android.util.Log.d("SettingsTimetableViewModel", "Error fetching train timetable data: ${e.message}", e)
@@ -856,375 +815,10 @@ class SettingsTimetableViewModel(
         }
     }
     
-    // MARK: - Train Route Validation
-    // Get station timetable data for determined direction and find common train numbers
-    suspend fun getStationTimetableData(): Map<ODPTCalendarType, List<TransportationTime>> {
-        // Skip timetable generation if not all required fields are filled
-        if (!isAllNotEmpty) {
-            return emptyMap()
-        }
-        
-        _isLoadingTimetable.value = true
-        val loadingText = getApplication<Application>().getString(R.string.generatingTimetable)
-        _loadingMessage.value = loadingText
-        lineViewModel?.isLoadingTimetable = true
-        lineViewModel?.loadingMessage = loadingText
-        
-        try {
-            // Clear existing timetable data for all calendar types before generating new data
-            clearAllTimetableData()
-            
-            val selectedLine = this.selectedLine ?: return emptyMap()
-            
-            // Get the actual direction from selectedLine
-            val actualDirection = selectedLine.lineDirection ?: ""
-            
-            // Get actual directions from JSON data with fallback
-            val ascendingDirection = selectedLine.ascendingRailDirection ?: actualDirection
-            val descendingDirection = selectedLine.descendingRailDirection ?: actualDirection
-            
-            val allTimes = mutableMapOf<ODPTCalendarType, List<TransportationTime>>()
-            
-            // Get available calendar types dynamically
-            // Same calendar types for TrainTimetable and StationTimetable on the same line
-            val availableCalendarTypes = getAvailableCalendarTypes()
-            
-            for (calendarType in availableCalendarTypes) {
-                // Get data for both directions
-                val directions = listOf(ascendingDirection, descendingDirection)
-                val directionResults = mutableListOf<List<TransportationTime>>()
-                
-                for (direction in directions) {
-                    // Get departure and arrival data for this direction
-                    val departureLink = stationTimetableApiLink(true, calendarType, direction)
-                    val arrivalLink = stationTimetableApiLink(false, calendarType, direction)
-                    
-                    val departureData = fetchStationTimetableData(departureLink)
-                    val arrivalData = fetchStationTimetableData(arrivalLink)
-                    
-                    // Process this direction if we have both departure and arrival data
-                    val result = if (departureData.isNotEmpty()) {
-                        getEstimatedTrainTime(
-                            departureTimetableData = departureData,
-                            arrivalTimetableData = arrivalData,
-                            calendarType = calendarType,
-                            approxRideTime = selectedRideTime
-                        )
-                    } else {
-                        emptyList()
-                    }
-                    directionResults.add(result)
-                }
-                
-                // Choose the direction with smaller average ride time
-                val selectedResult = directionResults.minByOrNull {
-                    if (it.isEmpty()) Int.MAX_VALUE else it.map { time -> time.rideTime }.sum() / it.size
-                } ?: emptyList()
-                
-                // Save to dictionary with calendar type as key
-                allTimes[calendarType] = selectedResult
-            }
-            return allTimes
-        } finally {
-            _isLoadingTimetable.value = false
-            _loadingMessage.value = null
-            lineViewModel?.isLoadingTimetable = false
-            lineViewModel?.loadingMessage = null
-        }
-    }
-    
-    // MARK: - Station Timetable Data Processing
-    // Generate station timetable link with flexible parameters
-    fun stationTimetableApiLink(isDeparture: Boolean, calendarType: ODPTCalendarType, direction: String? = null): String {
-        // Generate timetable information links for departure and arrival stations
-        val operatorCode = selectedLine?.operatorCode ?: ""
-        val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode }
-        val stationTimetableApiLink = dataSource?.apiLink(APIDataType.STOP_TIMETABLE) ?: ""
-        
-        // Extract station name from station code (remove "odpt.Station:" prefix)
-        val lineCode = selectedLine?.code ?: ""
-        val lineName = lineCode.replace("odpt.Railway:", "&owl:sameAs=odpt.StationTimetable:")
-        
-        val stationCode = if (isDeparture) selectedDepartureStop?.code else selectedArrivalStop?.code
-        val stationName = stationCode?.split(".")?.lastOrNull() ?: ""
-        
-        // Use provided direction or fallback to lineDirection from selectedLine
-        val directionCode = direction ?: (selectedLine?.lineDirection ?: "")
-        val directionName = directionCode.replace("odpt.RailDirection:", "")
-        
-        val dateSuffix = calendarType.rawValue.replace("odpt.Calendar:", "")
-        
-        return "$stationTimetableApiLink$lineName.$stationName.$directionName.$dateSuffix"
-    }
-    
-    // MARK: - Timetable Data Retrieval
-    // Get timetable data from API endpoint
-    private suspend fun fetchStationTimetableData(urlString: String): List<StationTimetableData> {
-        try {
-            android.util.Log.d("SettingsTimetableViewModel", "Fetch URL: $urlString")
-            // Determine which key to use based on operator
-            val operatorCode = selectedLine?.operatorCode ?: ""
-            val selectedOperator = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode }
-            val authKey = if (selectedOperator?.apiType() == ODPTAPIType.CHALLENGE) {
-                challengeKey
-            } else {
-                consumerKey
-            }
-            val (data, response) = odptService.fetchODPTDataWithAuth(urlString, authKey)
-            
-            if (response.code != 200) {
-                android.util.Log.d("SettingsTimetableViewModel", "Failed to fetch calendar types from ${if (urlString.contains("Westbound")) "ascending" else "descending"} direction - status: ${response.code}")
-                return emptyList()
-            }
-            
-            // Parse JSON and extract train data
-            val json = odptService.parseJSONArray(data)
-            val firstObject = json.firstOrNull() ?: return emptyList()
-            val stationTimetableObjects = firstObject["odpt:stationTimetableObject"] as? List<*>
-                ?: return emptyList()
-            
-            // Parse timetable objects into structured data
-            val parsedData = stationTimetableObjects.mapNotNull { timetableObject ->
-                val timetableObj = timetableObject as? Map<*, *> ?: return@mapNotNull null
-                val departureTime = timetableObj["odpt:departureTime"] as? String
-                    ?: return@mapNotNull null
-                
-                val trainNumber = timetableObj["odpt:trainNumber"] as? String ?: ""
-                val trainType = timetableObj["odpt:trainType"] as? String ?: ""
-                val destinationStation = ((timetableObj["odpt:destinationStation"] as? List<*>)?.firstOrNull() as? String)
-                    ?: ""
-                
-                // Apply timetableHour extension for 0-3 AM times (add 24 hours for previous day)
-                val adjustedDepartureTime = departureTime.adjustedForTimetable()
-                
-                StationTimetableData(
-                    trainNumber = trainNumber,
-                    departureTime = adjustedDepartureTime,
-                    destinationStation = destinationStation,
-                    trainType = trainType
-                )
-            }
-            
-            // Sort by departure time in ascending order (earliest first)
-            return parsedData.sortedWith { first, second ->
-                val firstMinutes = first.departureTime.timeToMinutes
-                val secondMinutes = second.departureTime.timeToMinutes
-                firstMinutes.compareTo(secondMinutes)
-            }
-        } catch (e: Exception) {
-            android.util.Log.d("SettingsTimetableViewModel", "Failed to process timetable data from $urlString: ${e.message}", e)
-            return emptyList()
-        }
-    }
-    
-    // MARK: - trainNumber-less Timetable Generation
-    // Estimate departure times using simplified matching when train numbers are not available
-    // Returns array of TrainTime objects with estimated departure times
-    private suspend fun getEstimatedTrainTime(
-        departureTimetableData: List<StationTimetableData>,
-        arrivalTimetableData: List<StationTimetableData>,
-        calendarType: ODPTCalendarType,
-        approxRideTime: Int
-    ): List<TransportationTime> {
-        // Get unique train types from departure data
-        val trainTypeList = departureTimetableData.trainTypeList()
-        
-        val allTransportationTimes = mutableListOf<TransportationTime>()
-        
-        // Process each train type separately
-        for (trainType in trainTypeList) {
-            // Filter departure and arrival data by train type
-            val departureData = departureTimetableData.filteredBy(trainType)
-            val arrivalData = arrivalTimetableData.filteredBy(trainType)
-            
-            // Skip if no data for this train type
-            if (departureData.isEmpty()) continue
-            
-            val terminalDepartureData = departureData.filter { data ->
-                data.destinationStation.isNotEmpty() && data.destinationStation == selectedArrivalStop?.code
-            }
-            
-            // Create terminalTrainTimes list from terminalDepartureData
-            val terminalTrainTimes = terminalDepartureData.map { data ->
-                TrainTime(
-                    departureTime = data.departureTime,
-                    arrivalTime = "",
-                    trainNumber = data.trainNumber.ifEmpty { null },
-                    trainType = data.trainType.ifEmpty { null },
-                    rideTime = selectedRideTime
-                )
-            }
-            if (terminalTrainTimes.isNotEmpty()) {
-                allTransportationTimes.addAll(terminalTrainTimes)
-            }
-            
-            // Remove terminalDepartureData from departureData
-            val filteredDepartureData = departureData.filter { data ->
-                data.destinationStation.isEmpty() || data.destinationStation != selectedArrivalStop?.code
-            }
-            
-            // Process this train type with filtered data
-            if (filteredDepartureData.isNotEmpty()) {
-                val trainTimes = processTrainType(
-                    departureData = filteredDepartureData,
-                    arrivalData = arrivalData,
-                    trainType = trainType,
-                    approxRideTime = approxRideTime
-                )
-                // Calculate average ride time for this train type
-                if (trainTimes.isNotEmpty()) {
-                    allTransportationTimes.addAll(trainTimes)
-                }
-            }
-        }
-        
-        // Sort all train times by departure time
-        return allTransportationTimes.sortedWith { first, second ->
-            val firstMinutes = first.departureTime.timeToMinutes
-            val secondMinutes = second.departureTime.timeToMinutes
-            firstMinutes.compareTo(secondMinutes)
-        }
-    }
-    
-    // MARK: - Train Type Processing with Advanced Algorithm
-    // Process timetable data for a specific train type using advanced statistical methods
-    private fun processTrainType(
-        departureData: List<StationTimetableData>,
-        arrivalData: List<StationTimetableData>,
-        trainType: String,
-        approxRideTime: Int
-    ): List<TransportationTime> {
-        // 0) Filter out trains that don't reach the arrival station (only for trains without train numbers)
-        val filteredDepartureData = departureData.filter { data ->
-            !(data.trainNumber.isEmpty() && !isTrainReachingArrivalStop(data.destinationStation))
-        }
-        
-        // 0.5) Filter arrival data to match departure destinations
-        val filteredArrivalData = arrivalData.filter { arrivalDataItem ->
-            // Check if there's a matching departure with the same destination
-            filteredDepartureData.any { departureDataItem ->
-                departureDataItem.destinationStation == arrivalDataItem.destinationStation
-            }
-        }
-        
-        // 1) Build departure and arrival station data
-        val departureTimes = filteredDepartureData.map { it.departureTime }.filter { it.isNotEmpty() }
-        val arrivalTimes = filteredArrivalData.map { it.departureTime }.filter { it.isNotEmpty() }
-        
-        // 2) Sort time strings directly
-        val sortedDepartureTimes = departureTimes.sorted()
-        val sortedArrivalTimes = arrivalTimes.sorted()
-        
-        // 5) Collect pairs using no duplicates with minimum ride time within range
-        val transportationTimes = mutableListOf<TransportationTime>()
-        val usedArrivals = mutableSetOf<Int>() // Track used arrival indices
-        
-        for (departureTime in sortedDepartureTimes) {
-            var bestArrivalIndex: Int? = null
-            var minDistanceFromAverage = Double.MAX_VALUE
-            
-            for ((index, arrivalTime) in sortedArrivalTimes.withIndex()) {
-                // Skip if this arrival has already been used
-                if (usedArrivals.contains(index)) continue
-                
-                val rideTimeMinutes = departureTime.calculateRideTime(arrivalTime)
-                // Skip if distance from target exceeds half of approxRideTime
-                val distanceFromTarget = kotlin.math.abs(rideTimeMinutes - approxRideTime).toDouble()
-                if (distanceFromTarget > approxRideTime / 2.0) continue
-                
-                if (distanceFromTarget < minDistanceFromAverage) {
-                    minDistanceFromAverage = distanceFromTarget
-                    bestArrivalIndex = index
-                }
-            }
-            
-            // Use the best arrival and mark it as used
-            bestArrivalIndex?.let { bestIndex ->
-                val trainTime = TrainTime(
-                    departureTime = departureTime,
-                    arrivalTime = sortedArrivalTimes[bestIndex],
-                    trainNumber = null,
-                    trainType = trainType,
-                    rideTime = departureTime.calculateRideTime(sortedArrivalTimes[bestIndex])
-                )
-                transportationTimes.add(trainTime)
-                usedArrivals.add(bestIndex)
-            }
-        }
-        return transportationTimes
-    }
-    
-    // Check if train reaches the arrival station (destination station index is not between departure and arrival)
-    private fun isTrainReachingArrivalStop(destinationStation: String): Boolean {
-        // Get station indices for departure, arrival, and destination stations
-        val departureIndex = selectedDepartureStop?.index
-        val arrivalIndex = selectedArrivalStop?.index
-        val destinationIndex = getStationIndexFromDestinationStation(destinationStation)
-        
-        if (departureIndex == null || arrivalIndex == null || destinationIndex == null) {
-            // If any index is missing, allow the train (fallback behavior)
-            return true
-        }
-        
-        // Check if destination station index is between departure and arrival stations
-        val minIndex = minOf(departureIndex, arrivalIndex)
-        val maxIndex = maxOf(departureIndex, arrivalIndex)
-        
-        // If destination station is between departure and arrival, the train doesn't reach the arrival station
-        if (destinationIndex in (minIndex + 1)..<maxIndex) {
-            return false
-        }
-        
-        // Train reaches the arrival station
-        return true
-    }
-    
-    // MARK: - Station Index Helper
-    // Get station index from destination station code (only for selected line)
-    private fun getStationIndexFromDestinationStation(destinationStationCode: String): Int? {
-        // Only search in the selected line's stations
-        val selectedLine = this.selectedLine ?: return null
-        
-        // Parse destination station code (e.g., "odpt.Station:Odakyu.Odawara.Odawara")
-        // Extract the line code from selected (e.g., "Odawara" from "odpt.Railway:Odakyu.Odawara")
-        val selectedComponents = selectedLine.code.split(".")
-        val selectedLineCode = selectedComponents.getOrNull(2) ?: ""
-        
-        // Only process if the destination station belongs to the selected line
-        // Check if the destination station code contains the selected line code
-        if (!destinationStationCode.contains(selectedLineCode)) {
-            return null
-        }
-        
-        // Extract the station name from the code
-        val stationName = destinationStationCode.split(".").lastOrNull() ?: ""
-        
-        // Use already loaded line stops and filter for railway stations
-        val selectedLineStations = lineStops.filter { stop ->
-            stop.kind == TransportationLineKind.RAILWAY
-        }.mapNotNull { stop ->
-            if (stop.kind == TransportationLineKind.RAILWAY) {
-                stop
-            } else {
-                null
-            }
-        }
-        
-        // Find station by code or name match
-        val station = selectedLineStations.firstOrNull {
-            it.code == destinationStationCode ||
-            it.name == stationName ||
-            it.title?.getLocalizedName(getApplication(), it.name) == stationName
-        }
-        return station?.index
-    }
-    
     // MARK: - Timetable Data Saving
     // Save timetable data to SharedPreferences for display in TimetableContentView
     // Saves both departure times and ride times grouped by hour
     private fun saveTimetableToUserDefaults(transportationTimes: List<TransportationTime>, calendarType: ODPTCalendarType) {
-        android.util.Log.d("SettingsTimetableViewModel", "saveTimetableToUserDefaults: ${transportationTimes.size} times for calendarType=${calendarType.rawValue}, goorback=$goorback, lineIndex=${lineIndex + 1}")
-        
         // Clear existing timetable data for this line and calendar type
         // IMPORTANT: Use initialized goorback and lineIndex to prevent data corruption across routes
         clearTimetableDataForRoute(calendarType, goorback, lineIndex + 1)
@@ -1242,23 +836,16 @@ class SettingsTimetableViewModel(
             }
         }
         
-        android.util.Log.d("SettingsTimetableViewModel", "Grouped into ${hourlyTransportationTimes.size} hours: ${hourlyTransportationTimes.keys.sorted()}")
-        
         // Sort and save to SharedPreferences using unified TransportationTime format
         for ((hour, transportationTimesForHour) in hourlyTransportationTimes) {
             val sortedTransportationTimes = transportationTimesForHour.sortedBy { it.departureTime }
             // IMPORTANT: Use initialized goorback and lineIndex to prevent data corruption across routes
-            
-            android.util.Log.d("SettingsTimetableViewModel", "Saving ${sortedTransportationTimes.size} times for hour=$hour")
             goorback.saveTransportationTimes(sortedTransportationTimes, calendarType, lineIndex, hour, sharedPreferences)
         }
         
         // Save train type list for the entire timetable
         // IMPORTANT: Use initialized goorback and lineIndex to prevent data corruption across routes
         val allTransportationTimes = hourlyTransportationTimes.values.flatten()
-        val trainTypes = allTransportationTimes.mapNotNull { (it as? TrainTime)?.trainType }.distinct()
-        android.util.Log.d("SettingsTimetableViewModel", "Saving ${trainTypes.size} train types: $trainTypes")
-        
         goorback.saveTrainTypeList(allTransportationTimes, calendarType, lineIndex, sharedPreferences)
         
         // Ensure all SharedPreferences changes are synchronized to disk
@@ -1267,27 +854,11 @@ class SettingsTimetableViewModel(
         }
     }
     
-    // MARK: - Common Timetable Data Finalization with Arrays
-    // Common post-processing for timetable data with weekday/weekend arrays
-    suspend fun finalizeTimetableData(weekdayTimes: List<TransportationTime>, weekendTimes: List<TransportationTime>) {
-        // Save timetable data using unified TransportationTime format
-        saveTimetableToUserDefaults(weekdayTimes, ODPTCalendarType.Weekday)
-        saveTimetableToUserDefaults(weekendTimes, ODPTCalendarType.SaturdayHoliday)
-        
-        // Save all data after timetable data has been processed and saved
-        lineViewModel?.saveAllDataToUserDefaults()
-        
-        // Notify that timetable data has been updated
-        // TODO: Implement notification system for Android
-    }
-    
     // MARK: - Common Timetable Data Finalization with Calendar Types
     // Common post-processing for timetable data with individual calendar types
     suspend fun finalizeTimetableData(calendarTimes: Map<ODPTCalendarType, List<TransportationTime>>) {
-        android.util.Log.d("SettingsTimetableViewModel", "finalizeTimetableData: ${calendarTimes.size} calendar types, total times=${calendarTimes.values.sumOf { it.size }}")
         // Save timetable data for each calendar type individually
         for ((calendarType, times) in calendarTimes) {
-            android.util.Log.d("SettingsTimetableViewModel", "Saving ${times.size} times for calendarType=${calendarType.rawValue}")
             saveTimetableToUserDefaults(times, calendarType)
         }
         

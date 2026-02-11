@@ -8,12 +8,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-// MARK: - Screen Size Extensions
-// Screen dimensions and responsive sizing calculations
+// Screen dimensions and responsive sizing utilities.
+// Centralizes size rules for layouts.
 object ScreenSize {
     
-    // MARK: - Basic Screen Properties
-    // Use LocalConfiguration for actual screen size
+    // Basic screen properties from LocalConfiguration.
     @Composable
     fun screenWidth(): Dp = LocalConfiguration.current.screenWidthDp.dp
     @Composable
@@ -25,7 +24,7 @@ object ScreenSize {
         WindowInsets.statusBars.getTop(this).toDp()
     }
 
-    // MARK: - Splash Screen
+    // Splash screen sizing.
     @Composable
     fun splashTitleFontSize(): Dp = customWidth() * 0.075f
     @Composable
@@ -35,7 +34,7 @@ object ScreenSize {
     @Composable
     fun splashLoadingSpacing(): Dp = screenHeight() * 0.02f
     
-    // MARK: - Header & Navigation
+    // Header and navigation sizing.
     @Composable
     fun headerHeight(): Dp = operationButtonWidth()
     @Composable
@@ -53,7 +52,7 @@ object ScreenSize {
     @Composable
     fun operationButtonMargin(): Dp = customWidth() / 24f
     
-    // MARK: - Main Content Layout
+    // Main content layout sizing.
     @Composable
     fun routeSingleWidth(): Dp = customWidth() * 0.7f
     @Composable
@@ -91,7 +90,7 @@ object ScreenSize {
     @Composable
     fun timeFontSize(): Dp = customWidth() * 0.056f
 
-    // MARK: - AdMob Banner
+    // AdMob banner sizing.
     @Composable
     fun admobBannerWidth(): Dp = customWidth()
     @Composable
@@ -99,7 +98,7 @@ object ScreenSize {
     @Composable
     fun admobBannerHeight(): Dp = if ((screenHeight() - headerHeight() - 75.dp) < 500.dp) 50.dp else (screenHeight() - headerHeight() - 75.dp) / 10
 
-    // MARK: - Login
+    // Login screen sizing.
     @Composable
     fun loginTitleFontSize(): Dp = customWidth() * 0.06f
     @Composable
@@ -125,7 +124,7 @@ object ScreenSize {
     @Composable
     fun loginLoadingIndicatorSize(): Dp = customWidth() * 0.06f
     
-    // MARK: - Timetable
+    // Timetable sizing.
     @Composable
     fun timetableDisplayWidth(): Dp = customWidth() * 0.90f
     @Composable
@@ -173,7 +172,7 @@ object ScreenSize {
     @Composable
     fun timetableVerticalSpacing(): Dp = screenHeight() * 0.012f
     @Composable
-    fun timetableCopyMenuOffsetY(): Dp = screenHeight() * 0.18f  // SettingsTimetableSheet: copy time dropdown (発車時刻のコピー)
+    fun timetableCopyMenuOffsetY(): Dp = screenHeight() * 0.18f  // SettingsTimetableSheet: copy time dropdown
     @Composable
     fun timetableCalendarMenuOffsetY(): Dp = screenHeight() * 0.06f  // SettingsTimetableSheet: calendar type dropdown
     @Composable
@@ -182,10 +181,8 @@ object ScreenSize {
     fun timetablePickerTopPadding(): Dp = screenHeight() * 0.000f
     @Composable
     fun timetablePickerBottomPadding(): Dp = screenHeight() * 0.000f
-    @Composable
-    fun settingsTimetableSheetHeight(): Dp = screenHeight() * 0.6f
 
-    // MARK: - Settings
+    // Settings screen sizing.
     @Composable
     fun settingsTitleFontSize(): Dp = screenHeight() * 0.022f
     @Composable
@@ -199,7 +196,7 @@ object ScreenSize {
     @Composable
     fun settingsFontSize(): Dp = screenHeight() * 0.018f
     
-    // MARK: - Settings Sheet Common
+    // Common settings sheet sizing.
     @Composable
     fun settingsSheetVerticalSpacing(): Dp = screenHeight() * 0.012f
     @Composable
@@ -252,8 +249,10 @@ object ScreenSize {
     fun settingsSheetBackButtonPadding(): Dp = customWidth() * 0.02f
     @Composable
     fun settingsSheetDropdownContentPaddingVertical(): Dp = screenHeight() * 0.005f
+    @Composable
+    fun settingsTimetableSheetHeight(): Dp = screenHeight() * 0.6f
 
-    // MARK: - Settings Line Sheet
+    // Settings line sheet sizing.
     @Composable
     fun settingsLineSheetPickerPadding(): Dp = screenHeight() * 0.000f
     @Composable
@@ -285,7 +284,7 @@ object ScreenSize {
     @Composable
     fun settingsLineSheetColorCircleSmallSize(): Dp = customWidth() * 0.05f
 
-    // MARK: - Alert Dialog
+    // Alert dialog sizing.
     @Composable
     fun alertDialogContentPadding(): Dp = customWidth() * 0.02f
     @Composable
@@ -301,7 +300,7 @@ object ScreenSize {
     @Composable
     fun alertDialogElevation(): Dp = customWidth() * 0.015f
 
-    // MARK: - Custom Component
+    // Custom component sizing.
     @Composable
     fun customToggleSpacing(): Dp = screenHeight() * 0.006f
     @Composable
@@ -315,8 +314,7 @@ object ScreenSize {
     @Composable
     fun progressIndicatorSize(): Dp = customWidth() * 0.1f
 
-    
-    // MARK: - Common UI Elements
+    // Common UI element sizes.
     @Composable
     fun dividerWidth(): Dp = 1.5.dp
     @Composable
