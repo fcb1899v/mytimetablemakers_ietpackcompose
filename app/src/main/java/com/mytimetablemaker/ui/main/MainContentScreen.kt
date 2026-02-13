@@ -52,8 +52,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// MARK: - Main Content Screen
-// Primary screen displaying transfer information, timetables, and navigation controls
+// Main screen showing transfers, timetables, and navigation.
 @Composable
 fun MainContentScreen(
     viewModel: MainViewModel? = null,
@@ -64,18 +63,18 @@ fun MainContentScreen(
     val context = LocalContext.current
     val application = context.applicationContext as Application
     
-    // Create ViewModels if not provided
+    // Create ViewModel if not provided.
     val mainViewModel = viewModel ?: remember { MainViewModel(application) }
 
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
-    // State for sheet management
+    // Sheet state.
     var isShowingLineSheet by remember { mutableStateOf(false) }
     var isShowingTransferSheet by remember { mutableStateOf(false) }
     var sheetGoorback by remember { mutableStateOf<String?>(null) }
     var sheetLineIndex by remember { mutableStateOf<Int?>(null) }
     
-    // Use ViewModel properties directly - they are tracked by Compose automatically
+    // Snapshot ViewModel state used by Compose.
     val dateToDisplay = mainViewModel.displayDate ?: mainViewModel.selectDate
     val timeLabel = mainViewModel.timeLabel
     val isTimeStop = mainViewModel.isTimeStop
@@ -100,24 +99,23 @@ fun MainContentScreen(
     val lineKindArray2 = mainViewModel.lineKindArray2
     val isShowRoute2 = mainViewModel.isShowRoute2
 
-    // Reload data when isBack changes
+    // Reload data when route direction changes.
     LaunchedEffect(isBack) {
         mainViewModel.updateAllDataFromUserDefaults()
     }
     
-    // Listen to SharedPreferences changes and update data
-    // Also listen for SettingsLineUpdated and SettingsTransferUpdated notifications
+    // Listen for SharedPreferences changes and update data.
     DisposableEffect(isBack) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            // Update data on any SharedPreferences change (same as UserDefaults.didChangeNotification)
+            // Update data on any SharedPreferences change.
             mainViewModel.updateAllDataFromUserDefaults()
             
-            // Also check for specific notification keys (SettingsLineUpdated, SettingsTransferUpdated)
+            // Check specific update flags.
             if (key == "SettingsLineUpdated" || key == "SettingsTransferUpdated") {
                 mainViewModel.updateAllDataFromUserDefaults()
             }
             
-            // Update route2 flags when route2 setting changes
+            // Update route2 flags when the setting changes.
             if (key == "back2".isShowRoute2Key() || key == "go2".isShowRoute2Key()) {
                 mainViewModel.updateAllDataFromUserDefaults()
             }
@@ -128,7 +126,7 @@ fun MainContentScreen(
         }
     }
     
-    // Ensure timer is running when MainContentScreen appears
+    // Ensure timer is running when the screen appears.
     DisposableEffect(Unit) {
         if (isTimeStop) {
             mainViewModel.startButton()
@@ -136,7 +134,7 @@ fun MainContentScreen(
         onDispose { }
     }
 
-    // Update dateLabel and timeLabel when selectDate changes
+    // Update date/time when selectDate changes.
     LaunchedEffect(mainViewModel.selectDate) {
         mainViewModel.updateDate(mainViewModel.selectDate)
         if (isTimeStop) {
@@ -151,13 +149,13 @@ fun MainContentScreen(
     val timeArrayString1 = mainViewModel.timeArrayString1
     val timeArrayString2 = mainViewModel.timeArrayString2
 
-    // Set status bar icons appearance (light/dark)
+    // Set status bar icon appearance.
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (view.context as? android.app.Activity)?.window
         if (window != null) {
             val controller = WindowCompat.getInsetsController(window, view)
-            // Set status bar content to light (white icons) for dark background (Primary color)
+            // Use light icons on the Primary background.
             controller.isAppearanceLightStatusBars = false
         }
         onDispose { }
@@ -187,25 +185,25 @@ fun MainContentScreen(
                 .background(White)
                 .padding(paddingValues)
         ) {
-        // MARK: - Main Content
+        // Main content.
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // MARK: - Header Section
+            // Header section.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Primary),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Date and Time Display
+                // Date and time display.
                 val context = LocalContext.current
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(ScreenSize.headerDateMargin()),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Date Display
+                    // Date display.
                     var showDatePicker by remember { mutableStateOf(false) }
                     val calendar = Calendar.getInstance()
                     val initialYear = calendar.get(Calendar.YEAR)
@@ -255,7 +253,7 @@ fun MainContentScreen(
                         }
                     }
                     
-                    // Time Display
+                    // Time display.
                     if (isTimeStop) {
                         var showTimePicker by remember { mutableStateOf(false) }
                         val initialHour = calendar.get(Calendar.HOUR_OF_DAY)
@@ -302,9 +300,9 @@ fun MainContentScreen(
                         }
                     } else {
                         DisposableEffect(Unit) {
-                            mainViewModel.ensureTimerRunning()
+                            mainViewModel.startButton()
                             onDispose {
-                                mainViewModel.stopTimerOnDisappear()
+                                mainViewModel.stopButton()
                             }
                         }
                         
@@ -317,7 +315,7 @@ fun MainContentScreen(
                     }
                 }
                 
-                // Operation Buttons
+                // Operation buttons.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(ScreenSize.operationButtonMargin()),
                     verticalAlignment = Alignment.CenterVertically
@@ -369,7 +367,7 @@ fun MainContentScreen(
                 }
             }
         
-            // MARK: - Transfer Information Display
+            // Transfer information display.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -384,7 +382,7 @@ fun MainContentScreen(
 
                 Spacer(modifier = Modifier.width(ScreenSize.routeSidePadding()))
 
-                // First direction route
+                // First direction route.
                 Column(
                     modifier = Modifier
                         .width(ScreenSize.routeWidth(isShowRoute2))
@@ -396,7 +394,7 @@ fun MainContentScreen(
 
                     Spacer(modifier = Modifier.height(ScreenSize.routeCountdownTopSpace()))
 
-                    // Countdown Time
+                    // Countdown time.
                     Text(
                         text = countdownTime1,
                         fontSize = ScreenSize.routeCountdownFontSize().value.sp,
@@ -406,7 +404,7 @@ fun MainContentScreen(
 
                     Spacer(modifier = Modifier.height(ScreenSize.routeCountdownSpace()))
 
-                    // Home/Office View (destination)
+                    // Home/Office view (destination).
                     HomeOfficeView(
                         goorback = goOrBack1,
                         num = 1,
@@ -414,7 +412,7 @@ fun MainContentScreen(
                         sharedPreferences = sharedPreferences
                     )
 
-                    // Transfer and Station Line Views
+                    // Transfer and station line views.
                     for (num in 0..changeLine1) {
                         TransferView(
                             goorback = goOrBack1,
@@ -460,7 +458,7 @@ fun MainContentScreen(
                         )
                     }
 
-                    // Transfer View (arrival)
+                    // Transfer view (arrival).
                     TransferView(
                         goorback = goOrBack1,
                         num = 0,
@@ -475,7 +473,7 @@ fun MainContentScreen(
                         }
                     )
 
-                    // Home/Office View (departure)
+                    // Home/Office view (departure).
                     HomeOfficeView(
                         goorback = goOrBack1,
                         num = 0,
@@ -486,7 +484,7 @@ fun MainContentScreen(
                     Spacer(modifier = Modifier.weight(1f))
                 }
 
-                // Second direction route (if enabled)
+                // Second direction route (if enabled).
                 if (isShowRoute2) {
 
                     Spacer(modifier = Modifier.width(ScreenSize.dividerSidePadding()))
@@ -511,7 +509,7 @@ fun MainContentScreen(
 
                         Spacer(modifier = Modifier.height(ScreenSize.routeCountdownTopSpace()))
 
-                        // Countdown Time
+                        // Countdown time.
                         Text(
                             text = countdownTime2,
                             fontSize = ScreenSize.routeCountdownFontSize().value.sp,
@@ -521,7 +519,7 @@ fun MainContentScreen(
 
                         Spacer(modifier = Modifier.height(ScreenSize.routeCountdownSpace()))
 
-                        // Home/Office View (destination)
+                        // Home/Office view (destination).
                         HomeOfficeView(
                             goorback = goOrBack2,
                             num = 1,
@@ -529,7 +527,7 @@ fun MainContentScreen(
                             sharedPreferences = sharedPreferences
                         )
 
-                        // Transfer and Station Line Views
+                        // Transfer and station line views.
                         for (num in 0..changeLine2) {
                             TransferView(
                                 goorback = goOrBack2,
@@ -575,7 +573,7 @@ fun MainContentScreen(
                             )
                         }
 
-                        // Transfer View (arrival)
+                        // Transfer view (arrival).
                         TransferView(
                             goorback = goOrBack2,
                             num = 0,
@@ -590,7 +588,7 @@ fun MainContentScreen(
                             }
                         )
 
-                        // Home/Office View (departure)
+                        // Home/Office view (departure).
                         HomeOfficeView(
                             goorback = goOrBack2,
                             num = 0,
@@ -609,7 +607,7 @@ fun MainContentScreen(
                 }
             }
 
-            // MARK: - Ad Banner (画面最下部)
+            // Ad banner at the bottom.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -627,8 +625,7 @@ fun MainContentScreen(
     }
     }
     
-    // Handle sheet navigation using LaunchedEffect
-    // Navigate to Line Settings Sheet
+    // Handle sheet navigation.
     LaunchedEffect(isShowingLineSheet, sheetGoorback, sheetLineIndex) {
         if (isShowingLineSheet && sheetGoorback != null && sheetLineIndex != null) {
             val currentGoorback = sheetGoorback!!
@@ -638,8 +635,7 @@ fun MainContentScreen(
         }
     }
     
-    // Reset navigation parameters after sheet is dismissed
-    // This LaunchedEffect reads the reset values, preventing the warning
+    // Reset navigation parameters after dismissal.
     LaunchedEffect(isShowingLineSheet) {
         if (!isShowingLineSheet) {
             sheetGoorback = null
@@ -647,7 +643,7 @@ fun MainContentScreen(
         }
     }
     
-    // Navigate to Transfer Settings Sheet
+    // Navigate to Transfer Settings Sheet.
     LaunchedEffect(isShowingTransferSheet) {
         if (isShowingTransferSheet) {
             onNavigateToTransferSheet()
@@ -656,8 +652,7 @@ fun MainContentScreen(
 }
 
 
-// MARK: - Home Office View
-// Displays station name and departure/arrival time
+// Home/office row with station and time.
 @Composable
 private fun HomeOfficeView(
     goorback: String,
@@ -693,8 +688,7 @@ private fun HomeOfficeView(
     }
 }
 
-// MARK: - Transfer View
-// Displays transfer icon and handles transfer selection
+// Transfer row with icon and selection.
 @Composable
 private fun TransferView(
     goorback: String,
@@ -710,12 +704,12 @@ private fun TransferView(
     val context = mainViewModel.getApplication<Application>()
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
-    // Calculate timeArray for isDirectConnection check
+    // Calculate timeArray for isDirectConnection check.
     val currentDate = mainViewModel.selectDate
     val currentTime = mainViewModel.currentTime
     val timeArray = goorback.timeArray(sharedPreferences, currentDate, currentTime)
     
-    // Determine if this is a direct connection (0 minutes transfer with same arrival/departure time)
+    // Determine direct connection by matching times.
     val isDirectConnection = transferTimeArray.getOrNull(num) == 0 && num > 0 && run {
         val prevIndex = if (num == 1) 1 else 2 * (num - 2) + 3
         val nextIndex = if (num == 1) 2 else 2 * (num - 2) + 4
@@ -755,8 +749,7 @@ private fun TransferView(
     }
 }
 
-// MARK: - Station Line View
-// Displays station line information with departure and arrival times
+// Station/line row with departure and arrival times.
 @Composable
 private fun StationLineView(
     goorback: String,
@@ -773,7 +766,7 @@ private fun StationLineView(
     val context = mainViewModel.getApplication<Application>()
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
-    // Calculate timeArray for current date and time
+    // Calculate timeArray for current date and time.
     val currentDate = mainViewModel.selectDate
     val currentTime = mainViewModel.currentTime
     val timeArray = goorback.timeArray(sharedPreferences, currentDate, currentTime).map { it.stringTime }
@@ -789,7 +782,7 @@ private fun StationLineView(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Start
     ) {
-        // Departure Station and Time
+        // Departure station and time.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -814,7 +807,7 @@ private fun StationLineView(
             )
         }
         
-        // Line Name Button
+        // Line name button.
         Button(
             onClick = onLineClick,
             modifier = Modifier
@@ -850,7 +843,7 @@ private fun StationLineView(
             }
         }
         
-        // Arrival Station and Time
+        // Arrival station and time.
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -877,8 +870,7 @@ private fun StationLineView(
     }
 }
 
-// MARK: - Line Time Image
-// Displays line icon with color and code
+// Line icon with color and code.
 @Composable
 private fun LineTimeImage(
     goorback: String,
@@ -916,7 +908,7 @@ private fun LineTimeImage(
     val transportation = if (isTransfer) transportationArray.getOrNull(num) ?: "" else ""
     val transportationKind = if (isTransfer) null else lineKindArray.getOrNull(num) ?: goorback.lineKind(sharedPreferences, num)
     
-    // Determine icon based on transfer type and transportation kind
+    // Determine icon based on transfer type and line kind.
     val icon = when {
         !isTransfer && transportationKind == TransportationLineKind.BUS -> Icons.Filled.DirectionsBus
         !isTransfer -> Icons.Filled.Train
@@ -925,7 +917,7 @@ private fun LineTimeImage(
         else -> Icons.Filled.KeyboardDoubleArrowDown
     }
     
-    // ZStack equivalent: Rectangle (background), Image (icon), Text (lineCode)
+    // Layered icon with background and code.
     Box(
         modifier = Modifier
             .size(ScreenSize.lineImageBackgroundSize())
@@ -933,7 +925,7 @@ private fun LineTimeImage(
             .background(lineColor, RoundedCornerShape(0.dp)),
         contentAlignment = Alignment.Center
     ) {
-        // Icon layer
+        // Icon layer.
         Icon(
             imageVector = icon,
             contentDescription = null,
@@ -941,118 +933,19 @@ private fun LineTimeImage(
             tint = White
         )
         
-        // Line code text with shadow effect (overlay on icon)
-        // Multiple shadows for better visibility
+        // Line code with shadow layers.
         if (lineCode.isNotEmpty()) {
-            val shadowOffset = ScreenSize.shadowOffset()
-            val shadowColor = Gray.copy(alpha = 0.5f)
-            val lineCodeFontSize = ScreenSize.stationFontSize().value.sp
-            
-            // Draw shadow layers first (behind main text)
-            // Shadow layer 1: (0.5, 0)
-            Text(
+            CommonComponents.CustomShadowText(
                 text = lineCode,
-                fontSize = lineCodeFontSize,
+                fontSize = ScreenSize.stationFontSize().value.sp,
                 fontWeight = FontWeight.Bold,
-                color = shadowColor,
+                textColor = White,
+                shadowColor = Black.copy(alpha = 0.5f),
+                shadowOffset = ScreenSize.shadowOffset(),
+                modifier = Modifier.align(Alignment.Center),
                 maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = shadowOffset, y = 0.dp)
-            )
-            // Shadow layer 2: (-0.5, 0)
-            Text(
-                text = lineCode,
-                fontSize = lineCodeFontSize,
-                fontWeight = FontWeight.Bold,
-                color = shadowColor,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = -shadowOffset, y = 0.dp)
-            )
-            // Shadow layer 3: (0, 0.5)
-            Text(
-                text = lineCode,
-                fontSize = lineCodeFontSize,
-                fontWeight = FontWeight.Bold,
-                color = shadowColor,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = 0.dp, y = shadowOffset)
-            )
-            // Shadow layer 4: (0, -0.5)
-            Text(
-                text = lineCode,
-                fontSize = lineCodeFontSize,
-                fontWeight = FontWeight.Bold,
-                color = shadowColor,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = 0.dp, y = -shadowOffset)
-            )
-            // Shadow layer 5: (0.5, 0.5)
-            Text(
-                text = lineCode,
-                fontSize = lineCodeFontSize,
-                fontWeight = FontWeight.Bold,
-                color = shadowColor,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = shadowOffset, y = shadowOffset)
-            )
-            // Shadow layer 6: (0.5, -0.5)
-            Text(
-                text = lineCode,
-                fontSize = lineCodeFontSize,
-                fontWeight = FontWeight.Bold,
-                color = shadowColor,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = shadowOffset, y = -shadowOffset)
-            )
-            // Shadow layer 7: (-0.5, 0.5)
-            Text(
-                text = lineCode,
-                fontSize = lineCodeFontSize,
-                fontWeight = FontWeight.Bold,
-                color = shadowColor,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = -shadowOffset, y = shadowOffset)
-            )
-            // Shadow layer 8: (-0.5, -0.5)
-            Text(
-                text = lineCode,
-                fontSize = lineCodeFontSize,
-                fontWeight = FontWeight.Bold,
-                color = shadowColor,
-                maxLines = 1,
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = -shadowOffset, y = -shadowOffset)
-            )
-            
-            // Main text (on top of shadows, drawn last)
-            Text(
-                text = lineCode,
-                fontSize = lineCodeFontSize,
-                fontWeight = FontWeight.Bold,
-                color = White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.Center)
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
 }
-// MARK: - Helper Functions
-// Get display name (split by ":" and return first component for ODPT format)
-
-
-

@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -37,8 +37,7 @@ import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.theme.*
 import java.util.*
 
-// MARK: - Timetable Content Screen
-// Main timetable editing screen with grid view
+// Main timetable editing screen with calendar type selection and hourly grid view
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimetableContentScreen(
@@ -49,39 +48,29 @@ fun TimetableContentScreen(
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
-    // Selected calendar type for filtering timetable data
+    // Calendar type and available types
     var selectedCalendarType by remember { mutableStateOf<ODPTCalendarType>(ODPTCalendarType.Weekday) }
-    
-    // Available calendar types loaded from cache
     var availableCalendarTypes by remember { mutableStateOf<List<ODPTCalendarType>>(emptyList()) }
-    
-    // Controls visibility of calendar type dropdown menu
     var isCalendarTypeDropdownOpen by remember { mutableStateOf(false) }
     
-    // State for timetable grid views (hour-based sheet presentation)
-    // Store the hour that should show the sheet, or null if no sheet should be shown
+    // Timetable sheet state (hour-based editing)
     var showingTimetableSheetHour by remember { mutableStateOf<Int?>(null) }
-    
-    // Valid hours for current calendar type
     var validHours by remember { mutableStateOf<List<Int>>(emptyList()) }
     
-    // Increment when sheet is dismissed to force grid refresh (sheet changes don't trigger recomposition)
+    // Refresh trigger for grid update after sheet dismissal
     var timetableRefreshTrigger by remember { mutableIntStateOf(0) }
-    // MARK: - Helper Functions
     
-    // Update valid hours for current calendar type
-    // This is called when calendar type changes or timetable data is updated
+    // Update valid hours for current or specified calendar type
     fun updateValidHours() {
         validHours = goorback.validHourRange(selectedCalendarType, num, sharedPreferences)
     }
 
-    // Update valid hours for a specific calendar type (use when selecting from dropdown so the new type is applied immediately)
+    // Update valid hours for specified calendar type (for dropdown selection)
     fun updateValidHours(newCalendarType: ODPTCalendarType) {
         validHours = goorback.validHourRange(newCalendarType, num, sharedPreferences)
     }
     
-    // Sort calendar types according to enum definition order
-    // Order: weekday, holiday, saturdayHoliday, sunday, monday, tuesday, wednesday, thursday, friday, saturday, specific(String)
+    // Sort calendar types: weekday, holiday, saturday/sunday, weekdays, then specific types alphabetically
     fun sortCalendarTypesByEnumOrder(types: List<ODPTCalendarType>): List<ODPTCalendarType> {
         val enumOrder = listOf(
             ODPTCalendarType.Weekday,
@@ -112,8 +101,7 @@ fun TimetableContentScreen(
         return sortedRegularTypes + sortedSpecificTypes
     }
     
-    // Rebuild train type list from existing timetable data if not exists
-    // This ensures the train type list is always up to date
+    // Rebuild train type list from timetable data if not exists
     fun rebuildTrainTypeListIfNeeded() {
         // Check if train type list already exists
         val existingTrainTypes = goorback.loadTrainTypeList(selectedCalendarType, num, sharedPreferences)
@@ -136,25 +124,20 @@ fun TimetableContentScreen(
         }
     }
     
-    // MARK: - Initialization
+    // Initialize calendar types and valid hours on first load
     LaunchedEffect(Unit) {
-        // Load available calendar types from cache or use default
+        // Load available calendar types (already full rawValue format)
         val loadedTypesString = goorback.loadAvailableCalendarTypes(sharedPreferences, num)
-        
-        // loadedTypesString already contains full rawValue (e.g., "odpt.Calendar:Weekday")
-        // Convert to ODPTCalendarType objects
         val loadedTypes = loadedTypesString.mapNotNull { typeString ->
             ODPTCalendarType.fromRawValue(typeString)
         }
         
-        // Sort calendar types according to enum definition order
+        // Sort and set selected calendar type based on current date
         availableCalendarTypes = sortCalendarTypesByEnumOrder(loadedTypes)
-        
-        // Set selectedCalendarType based on current date with fallback to available types
         val currentDate = Date()
         selectedCalendarType = currentDate.odptCalendarType(fallbackTo = availableCalendarTypes)
         
-        // Check if data exists for the selected calendar type, if not, try other available types
+        // If no data for selected type, try other available types
         if (!goorback.hasTimetableDataForType(selectedCalendarType, num, sharedPreferences)) {
             for (calendarType in availableCalendarTypes) {
                 if (goorback.hasTimetableDataForType(calendarType, num, sharedPreferences)) {
@@ -164,20 +147,16 @@ fun TimetableContentScreen(
             }
         }
         
-        // Initialize valid hours
         updateValidHours()
-        
-        // Rebuild train type list from existing data if not exists
         rebuildTrainTypeListIfNeeded()
     }
     
-    // Update valid hours when calendar type changes
+    // Update when calendar type changes
     LaunchedEffect(selectedCalendarType) {
         updateValidHours()
         rebuildTrainTypeListIfNeeded()
     }
     
-    // MARK: - Main Content
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -212,8 +191,7 @@ fun TimetableContentScreen(
                     .fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(ScreenSize.timetableVerticalSpacing())
             ) {
-                // MARK: - Header Section
-                // Operator & Line Name Display
+                // Operator & line name display
                 Text(
                     text = "${goorback.operatorNameArray(sharedPreferences)[num]} : ${goorback.lineNameArray(sharedPreferences, context)[num]}",
                     fontSize = ScreenSize.settingsSheetTitleFontSize().value.sp,
@@ -231,7 +209,7 @@ fun TimetableContentScreen(
                     modifier = Modifier.padding(start = ScreenSize.timetableHorizontalSpacing())
                 )
                 
-                // MARK: - Timetable Grid
+                // Timetable grid with hourly columns
                 Column(
                     verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
@@ -345,10 +323,6 @@ fun TimetableContentScreen(
                     if (validHours.isEmpty()) {
                         // Show register button when no timetable data exists
                         RegisterTimetableButton(
-                            goorback = goorback,
-                            num = num,
-                            hour = 18,
-                            selectedCalendarType = selectedCalendarType,
                             onShowSheet = { hourValue ->
                                 showingTimetableSheetHour = hourValue
                             }
@@ -367,7 +341,6 @@ fun TimetableContentScreen(
                         rebuildTrainTypeListIfNeeded()
                         isCalendarTypeDropdownOpen = false
                     },
-                    onDismiss = { isCalendarTypeDropdownOpen = false },
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .offset(y = ScreenSize.timetableContentViewMenuOffsetY())
@@ -393,8 +366,7 @@ fun TimetableContentScreen(
     }
 }
 
-// MARK: - Timetable Grid View
-// Individual grid cell for editing timetable times with add/delete/copy functionality
+// Individual grid cell for editing timetable times at specified hour
 @Composable
 private fun TimetableGridView(
     goorback: String,
@@ -411,11 +383,10 @@ private fun TimetableGridView(
         sharedPreferences
     )
     
-    // MARK: - Time Edit Button
     Row(
         horizontalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        // MARK: - Hour Display
+        // Hour display box
         Box(
             modifier = Modifier
                 .width(ScreenSize.timetableHourFrameWidth())
@@ -429,7 +400,7 @@ private fun TimetableGridView(
             ) {
                 Box(
                     modifier = Modifier
-                        .width(1.dp)
+                        .width(ScreenSize.borderWidth())
                         .fillMaxHeight()
                         .background(White)
                 )
@@ -447,14 +418,14 @@ private fun TimetableGridView(
 
                 Box(
                     modifier = Modifier
-                        .width(1.dp)
+                        .width(ScreenSize.borderWidth())
                         .fillMaxHeight()
                         .background(White)
                 )
             }
         }
         
-        // MARK: - Time Edit Button
+        // Time edit button with grid content
         Button(
             onClick = { onShowSheet(hour) },
             colors = ButtonDefaults.buttonColors(
@@ -475,15 +446,14 @@ private fun TimetableGridView(
         
         Box(
             modifier = Modifier
-                .width(1.dp)
+                .width(ScreenSize.borderWidth())
                 .height(ScreenSize.calculateContentHeight(transportationTimes.size))
                 .background(White)
         )
     }
 }
 
-// MARK: - Grid Content View
-// Train times display grid with proper wrapping
+// Train times display grid with 10 columns per row
 @Composable
 private fun TimetableGridContent(
     transportationTimes: List<TransportationTime>,
@@ -508,7 +478,7 @@ private fun TimetableGridContent(
             .width(ScreenSize.timetableMinuteFrameWidth())
             .fillMaxSize(),
     ) {
-        itemsIndexed(transportationTimes) { index, transportationTime ->
+        items(transportationTimes) { transportationTime ->
             Row(
                 modifier = Modifier
                     .width(itemWidth.dp)
@@ -537,13 +507,11 @@ private fun TimetableGridContent(
     }
 }
 
-// MARK: - Calendar Type Dropdown View
 // Dropdown menu for selecting calendar type (weekday/holiday/etc.)
 @Composable
 private fun CalendarTypeDropdownView(
     availableCalendarTypes: List<ODPTCalendarType>,
     onCalendarTypeSelected: (ODPTCalendarType) -> Unit,
-    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -598,8 +566,7 @@ private fun CalendarTypeDropdownView(
     }
 }
 
-// MARK: - Color Legend View Function
-// Displays color legend for train types based on saved train type list (horizontal flow, wraps when exceeding customWidth)
+// Displays color legend for train types (horizontal flow layout, wraps at customWidth)
 @Composable
 private fun ColorLegendView(
     trainTypes: List<String>,
@@ -667,14 +634,9 @@ private fun ColorLegendView(
     }
 }
 
-// MARK: - Register Timetable Button
-// Button to register timetable when no data exists
+// Button to trigger timetable generation from API when no data exists
 @Composable
 private fun RegisterTimetableButton(
-    goorback: String,
-    num: Int,
-    hour: Int,
-    selectedCalendarType: ODPTCalendarType,
     onShowSheet: (Int) -> Unit
 ) {
     Row(
@@ -688,7 +650,7 @@ private fun RegisterTimetableButton(
             icon = Icons.Default.Add,
             backgroundColor = Accent,
             textColor = White,
-            onClick = { onShowSheet(hour) }
+            onClick = { onShowSheet(18) }
         )
     }
 }

@@ -4,17 +4,13 @@ import androidx.compose.ui.graphics.Color
 import com.mytimetablemaker.models.CustomColor
 import androidx.core.graphics.toColorInt
 
-// MARK: - App Theme Colors
-// Application-wide color constants
-// These colors are derived from CustomColor enum to maintain consistency
+// Application theme colors derived from CustomColor enum
 
-// Primary theme color (Indigo - #3700B3)
+// Theme colors
 val Primary = CustomColor.PRIMARY.color()
-
-// Accent color (Default - #03DAC5)
 val Accent = CustomColor.ACCENT.color()
 
-// Standard colors
+// Standard palette
 val Red = CustomColor.RED.color()
 val Yellow = CustomColor.YELLOW.color()
 val Gray = CustomColor.GRAY.color()
@@ -26,16 +22,14 @@ val LightBlue = CustomColor.LIGHT_BLUE.color()
 val White = Color.White
 val Black = Color.Black
 
-// Hex string values for color storage
 const val AccentString = "#03DAC5"
 
-// MARK: - CustomColor Extension
-// Convert CustomColor enum to Color object
+// Convert CustomColor enum to Compose Color
 fun CustomColor.color(): Color {
     return Color(this.rgb().toColorInt())
 }
 
-// Get RGB hex string value for CustomColor
+// Get hex color string for CustomColor enum
 fun CustomColor.rgb(): String {
     return when (this) {
         CustomColor.RED -> "#E60012"

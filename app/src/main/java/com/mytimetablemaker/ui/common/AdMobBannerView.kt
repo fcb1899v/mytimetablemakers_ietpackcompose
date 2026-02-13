@@ -1,6 +1,8 @@
 package com.mytimetablemaker.ui.common
 
 import android.content.Context
+import android.content.res.Resources
+import android.util.Log
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -22,8 +24,7 @@ import kotlinx.coroutines.delay
 import java.io.File
 import java.util.Properties
 
-// MARK: - AdMob Banner View
-// Jetpack Compose wrapper for Google Mobile Ads banner view
+// AdMob banner wrapper for Compose.
 @Composable
 fun AdMobBannerView(
     modifier: Modifier = Modifier
@@ -33,11 +34,11 @@ fun AdMobBannerView(
     var isReadyToLoad by remember { mutableStateOf(false) }
     val minimumLoadInterval = 60_000L // 60 seconds in milliseconds
     
-    // Get AdMob Banner Unit ID from resources or local.properties
+    // Resolve the AdMob unit ID from resources or local.properties.
     val adUnitID = remember { getAdUnitID(context) }
     val bannerHeight = ScreenSize.admobBannerHeight()
     
-    // Defer first ad load to avoid blocking main thread during initial composition
+    // Defer first ad load to avoid blocking initial composition.
     LaunchedEffect(Unit) {
         delay(500)
         isReadyToLoad = true
@@ -67,30 +68,34 @@ fun AdMobBannerView(
     )
 }
 
-// MARK: - Ad Unit ID Configuration
-// Get AdMob unit ID from resources or local.properties
+// Ad unit ID resolution for banner ads.
 private fun getAdUnitID(context: Context): String {
-    // Method 1: Try to get from string resources (set by build.gradle.kts)
+    // Method 1: string resource (set by build.gradle.kts).
     try {
         val unitID = context.getString(R.string.admob_banner_unit_id)
         if (unitID.isNotEmpty() && unitID != "$(ADMOB_BANNER_UNIT_ID)") {
             return unitID
         }
-    } catch (_: Exception) {
-        // Resource not found, continue to next method
+    } catch (e: Resources.NotFoundException) {
+        Log.w("AdMobBannerView", "admob_banner_unit_id resource not found", e)
     }
     
-    // Method 2: Try to get from local.properties
+    // Method 2: local.properties.
     val localPropertiesFile = File(context.filesDir.parentFile, "local.properties")
     if (localPropertiesFile.exists()) {
         val properties = Properties()
-        localPropertiesFile.inputStream().use { properties.load(it) }
-        val unitID = properties.getProperty("ADMOB_BANNER_UNIT_ID")
-        if (!unitID.isNullOrEmpty()) {
-            return unitID
+        try {
+            localPropertiesFile.inputStream().use { properties.load(it) }
+            val unitID = properties.getProperty("ADMOB_BANNER_UNIT_ID")
+            if (!unitID.isNullOrEmpty()) {
+                return unitID
+            }
+        } catch (e: Exception) {
+            Log.w("AdMobBannerView", "Failed to read local.properties for ADMOB_BANNER_UNIT_ID", e)
         }
     }
     
-    // Fallback to test unit ID
+    // Fallback to the test unit ID.
+    Log.w("AdMobBannerView", "Using test AdMob banner unit ID; configure ADMOB_BANNER_UNIT_ID.")
     return "ca-app-pub-3940256099942544/6300978111"
 }

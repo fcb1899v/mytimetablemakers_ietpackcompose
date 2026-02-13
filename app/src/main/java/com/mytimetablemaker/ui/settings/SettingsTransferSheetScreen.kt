@@ -36,8 +36,7 @@ import androidx.core.view.WindowCompat
 import com.mytimetablemaker.ui.common.CommonComponents.Custom2DigitPicker
 import com.mytimetablemaker.ui.common.CommonComponents.CustomBackButton
 
-// MARK: - Settings Transfer Sheet Screen
-// Sheet view for configuring transfer time and transportation methods in settings
+// Sheet view for configuring transfer time and transportation methods
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsTransferSheetScreen(
@@ -45,10 +44,9 @@ fun SettingsTransferSheetScreen(
 ) {
     val context = LocalContext.current
     val application = context.applicationContext as Application
-    // Use the same SharedPreferences instance as MainViewModel to ensure listeners work
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
-    // Create ViewModel
+    // Create ViewModel with shared preferences
     val viewModel = remember {
         SettingsTransferSheetViewModel(application, sharedPreferences)
     }
@@ -66,7 +64,7 @@ fun SettingsTransferSheetScreen(
     val selectedOfficeTransferTime2 by viewModel.selectedOfficeTransferTime2.collectAsState()
     val showRoute2 by viewModel.showRoute2.collectAsState()
     
-    // Calculate form validity based on all required fields
+    // Validate form: check all required fields
     val isFormValid by remember(
         homeInput,
         officeInput,
@@ -77,13 +75,11 @@ fun SettingsTransferSheetScreen(
         showRoute2
     ) {
         derivedStateOf {
-            // Validate departure point, destination, and transfer times
             val basicValidation = homeInput.isNotEmpty() &&
                     officeInput.isNotEmpty() &&
                     selectedHomeTransferTime1 > 0 &&
                     selectedOfficeTransferTime1 > 0
             
-            // If Route 2 is shown, also validate Route 2 fields
             if (showRoute2) {
                 basicValidation &&
                         selectedHomeTransferTime2 > 0 &&
@@ -94,7 +90,7 @@ fun SettingsTransferSheetScreen(
         }
     }
     
-    // Status bar setup
+    // Status bar configuration
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (context as? android.app.Activity)?.window
@@ -120,7 +116,6 @@ fun SettingsTransferSheetScreen(
                     .height(ScreenSize.settingsSheetTopBarHeight())
                     .background(White)
             ) {
-                // Back button aligned to the left
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
@@ -132,7 +127,6 @@ fun SettingsTransferSheetScreen(
                     )
                 }
                 
-                // Title centered on screen
                 Text(
                     text = stringResource(R.string.homeDestination),
                     fontSize = titleFontSize.value.sp,
@@ -158,7 +152,6 @@ fun SettingsTransferSheetScreen(
             ) {
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Route 2 Toggle Section
                 Route2ToggleSection(
                     viewModel = viewModel,
                     showRoute2 = showRoute2
@@ -166,12 +159,10 @@ fun SettingsTransferSheetScreen(
 
                 Spacer(modifier = Modifier.height(verticalSpacing))
 
-                // Header section - Setting departure point
                 HeaderSection(title = stringResource(R.string.settingDeparturePoint))
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Departure place input
                 PlaceInputSection(
                     title = stringResource(R.string.from),
                     placeholder = stringResource(R.string.enterDeparturePoint),
@@ -181,20 +172,17 @@ fun SettingsTransferSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Departure transportation settings - Route 1
                 TransportationSettingsSection(
                     routeTitle = if (showRoute2) stringResource(R.string.route1) else stringResource(R.string.route),
                     selectedTransportation = selectedHomeTransportation1,
                     onTransportationChanged = { viewModel.selectedHomeTransportation1.value = it }
                 )
                 
-                // Transfer Time Settings Section (only when transportation is not "none")
                 TransferTimeSettingsSection(
                     transferTime = selectedHomeTransferTime1,
                     onTransferTimeChanged = { viewModel.selectedHomeTransferTime1.value = it }
                 )
 
-                // Route 2 row (only shown when showRoute2 is true)
                 if (showRoute2) {
                     TransportationSettingsSection(
                         routeTitle = stringResource(R.string.route2),
@@ -202,19 +190,16 @@ fun SettingsTransferSheetScreen(
                         onTransportationChanged = { viewModel.selectedHomeTransportation2.value = it }
                     )
                     
-                    // Transfer Time Settings Section (only when transportation is not "none")
                     TransferTimeSettingsSection(
                         transferTime = selectedHomeTransferTime2,
                         onTransferTimeChanged = { viewModel.selectedHomeTransferTime2.value = it }
                     )
                 }
 
-                // Destination section header
                 HeaderSection(title = stringResource(R.string.settingDestination))
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Destination place input
                 PlaceInputSection(
                     title = stringResource(R.string.to),
                     placeholder = stringResource(R.string.enterDestination),
@@ -224,20 +209,17 @@ fun SettingsTransferSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Destination transportation settings - Route 1
                 TransportationSettingsSection(
                     routeTitle = if (showRoute2) stringResource(R.string.route1) else stringResource(R.string.route),
                     selectedTransportation = selectedOfficeTransportation1,
                     onTransportationChanged = { viewModel.selectedOfficeTransportation1.value = it }
                 )
                 
-                // Transfer Time Settings Section (only when transportation is not "none")
                 TransferTimeSettingsSection(
                     transferTime = selectedOfficeTransferTime1,
                     onTransferTimeChanged = { viewModel.selectedOfficeTransferTime1.value = it }
                 )
 
-                // Route 2 row (only shown when showRoute2 is true)
                 if (showRoute2) {
                     TransportationSettingsSection(
                         routeTitle = stringResource(R.string.route2),
@@ -245,23 +227,17 @@ fun SettingsTransferSheetScreen(
                         onTransportationChanged = { viewModel.selectedOfficeTransportation2.value = it }
                     )
                     
-                    // Transfer Time Settings Section (only when transportation is not "none")
                     TransferTimeSettingsSection(
                         transferTime = selectedOfficeTransferTime2,
                         onTransferTimeChanged = { viewModel.selectedOfficeTransferTime2.value = it }
                     )
                 }
 
-                // Save button
-                //          NotificationCenter.default.post(name: NSNotification.Name("SettingsTransferUpdated"), object: nil)
-                //          dismiss()
-                // Note: saveSettings() already posts the notification via SharedPreferences
                 SaveButtonSection(
                     isFormValid = isFormValid,
                     onSave = {
                         viewModel.saveSettings()
-                        // Notification is posted in saveSettings() via SharedPreferences
-                        // MainContentScreen listens for "SettingsTransferUpdated" key changes
+                        // Notification posted via SharedPreferences
                         onNavigateBack()
                     }
                 )
@@ -269,14 +245,12 @@ fun SettingsTransferSheetScreen(
         }
     }
     
-    // Load settings on appear
+    // Load settings when screen appears
     LaunchedEffect(Unit) {
         viewModel.loadSettings()
     }
 }
 
-// MARK: - Route 2 Toggle Section
-// Toggle to show/hide Route 2 configuration options
 @Composable
 private fun Route2ToggleSection(
     viewModel: SettingsTransferSheetViewModel,
@@ -291,8 +265,6 @@ private fun Route2ToggleSection(
         
         HeaderSection(title = stringResource(R.string.anotherRoute))
         
-        // Route 2 toggle
-        // Save only when save button is pressed, not immediately on toggle change
         CommonComponents.CustomToggle(
             isLeftSelected = !showRoute2,
             onToggle = { newValue ->
@@ -305,8 +277,6 @@ private fun Route2ToggleSection(
 }
 
 
-// MARK: - Header Section
-// Header section with title text
 @Composable
 private fun HeaderSection(title: String) {
     Text(
@@ -317,8 +287,6 @@ private fun HeaderSection(title: String) {
     )
 }
 
-// MARK: - Place Input Section
-// Place input section with title, text field, and validation checkmark
 @Composable
 private fun PlaceInputSection(
     title: String,
@@ -337,8 +305,6 @@ private fun PlaceInputSection(
     )
 }
 
-// MARK: - Transportation Settings Section
-// Section for selecting transportation method for next transfer
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TransportationSettingsSection(
@@ -346,7 +312,6 @@ private fun TransportationSettingsSection(
     selectedTransportation: String,
     onTransportationChanged: (String) -> Unit
 ) {
-    // Ensure selectedTransportation is not "none" or empty, default to "walking"
     val effectiveTransportation = remember(selectedTransportation) {
         if (selectedTransportation.isEmpty() || selectedTransportation == "none") {
             TransferType.WALKING.rawValue
@@ -355,7 +320,6 @@ private fun TransportationSettingsSection(
         }
     }
     
-    // Update parent if needed
     LaunchedEffect(effectiveTransportation) {
         if (effectiveTransportation != selectedTransportation) {
             onTransportationChanged(effectiveTransportation)
@@ -499,8 +463,6 @@ private fun TransportationSettingsSection(
     }
 }
 
-// MARK: - Transfer Time Settings Section
-// Section for configuring transfer time
 @Composable
 private fun TransferTimeSettingsSection(
     transferTime: Int,
@@ -536,7 +498,6 @@ private fun TransferTimeSettingsSection(
         Box(
             modifier = Modifier.weight(1f)
         ) {
-            // Custom2DigitPicker overlay
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -562,14 +523,11 @@ private fun TransferTimeSettingsSection(
 
 
 
-// MARK: - Save Button Section
-// Button to save all transfer settings
 @Composable
 private fun SaveButtonSection(
     isFormValid: Boolean,
     onSave: () -> Unit
 ) {
-    // Convert icon name to ImageVector
     val saveIcon = Icons.Filled.Save
     
     CommonComponents.CustomButton(
@@ -585,11 +543,8 @@ private fun SaveButtonSection(
 }
 
 
-// MARK: - Helper Functions
-// Get transfer type from string value
 private fun getTransferType(value: String): TransferType {
     val found = TransferType.entries.find { it.rawValue == value }
-    // If value is "none" or empty, default to WALKING
     return if (found == null || found == TransferType.NONE) TransferType.WALKING else found
 }
 

@@ -340,8 +340,6 @@ class GTFSDataService(private val context: Context) {
             throw ODPTError.NetworkError("HTTP ${response.code}")
         }
         
-        android.util.Log.d("GTFSDataService", "🔄 GTFS ZIP updated on server, downloading new file")
-        
         val data = response.body.bytes()
         
         // Save ETag and Last-Modified for future checks.
@@ -354,8 +352,6 @@ class GTFSDataService(private val context: Context) {
         
         // Save new data to cache.
         cache.saveData(data, cacheKey)
-        android.util.Log.d("GTFSDataService", "✅ Downloaded and cached updated GTFS ZIP: ${data.size} bytes")
-        
         // Extract and cache the directory.
         extractAndCacheGTFSZip(data, cacheKey)
         
@@ -372,8 +368,6 @@ class GTFSDataService(private val context: Context) {
             requestBuilder.addHeader("Authorization", consumerKey)
         }
         requestBuilder.addHeader("Accept", "application/zip")
-        
-        android.util.Log.d("GTFSDataService", "🔗 Downloading GTFS ZIP from: $httpUrl")
         
         val client = OkHttpClient()
         val response = client.newCall(requestBuilder.build()).execute()
@@ -404,8 +398,6 @@ class GTFSDataService(private val context: Context) {
                 
                 // Save to cache.
                 cache.saveData(redirectData, cacheKey)
-                android.util.Log.d("GTFSDataService", "✅ Downloaded and cached GTFS ZIP: ${redirectData.size} bytes")
-                
                 // Extract and cache the directory.
                 extractAndCacheGTFSZip(redirectData, cacheKey)
                 
@@ -431,8 +423,6 @@ class GTFSDataService(private val context: Context) {
         
         // Save to cache.
         cache.saveData(data, cacheKey)
-        android.util.Log.d("GTFSDataService", "✅ Downloaded and cached GTFS ZIP: ${data.size} bytes")
-        
         // Extract and cache the directory.
         extractAndCacheGTFSZip(data, cacheKey)
         
@@ -539,7 +529,6 @@ class GTFSDataService(private val context: Context) {
             // Get GTFS URL using apiLink.
             val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
             if (gtfsURL.isEmpty()) {
-                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Empty GTFS URL for ${transportOperator.name}")
                 throw ODPTError.InvalidData("Empty GTFS URL for ${transportOperator.name}")
             }
             
@@ -550,32 +539,12 @@ class GTFSDataService(private val context: Context) {
             val translations = loadTranslations(extractedDir)
             
             // Parse routes.txt for route info.
-            val routesData = try {
-                loadGTFSFile(extractedDir, "routes.txt")
-            } catch (e: Exception) {
-                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to load routes.txt: ${e.message}", e)
-                throw e
-            }
-            val routes = try {
-                parseGTFSCSV(routesData)
-            } catch (e: Exception) {
-                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to parse routes.txt: ${e.message}", e)
-                throw e
-            }
+            val routesData = loadGTFSFile(extractedDir, "routes.txt")
+            val routes = parseGTFSCSV(routesData)
             
             // Parse trips.txt for headsign and direction info.
-            val tripsData = try {
-                loadGTFSFile(extractedDir, "trips.txt")
-            } catch (e: Exception) {
-                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to load trips.txt: ${e.message}", e)
-                throw e
-            }
-            val trips = try {
-                parseGTFSCSV(tripsData)
-            } catch (e: Exception) {
-                android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to parse trips.txt: ${e.message}", e)
-                throw e
-            }
+            val tripsData = loadGTFSFile(extractedDir, "trips.txt")
+            val trips = parseGTFSCSV(tripsData)
         
         // Group trips by route_id and unique direction info.
         data class DirectionInfo(
@@ -769,12 +738,9 @@ class GTFSDataService(private val context: Context) {
             }
         }
         
-        android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Created ${transportationLines.size} transportation lines for ${transportOperator.name} (skipped $skippedRoutes routes without route_id)")
         transportationLines
         } catch (e: Exception) {
-            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Failed to process GTFS data for ${transportOperator.name}: ${e.message}", e)
-            android.util.Log.d("GTFSDataService", "🚌 fetchGTFSData: Exception type: ${e.javaClass.simpleName}")
-            e.printStackTrace()
+            android.util.Log.e("GTFSDataService", "fetchGTFSData failed for ${transportOperator.name}", e)
             throw e
         }
     }
@@ -1078,10 +1044,6 @@ class GTFSDataService(private val context: Context) {
         }
         
         if (filteredTrips.isEmpty()) {
-            android.util.Log.d(
-                "GTFSDataService",
-                "fetchGTFSStopsForRoute: No trips found for routeId=$routeId, originalRouteId=$originalRouteId, targetDirectionId=$targetDirectionId, targetFirstStopId=$targetFirstStopId, targetLastStopId=$targetLastStopId, allTrips.count=${allTrips.size}"
-            )
             return@withContext emptyList()
         }
         

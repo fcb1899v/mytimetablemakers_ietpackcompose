@@ -30,7 +30,7 @@ object ScreenSize {
     @Composable
     fun splashIconSize(): Dp = customWidth() * 0.3f
     @Composable
-    fun splashLoadingFontSize(): Dp = customWidth() * 0.06f
+    fun splashLoadingFontSize(): Dp = customWidth() * 0.05f
     @Composable
     fun splashLoadingSpacing(): Dp = screenHeight() * 0.02f
     
@@ -121,9 +121,7 @@ object ScreenSize {
     fun loginCheckboxSize(): Dp = customWidth() * 0.06f
     @Composable
     fun loginSpacingSmall(): Dp = screenHeight() * 0.01f
-    @Composable
-    fun loginLoadingIndicatorSize(): Dp = customWidth() * 0.06f
-    
+
     // Timetable sizing.
     @Composable
     fun timetableDisplayWidth(): Dp = customWidth() * 0.90f
@@ -146,7 +144,7 @@ object ScreenSize {
     @Composable
     fun timetableHourFrameWidth(): Dp = customWidth() * 0.08f
     @Composable
-    fun timetableMinuteFrameWidth(): Dp = customWidth() - timetableHourFrameWidth() - 2.0.dp
+    fun timetableMinuteFrameWidth(): Dp = customWidth() - timetableHourFrameWidth() - borderWidth()
     @Composable
     fun timetableTypeMenuWidth(): Dp = customWidth() * 0.50f
     @Composable
@@ -286,8 +284,6 @@ object ScreenSize {
 
     // Alert dialog sizing.
     @Composable
-    fun alertDialogContentPadding(): Dp = customWidth() * 0.02f
-    @Composable
     fun alertDialogTitleFontSize(): Dp = customWidth() * 0.045f
     @Composable
     fun alertDialogTextFontSize(): Dp = customWidth() * 0.036f
@@ -312,13 +308,13 @@ object ScreenSize {
     @Composable
     fun customSwitchDefaultHeight(): Dp = customWidth() * 0.05f
     @Composable
-    fun progressIndicatorSize(): Dp = customWidth() * 0.1f
+    fun customProgressIndicatorSize(): Dp = customWidth() * 0.1f
 
     // Common UI element sizes.
     @Composable
-    fun dividerWidth(): Dp = 1.5.dp
+    fun dividerWidth(): Dp = customWidth() * 0.003f
     @Composable
-    fun shadowOffset(): Dp = 0.5.dp
+    fun shadowOffset(): Dp = customWidth() * 0.0015f
     @Composable
-    fun borderWidth(): Dp = 1.dp
+    fun borderWidth(): Dp = customWidth() * 0.002f
 }

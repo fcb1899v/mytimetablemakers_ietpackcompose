@@ -44,7 +44,7 @@ enum class CustomColor(val rawValue: String) {
     YELLOW_GREEN("YELLOW GREEN"), // Yellow green - #9ACD32
     GREEN("GREEN"),         // Green - #009739
     DARK_GREEN("DARK GREEN"), // Dark green - #004E2E
-    BLUE_GREEN("BLUE GREEN"), // Blue green - #00AC9A
+    BLUE_GREEN("BLUE GREEN"), // Blue-green - #00AC9A
     LIGHT_BLUE("LIGHT BLUE"), // Light blue - #00BFFF
     BLUE("BLUE"),           // Pure blue - #0000FF
     NAVY_BLUE("NAVY BLUE"),  // Navy blue - #003580

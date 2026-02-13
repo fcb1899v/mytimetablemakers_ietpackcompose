@@ -29,8 +29,7 @@ import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.theme.*
 import androidx.core.net.toUri
 
-// MARK: - Sign Up Content Screen
-// User registration screen with form validation and terms agreement
+// Sign-up screen with validation and terms agreement.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpContentScreen(
@@ -39,10 +38,7 @@ fun SignUpContentScreen(
 ) {
     val context = LocalContext.current
     
-    // MARK: - State Variables
-    // Password visibility toggle states for input fields (now handled internally by CustomLoginTextField)
-    
-    // Observe ViewModel state
+    // Observe ViewModel state.
     val isLoading by loginViewModel.isLoading.collectAsState()
     val isValidSignUp by loginViewModel.isValidSignUp.collectAsState()
     val isShowMessage by loginViewModel.isShowMessage.collectAsState()
@@ -54,9 +50,9 @@ fun SignUpContentScreen(
     val password by loginViewModel.password.collectAsState()
     val passwordConfirm by loginViewModel.passwordConfirm.collectAsState()
     
-    // Note: Dismiss is handled in the alert's OK button click handler
+    // Dismiss is handled by the alert OK action.
     
-    // Clear fields on appear (signUpCheck with updateAlert=false to set isValidSignUp without overwriting alert)
+    // Clear fields on appear without overwriting alerts.
     LaunchedEffect(Unit) {
         loginViewModel.clearFields()
         loginViewModel.signUpCheck(updateAlert = false)
@@ -104,8 +100,7 @@ fun SignUpContentScreen(
 
                 Spacer(modifier = Modifier.height(ScreenSize.loginTitleTopMargin()))
 
-                // MARK: - Top App Bar
-                // Back button at top
+                // Back button at top.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start
@@ -116,7 +111,7 @@ fun SignUpContentScreen(
                     )
                 }
 
-                // MARK: - Title
+                // Title section.
                 Text(
                     text = stringResource(R.string.createAccount),
                     fontSize = ScreenSize.loginTitleFontSize().value.sp,
@@ -127,8 +122,7 @@ fun SignUpContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Email Input Field
-                // Text field for email address entry with validation
+                // Email input.
                 CommonComponents.CustomLoginTextField(
                     value = email,
                     onValueChange = { loginViewModel.updateEmail(it) },
@@ -141,8 +135,7 @@ fun SignUpContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Password Input Field
-                // Secure text field with visibility toggle for password entry
+                // Password input.
                 CommonComponents.CustomLoginTextField(
                     value = password,
                     onValueChange = { loginViewModel.updatePassword(it) },
@@ -156,8 +149,7 @@ fun SignUpContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Confirm Password Input Field
-                // Secure text field with visibility toggle for password confirmation
+                // Confirm password input.
                 CommonComponents.CustomLoginTextField(
                     value = passwordConfirm,
                     onValueChange = { loginViewModel.updatePasswordConfirm(it) },
@@ -171,8 +163,7 @@ fun SignUpContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Sign Up Button
-                // Button to submit registration form with loading indicator
+                // Sign-up action button.
                 Box(
                     modifier = Modifier.width(ScreenSize.loginButtonWidth())
                 ) {
@@ -183,7 +174,7 @@ fun SignUpContentScreen(
                         isEnabled = isValidSignUp
                     )
                     
-                    // Loading indicator overlay during sign up process
+                    // Loading indicator overlay.
                     if (isLoading) {
                         Box(
                             modifier = Modifier
@@ -192,7 +183,7 @@ fun SignUpContentScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(ScreenSize.loginLoadingIndicatorSize()),
+                                modifier = Modifier.size(ScreenSize.customProgressIndicatorSize()),
                                 color = White
                             )
                         }
@@ -201,8 +192,7 @@ fun SignUpContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Terms and Conditions Agreement
-                // Checkbox and link to terms and privacy policy
+                // Terms agreement and link.
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -210,7 +200,7 @@ fun SignUpContentScreen(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Checkbox button to toggle terms agreement
+                    // Toggle terms agreement.
                     IconButton(
                         onClick = { loginViewModel.toggle() },
                         modifier = Modifier.size(ScreenSize.loginCheckboxSize())
@@ -225,7 +215,7 @@ fun SignUpContentScreen(
                     
                     Spacer(modifier = Modifier.width(ScreenSize.settingsSheetHorizontalSpacing()))
                     
-                    // Button to open terms and privacy policy in browser
+                    // Open terms and privacy policy.
                     val termsUrl = stringResource(R.string.termsUrl)
                     Row(
                         modifier = Modifier.clickable {
@@ -233,7 +223,7 @@ fun SignUpContentScreen(
                                 val intent = Intent(Intent.ACTION_VIEW, termsUrl.toUri())
                                 context.startActivity(intent)
                             } catch (_: Exception) {
-                                // Handle error
+                                // No-op if no browser is available.
                             }
                         }
                     ) {
@@ -254,8 +244,7 @@ fun SignUpContentScreen(
                 Spacer(modifier = Modifier.weight(1f))
             }
             
-            // MARK: - Loading Indicator
-            // Display loading overlay during authentication process
+            // Loading indicator overlay.
             if (isLoading) {
                 Box(
                     modifier = Modifier
@@ -265,17 +254,17 @@ fun SignUpContentScreen(
                 ) {
                     Card(
                         shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius()),
-                        modifier = Modifier.padding(ScreenSize.alertDialogContentPadding())
+                        modifier = Modifier.padding(ScreenSize.settingsSheetHorizontalPadding())
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.padding(ScreenSize.alertDialogContentPadding())
+                            modifier = Modifier.padding(ScreenSize.settingsSheetHorizontalPadding())
                         )
                     }
                 }
             }
         }
         
-        // MARK: - Sign Up Result Alert
+        // Sign-up result alert.
         if (isShowMessage) {
             CommonComponents.CustomAlertDialog(
                 onDismissRequest = { loginViewModel.dismissMessage() },

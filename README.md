@@ -138,8 +138,7 @@ app/src/main/java/com/mytimetablemaker/
 │   │   └── SettingsTransferSheetScreen.kt
 │   ├── theme/               # Material theme
 │   │   ├── Color.kt
-│   │   ├── Theme.kt
-│   │   └── Type.kt
+│   │   └── Theme.kt
 │   └── timetable/           # Timetable views
 │       ├── SettingsTimetableSheetScreen.kt
 │       └── TimetableContentScreen.kt

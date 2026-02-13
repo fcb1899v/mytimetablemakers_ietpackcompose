@@ -10,28 +10,24 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-// MARK: - Material Theme Color Scheme
-// Theme colors (primary and accent)
-// Primary: #3700B3 (Indigo)
-// Accent: #03DAC5 (Cyan)
+// Material3 color schemes: Primary #3700B3, Accent #03DAC5
 
 private val LightColorScheme = lightColorScheme(
-    primary = Primary,      // #3700B3
-    secondary = Accent,     // #03DAC5
-    tertiary = Accent       // #03DAC5
+    primary = Primary,
+    secondary = Accent,
+    tertiary = Accent
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Primary,      // #3700B3
-    secondary = Accent,     // #03DAC5
-    tertiary = Accent       // #03DAC5
+    primary = Primary,
+    secondary = Accent,
+    tertiary = Accent
 )
 
+// Apply Material3 theme with dynamic color support (Android 12+)
 @Composable
-// Applies app-wide Material3 theme colors and typography.
 fun MyTransitMakers_JetpackComposeTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
@@ -46,7 +42,6 @@ fun MyTransitMakers_JetpackComposeTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
         content = content
     )
 }

@@ -28,7 +28,6 @@ import com.mytimetablemaker.ui.theme.MyTransitMakers_JetpackComposeTheme
 import com.mytimetablemaker.ui.timetable.TimetableContentScreen
 import java.util.Locale
 
-// MARK: - Main Activity
 // Main entry point for the Android timetable maker application
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,15 +59,12 @@ class MainActivity : ComponentActivity() {
             
             val configuration = resources.configuration
             configuration.setLocale(locale)
-            // Use createConfigurationContext for API 17+ instead of deprecated updateConfiguration
-            // Note: This is called from onCreate, so we don't recreate to avoid infinite loop
-            // The language will be applied when the activity is recreated from SettingsContentScreen
+            // Use createConfigurationContext for API 17+. Called from onCreate to avoid infinite loop.
             createConfigurationContext(configuration)
         }
     }
 }
 
-// MARK: - App Navigation
 // Manages app navigation and ViewModel initialization
 @Composable
 fun AppNavigation() {
@@ -85,7 +81,6 @@ fun AppNavigation() {
         navController = navController,
         startDestination = "splash"
     ) {
-        // MARK: - Splash Screen
         // Initial screen shown when app launches
         composable("splash") {
             SplashContentScreen(
@@ -98,7 +93,6 @@ fun AppNavigation() {
             )
         }
         
-        // MARK: - Main Content Screen
         // Primary screen displaying transfer information and timetables
         composable("main") {
             MainContentScreen(
@@ -115,7 +109,6 @@ fun AppNavigation() {
             )
         }
         
-        // MARK: - Login Screen
         // User authentication and account management
         composable("login") {
             LoginContentScreen(
@@ -132,7 +125,6 @@ fun AppNavigation() {
             )
         }
         
-        // MARK: - Settings Screen
         // Application settings and configuration
         composable("settings") {
             SettingsContentScreen(
@@ -154,7 +146,6 @@ fun AppNavigation() {
             )
         }
         
-        // MARK: - Line Settings Screen
         // Configure transportation line settings
         composable("line_settings/{goorback}/{lineIndex}") { backStackEntry ->
             val goorback = backStackEntry.arguments?.getString("goorback") ?: "back1"
@@ -171,7 +162,6 @@ fun AppNavigation() {
             )
         }
         
-        // MARK: - Transfer Settings Screen
         // Configure transfer time and transportation methods
         composable("transfer_settings/{goorback}") { _ ->
             SettingsTransferSheetScreen(
@@ -181,15 +171,13 @@ fun AppNavigation() {
             )
         }
         
-        // MARK: - Timetable Settings Screen
-        // Configure timetable generation settings
+        // Timetable editing screen
         composable("timetable_settings/{goorback}/{lineIndex}") { backStackEntry ->
             val goorback = backStackEntry.arguments?.getString("goorback") ?: "back1"
             val lineIndex = backStackEntry.arguments?.getString("lineIndex")?.toIntOrNull() ?: 0
-            // Navigate to TimetableContentScreen
             TimetableContentScreen(
                 goorback = goorback,
-                num = lineIndex, // lineIndex is 0-based, num is also 0-based (timetableKey uses lineNameKey(num) which adds +1 internally)
+                num = lineIndex,
                 onNavigateBack = {
                     navController.popBackStack()
                 }

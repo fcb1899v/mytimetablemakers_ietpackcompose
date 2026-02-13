@@ -3,7 +3,6 @@ package com.mytimetablemaker.ui.login
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
@@ -29,8 +28,7 @@ import com.mytimetablemaker.ui.common.AdMobBannerView
 import com.mytimetablemaker.ui.common.CommonComponents
 import com.mytimetablemaker.ui.theme.*
 
-// MARK: - Login Content Screen
-// Main login screen with authentication form and navigation
+// Main login screen with auth form and navigation.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginContentScreen(
@@ -38,12 +36,12 @@ fun LoginContentScreen(
     onNavigateBack: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
-    // MARK: - State Variables
+    // State variables.
     var showSignUpSheet by remember { mutableStateOf(false) }
     var showResetAlert by remember { mutableStateOf(false) }
     var showLoginResultAlert by remember { mutableStateOf(false) }
     
-    // Observe ViewModel state
+    // Observe ViewModel state.
     val isLoading by loginViewModel.isLoading.collectAsState()
     val isValidLogin by loginViewModel.isValidLogin.collectAsState()
     val isShowMessage by loginViewModel.isShowMessage.collectAsState()
@@ -54,14 +52,14 @@ fun LoginContentScreen(
     val password by loginViewModel.password.collectAsState()
     val resetEmail by loginViewModel.resetEmail.collectAsState()
     
-    // Clear fields on appear (updateAlert=false to avoid overwriting logout message with signUpCheck validation)
+    // Clear fields on appear without overwriting logout messages.
     LaunchedEffect(Unit) {
         loginViewModel.updateEmail("", updateAlert = false)
         loginViewModel.updatePassword("", updateAlert = false)
         loginViewModel.loginCheck(updateAlert = !isShowMessage)
     }
     
-    // Handle login result message changes
+    // Handle login result messages.
     LaunchedEffect(isShowMessage) {
         if (isShowMessage) {
             showLoginResultAlert = true
@@ -94,7 +92,7 @@ fun LoginContentScreen(
                 .padding(paddingValues)
         ) {
 
-            // MARK: - Login Form
+            // Login form.
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -105,8 +103,7 @@ fun LoginContentScreen(
 
                 Spacer(modifier = Modifier.height(ScreenSize.loginTitleTopMargin()))
 
-                // MARK: - Top App Bar
-                // Back button at top
+                // Back button at top.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start
@@ -117,7 +114,7 @@ fun LoginContentScreen(
                     )
                 }
 
-                // MARK: - Title Section
+                // Title section.
                 Text(
                     text = stringResource(R.string.login),
                     fontSize = ScreenSize.loginTitleFontSize().value.sp,
@@ -128,11 +125,11 @@ fun LoginContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Email Input Field
+                // Email input.
                 CommonComponents.CustomLoginTextField(
                     value = email,
                     onValueChange = { 
-                        // Directly update email value and check login
+                        // Update email and re-validate.
                         loginViewModel.updateEmail(it)
                         loginViewModel.loginCheck()
                     },
@@ -145,11 +142,11 @@ fun LoginContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Password Input Field
+                // Password input.
                 CommonComponents.CustomLoginTextField(
                     value = password,
                     onValueChange = { 
-                        // Directly update password value and check login
+                        // Update password and re-validate.
                         loginViewModel.updatePassword(it)
                         loginViewModel.loginCheck()
                     },
@@ -163,7 +160,7 @@ fun LoginContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Login Button
+                // Login button.
                 CommonComponents.CustomButton(
                     title = stringResource(R.string.login),
                     backgroundColor = if (isValidLogin) Primary else Gray,
@@ -174,7 +171,7 @@ fun LoginContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Sign Up Button
+                // Sign-up button.
                 CommonComponents.CustomButton(
                     title = stringResource(R.string.signup),
                     backgroundColor = White,
@@ -185,7 +182,7 @@ fun LoginContentScreen(
                 
                 Spacer(modifier = Modifier.height(ScreenSize.loginMargin()))
                 
-                // MARK: - Password Reset Button
+                // Password reset button.
                 TextButton(onClick = { showResetAlert = true }) {
                     Text(
                         text = stringResource(R.string.forgotPassword),
@@ -199,15 +196,14 @@ fun LoginContentScreen(
                 Spacer(modifier = Modifier.weight(1f))
             }
 
-            // MARK: - Splash Image and Ad Banner Placeholder
-            // Splash image at bottom with ad banner placeholder
+            // Bottom splash image and ad banner.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter),
                 verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                // Splash Image
+                // Splash image.
                 Image(
                     painter = painterResource(id = R.drawable.splash),
                     contentDescription = "Splash Image",
@@ -217,7 +213,7 @@ fun LoginContentScreen(
                     contentScale = ContentScale.FillWidth
                 )
 
-                // Ad Banner Placeholder
+                // Ad banner container.
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -228,28 +224,16 @@ fun LoginContentScreen(
                 }
             }
 
-            // MARK: - Loading Indicator
+            // Loading indicator.
             if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Gray.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Card(
-                        modifier = Modifier.padding(ScreenSize.alertDialogContentPadding()),
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.padding(ScreenSize.alertDialogContentPadding())
-                        )
-                    }
-                }
+                CommonComponents.CustomProgressIndicator(
+                    text = null
+                )
             }
         }
     }
     
-    // MARK: - Sign Up Sheet
+    // Sign-up sheet.
     if (showSignUpSheet) {
         Dialog(
             onDismissRequest = { showSignUpSheet = false },
@@ -265,8 +249,8 @@ fun LoginContentScreen(
         }
     }
 
-    // MARK: - Login Result Alert (also handles logout message from Settings)
-    // Note: Only use showLoginResultAlert - the redundant isShowMessage check caused double display when navigating from Settings after logout
+    // Login result alert (also handles logout message from Settings).
+    // Uses showLoginResultAlert to avoid double display.
     if (showLoginResultAlert) {
         CommonComponents.CustomAlertDialog(
             onDismissRequest = {
@@ -289,7 +273,7 @@ fun LoginContentScreen(
         )
     }
     
-    // MARK: - Password Reset Alert
+    // Password reset alert.
     if (showResetAlert) {
         CommonComponents.CustomAlertDialog(
             onDismissRequest = { showResetAlert = false },

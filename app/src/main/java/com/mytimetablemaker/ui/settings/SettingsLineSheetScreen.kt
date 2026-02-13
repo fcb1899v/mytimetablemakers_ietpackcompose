@@ -43,8 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import androidx.core.graphics.toColorInt
 import androidx.compose.runtime.collectAsState
 
-// MARK: - Settings Line Sheet Screen
-// Sheet view for configuring railway lines and bus routes in settings
+// Line settings sheet for route configuration.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsLineSheetScreen(
@@ -57,24 +56,24 @@ fun SettingsLineSheetScreen(
     val application = context.applicationContext as Application
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
-    // Validate goorback value and use default if invalid
+    // Validate route key and fall back to back1.
     val validGoorback = if (goorback.isEmpty() || !goorbackList.contains(goorback)) "back1" else goorback
     
-    // Create ViewModel
+    // Create ViewModel.
     val viewModel = remember(validGoorback, lineIndex) {
         SettingsLineViewModel(application, sharedPreferences, validGoorback, lineIndex)
     }
     
-    // Local state for UI
+    // Local UI state.
     var showTimetableSettings by remember { mutableStateOf(false) }
     
-    // Focus requesters for text fields
+    // Focus requesters for text fields.
     val operatorFocusRequester = remember { FocusRequester() }
     val lineFocusRequester = remember { FocusRequester() }
     val departureFocusRequester = remember { FocusRequester() }
     val arrivalFocusRequester = remember { FocusRequester() }
     
-    // Observe ViewModel state
+    // ViewModel state.
     val operatorInput by viewModel.operatorInput.collectAsState()
     val operatorSuggestions by viewModel.operatorSuggestions.collectAsState()
     val showOperatorSuggestions by viewModel.showOperatorSuggestions.collectAsState()
@@ -117,7 +116,7 @@ fun SettingsLineSheetScreen(
     val selectedDepartureStop by viewModel.selectedDepartureStopState.collectAsState()
     val selectedArrivalStop by viewModel.selectedArrivalStopState.collectAsState()
     
-    // Single source of truth: use ViewModel.isAllNotEmpty (four inputs + ride time > 0); recompose when any input or ride time changes
+    // Track form completeness.
     val isAllNotEmpty by remember(operatorInput, lineInput, departureStopInput, arrivalStopInput, selectedRideTime) {
         derivedStateOf { viewModel.isAllNotEmpty }
     }
@@ -132,7 +131,7 @@ fun SettingsLineSheetScreen(
         }
     }
     
-    // Status bar setup
+    // Status bar setup.
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (context as? android.app.Activity)?.window
@@ -149,43 +148,44 @@ fun SettingsLineSheetScreen(
     val verticalSpacing = ScreenSize.settingsSheetVerticalSpacing()
     val titleFontSize = ScreenSize.settingsTitleFontSize()
     
-    Scaffold(
-        topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsPadding(WindowInsets.statusBars)
-                    .height(ScreenSize.settingsSheetTopBarHeight())
-                    .background(White)
-            ) {
-                // Back button aligned to the left
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = ScreenSize.settingsSheetBackButtonPadding())
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .height(ScreenSize.settingsSheetTopBarHeight())
+                        .background(White)
                 ) {
-                    CommonComponents.CustomBackButton(
-                        onClick = {
-                            if (!isLoadingBusStops && !isLoadingTimetable && !isLoadingLines) {
-                                onNavigateBack()
-                            }
-                        },
-                        foregroundColor = if (isLoadingBusStops || isLoadingTimetable || isLoadingLines) White else Black
+                    // Back button.
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = ScreenSize.settingsSheetBackButtonPadding())
+                    ) {
+                        CommonComponents.CustomBackButton(
+                            onClick = {
+                                if (!isLoadingBusStops && !isLoadingTimetable && !isLoadingLines) {
+                                    onNavigateBack()
+                                }
+                            },
+                            foregroundColor = if (isLoadingBusStops || isLoadingTimetable || isLoadingLines) White else Black
+                        )
+                    }
+                    
+                    // Title.
+                    Text(
+                        text = stringResource(R.string.routeSettings),
+                        fontSize = titleFontSize.value.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Black,
+                        modifier = Modifier.align(Alignment.Center),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
-                
-                // Title centered on screen
-                Text(
-                    text = stringResource(R.string.routeSettings),
-                    fontSize = titleFontSize.value.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Black,
-                    modifier = Modifier.align(Alignment.Center),
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
             }
-        }
-    ) { paddingValues ->
+        ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -198,7 +198,7 @@ fun SettingsLineSheetScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = horizontalPadding)
             ) {
-                // Route Header Menu
+                // Route header menu.
                 RouteHeaderMenu(
                     viewModel = viewModel,
                     selectedGoorback = selectedGoorback,
@@ -214,33 +214,36 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Line Number Menu
+                // Line number menu.
                 LineNumberMenu(
                     viewModel = viewModel,
                     selectedLineNumber = selectedLineNumber,
                     selectedTransportationKind = selectedTransportationKind,
                     onTransportationKindChanged = { isRailway ->
+                        clearAllFocus(
+                            operatorFocusRequester,
+                            lineFocusRequester,
+                            departureFocusRequester,
+                            arrivalFocusRequester,
+                            viewModel
+                        )
                         viewModel.switchTransportationKind(isRailway)
                     }
                 )
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Operator Input Section
+                // Operator input.
                 OperatorInputSection(
                     operatorInput = operatorInput,
                     isOperatorSelected = selectedOperatorCode != null,
                     isOperatorFieldFocused = isOperatorFieldFocused,
                     focusRequester = operatorFocusRequester,
                     onOperatorInputChanged = { newValue ->
-                        // Update value immediately to ensure input works correctly
+                        // Update input and refresh suggestions.
                         viewModel.operatorInput.value = newValue
-                        // Process input and trigger filtering
-                        // Request focus back to text field after filtering completes
                         CoroutineScope(Dispatchers.Main).launch {
                             viewModel.processOperatorInput(newValue)
-                            // After filterOperators completes, check if dropdown should be shown
-                            // If dropdown is shown, ensure focus is on text field
                             if (viewModel.showOperatorSuggestions.value && viewModel.operatorSuggestions.value.isNotEmpty()) {
                                 operatorFocusRequester.requestFocus()
                             }
@@ -249,9 +252,7 @@ fun SettingsLineSheetScreen(
                     onFocusChanged = { isFocused ->
                         viewModel.isOperatorFieldFocused.value = isFocused
                         if (isFocused) {
-                            // Show all operators when field is focused and operator input is empty
-                            // Reset operatorSelected, isLineNumberChanging, and isGoorBackChanging to allow showing all operators when field is focused
-                            // This is necessary because filterOperators returns early if operatorSelected, isLineNumberChanging, or isGoorBackChanging is true
+                            // Reset flags so suggestions can show.
                             viewModel.operatorSelected.value = false
                             viewModel.isLineNumberChanging.value = false
                             viewModel.isGoOrBackChanging.value = false
@@ -259,23 +260,18 @@ fun SettingsLineSheetScreen(
                             if (operatorInput.isEmpty()) {
                                 CoroutineScope(Dispatchers.Main).launch {
                                     viewModel.filterOperators("")
-                                    // Request focus back to text field after filtering to show dropdown
                                     operatorFocusRequester.requestFocus()
                                 }
                             } else {
                                 CoroutineScope(Dispatchers.Main).launch {
                                     viewModel.filterOperators(operatorInput)
-                                    // Request focus back to text field after filtering to show dropdown
                                     operatorFocusRequester.requestFocus()
                                 }
                             }
                         } else {
-                            // If dropdown is showing, try to keep focus on text field
                             if (viewModel.showOperatorSuggestions.value && viewModel.operatorSuggestions.value.isNotEmpty()) {
-                                // Request focus immediately when lost (no delay needed)
                                 operatorFocusRequester.requestFocus()
                             } else {
-                                // Hide suggestions when field loses focus
                                 viewModel.showOperatorSuggestions.value = false
                             }
                         }
@@ -286,7 +282,7 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Line Input Section
+                // Line input.
                 LineInputSection(
                     lineInput = lineInput,
                     selectedTransportationKind = selectedTransportationKind,
@@ -298,20 +294,17 @@ fun SettingsLineSheetScreen(
                     onFocusChanged = { isFocused ->
                         viewModel.isLineFieldFocused.value = isFocused
                         if (isFocused) {
-                            // Show line suggestions when field is focused, operator is selected, and line input is empty
-                            // Reset isLineNumberChanging, isGoorBackChanging, and lineSelected to allow showing suggestions when field is focused
+                            // Reset flags so suggestions can show.
                             viewModel.isLineNumberChanging.value = false
                             viewModel.isGoOrBackChanging.value = false
                             viewModel.lineSelected.value = false
                             
-                            // Show all lines when field is focused and operator is selected
                             if (viewModel.selectedOperatorCode.value != null && viewModel.operatorSelected.value && lineInput.isEmpty()) {
                                 CoroutineScope(Dispatchers.Main).launch {
                                     viewModel.filterLine("", isFocused = true)
                                 }
                             }
                         } else {
-                            // Hide suggestions when field loses focus
                             viewModel.showLineSuggestions.value = false
                         }
                     }
@@ -319,7 +312,7 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Line Color Section
+                // Line color.
                 LineColorSection(
                     viewModel = viewModel,
                     selectedLineColor = selectedLineColor,
@@ -331,7 +324,7 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Station Header Text
+                // Station header.
                 StationHeaderText(
                     viewModel = viewModel,
                     selectedTransportationKind = selectedTransportationKind
@@ -339,7 +332,7 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Departure Stop Input Section
+                // Departure stop input.
                 DepartureStopInputSection(
                     departureStopInput = departureStopInput,
                     selectedTransportationKind = selectedTransportationKind,
@@ -351,9 +344,7 @@ fun SettingsLineSheetScreen(
                     onFocusChanged = { isFocused ->
                         viewModel.isDepartureFieldFocused.value = isFocused
                         if (isFocused && lineSelected) {
-                            // Reset selection flag to allow suggestions to show
                             viewModel.departureStopSelected.value = false
-                            // Filter and show all stations when field is focused
                             viewModel.filterDepartureStops(departureStopInput)
                         } else if (!isFocused) {
                             viewModel.showDepartureSuggestions.value = false
@@ -363,7 +354,7 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Arrival Stop Input Section
+                // Arrival stop input.
                 ArrivalStopInputSection(
                     arrivalStopInput = arrivalStopInput,
                     selectedTransportationKind = selectedTransportationKind,
@@ -375,9 +366,7 @@ fun SettingsLineSheetScreen(
                     onFocusChanged = { isFocused ->
                         viewModel.isArrivalFieldFocused.value = isFocused
                         if (isFocused && lineSelected) {
-                            // Reset selection flag to allow suggestions to show
                             viewModel.arrivalStopSelected.value = false
-                            // Filter and show all stations when field is focused
                             viewModel.filterArrivalStops(arrivalStopInput)
                         } else if (!isFocused) {
                             viewModel.showArrivalSuggestions.value = false
@@ -387,10 +376,10 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Time Header Text
+                // Time header.
                 TimeHeaderText()
                 
-                // Ride Time Section
+                // Ride time.
                 RideTimeSection(
                     viewModel = viewModel,
                     selectedRideTime = selectedRideTime,
@@ -400,7 +389,7 @@ fun SettingsLineSheetScreen(
                     }
                 )
 
-                // Transportation Settings Section (only for lines 1 and 2)
+                // Transportation settings for lines 1 and 2.
                 if (selectedLineNumber < 3) {
                     TransportationSettingsSection(
                         viewModel = viewModel,
@@ -410,7 +399,7 @@ fun SettingsLineSheetScreen(
                         }
                     )
 
-                    // Transfer Time Settings Section (only when transportation is not "none")
+                    // Transfer time settings when transportation is set.
                     if (selectedTransportation != "none") {
                         TransferTimeSettingsSection(
                             viewModel = viewModel,
@@ -425,7 +414,7 @@ fun SettingsLineSheetScreen(
                     }
                 }
                 
-                // Save Button Section (active when isAllNotEmpty || isAllSelected)
+                // Save action.
                 SaveButtonSection(
                     isAllNotEmpty = isAllNotEmpty,
                     isAllSelected = isAllSelected,
@@ -439,7 +428,7 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Timetable Settings Button Section (active when isAllNotEmpty || isAllSelected)
+                // Timetable settings action.
                 TimetableSettingsButtonSection(
                     isAllNotEmpty = isAllNotEmpty,
                     isAllSelected = isAllSelected,
@@ -453,22 +442,18 @@ fun SettingsLineSheetScreen(
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
                 
-                // Timetable Auto Settings Button Section (active when isAllSelected only)
+                // Auto-generate timetable action.
                 TimetableAutoSettingsButtonSection(
                     isAllSelected = isAllSelected,
                     onAutoGenerate = {
                         CoroutineScope(Dispatchers.Main).launch {
                             try {
-                                // Save line data first
                                 viewModel.handleLineSave()
-                                // Auto-generate timetable and wait for completion
                                 viewModel.autoGenerateTimetable()
-                                // Small delay to ensure data is saved to SharedPreferences
                                 delay(100)
-                                // Navigate to timetable content screen after generation
                                 showTimetableSettings = true
                             } catch (e: Exception) {
-                                android.util.Log.d("SettingsLineSheetScreen", "Failed to auto-generate timetable: ${e.message}", e)
+                                android.util.Log.e("SettingsLineSheetScreen", "Failed to auto-generate timetable", e)
                             }
                         }
                     }
@@ -477,19 +462,17 @@ fun SettingsLineSheetScreen(
                 Spacer(modifier = Modifier.height(verticalSpacing))
             }
             
-            // MARK: - Operator Suggestions (ZStack layer)
-            // Display operator dropdown in ZStack layer
+            // Operator suggestions overlay.
             if (showOperatorSuggestions && operatorSuggestions.isNotEmpty() && !isLineNumberChanging && !operatorSelected && isOperatorFieldFocused) {
                 OperatorSuggestionsView(
                     operatorSuggestions = operatorSuggestions,
-                    selectedTransportationKind = selectedTransportationKind,
                     onOperatorSelected = { operatorName ->
                         viewModel.operatorInput.value = operatorName
                         viewModel.operatorSelected.value = true
                         viewModel.showOperatorSuggestions.value = false
                         viewModel.operatorSuggestions.value = emptyList()
                         
-                        // Find operator code from operator name
+                        // Find operator code from operator name.
                         val transportationKind = when (selectedTransportationKind) {
                             TransportationLineKind.RAILWAY -> TransportationKind.RAILWAY
                             TransportationLineKind.BUS -> TransportationKind.BUS
@@ -502,41 +485,31 @@ fun SettingsLineSheetScreen(
                             val operatorCode = dataSource.operatorCode()
                             val previousOperatorCode = viewModel.selectedOperatorCode.value
                             
-                            // Check if operator has changed from saved value
                             if (previousOperatorCode != operatorCode) {
                                 viewModel.isChangedOperator.value = true
                             }
                             
                             viewModel.selectedOperatorCode.value = operatorCode
                             
-                            // Clear line input when operator is selected
                             viewModel.lineInput.value = ""
                             viewModel.lineSelected.value = false
                             
-                            // Reset lineSelected and isLineNumberChanging to allow showing line suggestions
                             viewModel.isLineNumberChanging.value = false
                             
-                            // Set focus state before calling processLineInput or fetchGTFSLinesForOperator
                             viewModel.isLineFieldFocused.value = true
                             
-                            // For GTFS operators, fetch lines from ZIP cache
                             if (dataSource.apiType() == ODPTAPIType.GTFS) {
-                                // Fetch GTFS lines asynchronously
-                                // fetchGTFSLinesForOperator will update lineSuggestions when complete
                                 CoroutineScope(Dispatchers.Main).launch {
                                     try {
                                         viewModel.fetchGTFSLinesForOperator(dataSource)
                                     } catch (e: Exception) {
-                                        android.util.Log.d("SettingsLineSheetScreen", "OperatorSuggestionsView onOperatorSelected: fetchGTFSLinesForOperator failed for ${dataSource.name}: ${e.message}", e)
+                                        android.util.Log.e("SettingsLineSheetScreen", "Failed to fetch GTFS lines for ${dataSource.name}", e)
                                     }
                                 }
                             } else {
-                                // For non-GTFS operators, use filterLine to show line suggestions
-                                // processLineInput will clear selectedLine internally
                                 viewModel.processLineInput("")
                             }
                             
-                            // Request focus on line input field
                             lineFocusRequester.requestFocus()
                         }
                     },
@@ -550,8 +523,7 @@ fun SettingsLineSheetScreen(
                 )
             }
             
-            // MARK: - Line Suggestions (ZStack layer)
-            // Display line dropdown in ZStack layer
+            // Line suggestions overlay.
             if (showLineSuggestions && lineSuggestions.isNotEmpty() && !isLineNumberChanging && !lineSelected && isLineFieldFocused && operatorSelected) {
                 LineSuggestionsView(
                     viewModel = viewModel,
@@ -561,14 +533,12 @@ fun SettingsLineSheetScreen(
                         viewModel.showLineSuggestions.value = false
                         viewModel.lineSelected.value = true
                         
-                        // If line has no color, show color selection
-                        // Otherwise, focus on departure station field
+                        // Show color selection or move to departure input.
                         if (line.lineColor == null) {
                             viewModel.showColorSelection.value = true
                         } else {
-                            // Focus on departure station field when line has color
                             CoroutineScope(Dispatchers.Main).launch {
-                                delay(100) // Small delay to ensure line selection is processed
+                                delay(100)
                                 departureFocusRequester.requestFocus()
                                 viewModel.isDepartureFieldFocused.value = true
                             }
@@ -584,8 +554,7 @@ fun SettingsLineSheetScreen(
                 )
             }
             
-            // MARK: - Departure Stop Suggestions (ZStack layer)
-            // Display departure stop dropdown in ZStack layer
+            // Departure stop suggestions overlay.
             if (showDepartureSuggestions && departureSuggestions.isNotEmpty() && lineSelected && isDepartureFieldFocused) {
                 DepartureStopSuggestionsView(
                     departureSuggestions = departureSuggestions,
@@ -599,9 +568,8 @@ fun SettingsLineSheetScreen(
                         viewModel.isDepartureFieldFocused.value = false
                         viewModel.departureSuggestions.value = emptyList()
                         viewModel.departureStopSelected.value = true
-                        // Focus on arrival station field after departure station selection
                         CoroutineScope(Dispatchers.Main).launch {
-                            delay(100) // Small delay to ensure departure station selection is processed
+                            delay(100)
                             arrivalFocusRequester.requestFocus()
                             viewModel.isArrivalFieldFocused.value = true
                             viewModel.isLineNumberChanging.value = false
@@ -617,8 +585,7 @@ fun SettingsLineSheetScreen(
                 )
             }
             
-            // MARK: - Arrival Stop Suggestions (ZStack layer)
-            // Display arrival stop dropdown in ZStack layer
+            // Arrival stop suggestions overlay.
             if (showArrivalSuggestions && arrivalSuggestions.isNotEmpty() && lineSelected && isArrivalFieldFocused) {
                 ArrivalStopSuggestionsView(
                     arrivalSuggestions = arrivalSuggestions,
@@ -633,16 +600,12 @@ fun SettingsLineSheetScreen(
                         viewModel.arrivalSuggestions.value = emptyList()
                         viewModel.arrivalStopSelected.value = true
                         
-                        // If departure station is not input, focus on departure station field
-                        // Otherwise, clear all focus (only for lines 1 and 2)
                         CoroutineScope(Dispatchers.Main).launch {
-                            delay(100) // Small delay to ensure arrival station selection is processed
+                            delay(100)
                             if (departureStopInput.isEmpty()) {
-                                // Focus on departure station field if it's empty
                                 departureFocusRequester.requestFocus()
                                 viewModel.isDepartureFieldFocused.value = true
                             } else if (viewModel.selectedLineNumber < 3) {
-                                // Clear all focus only for lines 1 and 2
                                 clearAllFocus(
                                     operatorFocusRequester,
                                     lineFocusRequester,
@@ -664,15 +627,14 @@ fun SettingsLineSheetScreen(
                 )
             }
             
-            // Color Selection Section
+            // Color selection overlay.
             if (showColorSelection || (lineInput.isNotEmpty() && selectedLineColor == null && selectedLine?.lineColor == null && !lineSelected)) {
                 ColorSelectionSection(
                     onColorSelected = { color ->
                         viewModel.setLineColor(color)
                         viewModel.showColorSelection.value = false
-                        // Focus on departure station field after color selection
                         CoroutineScope(Dispatchers.Main).launch {
-                            delay(100) // Small delay to ensure color selection is processed
+                            delay(100)
                             departureFocusRequester.requestFocus()
                             viewModel.isDepartureFieldFocused.value = true
                         }
@@ -683,17 +645,19 @@ fun SettingsLineSheetScreen(
                 )
             }
             
-            
-            // Loading Overlay
-            if (isLoadingBusStops || isLoadingTimetable || isLoadingLines) {
-                LoadingOverlay(
-                    message = loadingMessage
-                )
-            }
+            // Loading overlay removed from here (moved outside Scaffold)
+        }
+        }
+        
+        // Loading overlay - outside Scaffold to overlay TopBar/BottomBar
+        if (isLoadingBusStops || isLoadingTimetable || isLoadingLines) {
+            CommonComponents.CustomProgressIndicator(
+                text = loadingMessage
+            )
         }
     }
     
-    // Navigate to timetable settings when showTimetableSettings is true
+    // Navigate to timetable settings.
     LaunchedEffect(showTimetableSettings) {
         if (showTimetableSettings) {
             onNavigateToTimetableSettings(validGoorback, lineIndex)
@@ -701,7 +665,7 @@ fun SettingsLineSheetScreen(
         }
     }
     
-    // Initialize on appear
+    // Initialize on appear.
     LaunchedEffect(Unit) {
         viewModel.isChangedOperator.value = false
         if (viewModel.selectedGoorback != validGoorback) {
@@ -709,9 +673,7 @@ fun SettingsLineSheetScreen(
         }
     }
     
-    //             if isShowing { clearAllFocus() }
-    //         }
-    // Clear all focus when color selection is opened
+    // Clear focus when color selection opens.
     LaunchedEffect(showColorSelection) {
         if (showColorSelection) {
             clearAllFocus(
@@ -725,8 +687,7 @@ fun SettingsLineSheetScreen(
     }
 }
 
-// MARK: - Helper Functions
-// Clear all focus from text fields
+// Clear all focus from text fields.
 private fun clearAllFocus(
     operatorFocusRequester: FocusRequester,
     lineFocusRequester: FocusRequester,
@@ -744,8 +705,7 @@ private fun clearAllFocus(
     viewModel.isArrivalFieldFocused.value = false
 }
 
-// MARK: - Route Header Menu
-// Main header view with direction selection dropdown and clear button
+// Route header with direction dropdown and clear action.
 @Composable
 private fun RouteHeaderMenu(
     viewModel: SettingsLineViewModel,
@@ -762,7 +722,7 @@ private fun RouteHeaderMenu(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Direction selection dropdown
+        // Direction dropdown.
         var expanded by remember { mutableStateOf(false) }
         
         Box {
@@ -819,8 +779,7 @@ private fun RouteHeaderMenu(
     }
 }
 
-// MARK: - Line Number Menu
-// Line number selection menu with transportation kind toggle
+// Line number menu with transportation kind toggle.
 @Composable
 private fun LineNumberMenu(
     viewModel: SettingsLineViewModel,
@@ -835,7 +794,7 @@ private fun LineNumberMenu(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Line number selection dropdown
+        // Line number dropdown.
         var expanded by remember { mutableStateOf(false) }
         
         Box {
@@ -882,7 +841,7 @@ private fun LineNumberMenu(
         
         Spacer(modifier = Modifier.weight(1f))
         
-        // Transportation Kind Toggle
+        // Transportation kind toggle.
         CommonComponents.CustomToggle(
             isLeftSelected = selectedTransportationKind == TransportationLineKind.RAILWAY,
             onToggle = onTransportationKindChanged,
@@ -892,8 +851,7 @@ private fun LineNumberMenu(
     }
 }
 
-// MARK: - Operator Input Section
-// Section for inputting operator name
+// Operator input section.
 @Composable
 private fun OperatorInputSection(
     operatorInput: String,
@@ -905,8 +863,7 @@ private fun OperatorInputSection(
     showOperatorSuggestions: Boolean,
     operatorSuggestions: List<String>
 ) {
-    // When dropdown is shown, ensure focus is maintained
-    // IME visibility is now handled by CustomTextField itself
+    // Keep focus when suggestions are visible.
     LaunchedEffect(showOperatorSuggestions) {
         if (showOperatorSuggestions && operatorSuggestions.isNotEmpty()) {
             if (!isOperatorFieldFocused) {
@@ -928,8 +885,7 @@ private fun OperatorInputSection(
     )
 }
 
-// MARK: - Line Input Section
-// Section for inputting line name
+// Line input section.
 @Composable
 private fun LineInputSection(
     lineInput: String,
@@ -952,8 +908,7 @@ private fun LineInputSection(
     )
 }
 
-// MARK: - Line Color Section
-// Section for displaying and selecting line colors
+// Line color selection.
 @Composable
 private fun LineColorSection(
     viewModel: SettingsLineViewModel,
@@ -968,7 +923,7 @@ private fun LineColorSection(
     val goorback = viewModel.goorback
     val lineIndex = viewModel.selectedLineNumber - 1
     
-    // Use settingsLineColorString function to get color
+    // Resolve line color from inputs and saved values.
     val color = run {
         fun parseColorString(colorString: String?): Color? {
             return colorString?.takeIf { it.isNotEmpty() }?.let {
@@ -1000,7 +955,7 @@ private fun LineColorSection(
             modifier = Modifier.wrapContentWidth()
         )
         
-        // Color display circle
+        // Color display.
         Box(
             modifier = Modifier
                 .size(ScreenSize.settingsLineSheetColorCircleSmallSize())
@@ -1020,7 +975,7 @@ private fun LineColorSection(
                 .clickable(onClick = onColorSelectClick)
         )
         
-        // Color Selection Button
+        // Color selection button.
         CommonComponents.CustomRectangleButton(
             title = stringResource(R.string.select),
             icon = Icons.Default.Palette,
@@ -1032,8 +987,7 @@ private fun LineColorSection(
     }
 }
 
-// MARK: - Station Header Text
-// Station header with dynamic station information
+// Station header with optional first/last stop.
 @Composable
 private fun StationHeaderText(
     viewModel: SettingsLineViewModel,
@@ -1069,8 +1023,7 @@ private fun StationHeaderText(
     )
 }
 
-// MARK: - Departure Stop Input Section
-// Section for inputting departure station information
+// Departure stop input section.
 @Composable
 private fun DepartureStopInputSection(
     departureStopInput: String,
@@ -1101,8 +1054,7 @@ private fun DepartureStopInputSection(
     )
 }
 
-// MARK: - Arrival Stop Input Section
-// Section for inputting arrival station information
+// Arrival stop input section.
 @Composable
 private fun ArrivalStopInputSection(
     arrivalStopInput: String,
@@ -1133,8 +1085,7 @@ private fun ArrivalStopInputSection(
     )
 }
 
-// MARK: - Time Header Text
-// Time header with simple text
+// Time header text.
 @Composable
 private fun TimeHeaderText() {
     val titleFontSize = ScreenSize.settingsSheetTitleFontSize()
@@ -1149,8 +1100,7 @@ private fun TimeHeaderText() {
     )
 }
 
-// MARK: - Ride Time Section
-// Section for configuring travel time between stations
+// Ride time section.
 @Composable
 private fun RideTimeSection(
     viewModel: SettingsLineViewModel,
@@ -1168,7 +1118,7 @@ private fun RideTimeSection(
     val rideTimeKey = selectedGoorback.rideTimeKey(currentLineIndex)
     val hasSavedRideTime = sharedPreferences.contains(rideTimeKey)
     
-    // Use settingsRideTimeColor function for checkmark color
+    // Use saved ride time color for the checkmark.
     val rideTimeColor = selectedGoorback.settingsRideTimeColor(sharedPreferences, currentLineIndex)
     
     val horizontalSpacing = ScreenSize.settingsSheetHorizontalSpacing()
@@ -1187,7 +1137,7 @@ private fun RideTimeSection(
             color = Primary,
             modifier = Modifier.wrapContentWidth()
         )
-        // Display current ride time
+        // Display current ride time.
         Text(
             text = if (selectedRideTime == 0) {
                 if (hasSavedRideTime) "0" else "-"
@@ -1216,8 +1166,7 @@ private fun RideTimeSection(
     }
 }
 
-// MARK: - Transportation Settings Section
-// Section for selecting transportation method for next transfer
+// Transportation settings section.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TransportationSettingsSection(
@@ -1230,12 +1179,12 @@ private fun TransportationSettingsSection(
     val selectedGoorback by viewModel.selectedGoorbackState.collectAsState()
     val selectedLineNumber by viewModel.selectedLineNumberState.collectAsState()
     
-    // Use settingsTransportation function for display text (if not set)
+    // Resolve display value from saved data when needed.
     val currentLineIndex = selectedLineNumber - 1
     val savedTransportation = selectedGoorback.settingsTransportation(sharedPreferences, currentLineIndex + 2, context)
     val notSet = stringResource(R.string.notSet)
     
-    // Use saved transportation if current is "none" or empty, otherwise use current
+    // Prefer current selection unless unset.
     val displayTransportation = if (selectedTransportation == "none" || selectedTransportation.isEmpty()) {
         if (savedTransportation != notSet) savedTransportation else selectedTransportation
     } else {
@@ -1340,8 +1289,7 @@ private fun TransportationSettingsSection(
     }
 }
 
-// MARK: - Transfer Time Settings Section
-// Section for configuring transfer time
+// Transfer time settings section.
 @Composable
 private fun TransferTimeSettingsSection(
     viewModel: SettingsLineViewModel,
@@ -1403,8 +1351,7 @@ private fun TransferTimeSettingsSection(
     }
 }
 
-// MARK: - Save Button Section
-// Save button for storing line configuration data (active when isAllNotEmpty || isAllSelected)
+// Save button for line configuration.
 @Composable
 private fun SaveButtonSection(
     isAllNotEmpty: Boolean,
@@ -1424,8 +1371,7 @@ private fun SaveButtonSection(
     )
 }
 
-// MARK: - Timetable Settings Button Section
-// Button to open manual timetable configuration settings (active when isAllNotEmpty || isAllSelected)
+// Button to open manual timetable settings.
 @Composable
 private fun TimetableSettingsButtonSection(
     isAllNotEmpty: Boolean,
@@ -1443,8 +1389,7 @@ private fun TimetableSettingsButtonSection(
     )
 }
 
-// MARK: - Timetable Auto Settings Button Section
-// Button to automatically generate timetable data (active when isAllSelected only)
+// Button to auto-generate timetable data.
 @Composable
 private fun TimetableAutoSettingsButtonSection(
     isAllSelected: Boolean,
@@ -1460,21 +1405,14 @@ private fun TimetableAutoSettingsButtonSection(
     )
 }
 
-// MARK: - Operator Suggestions View
-// Dropdown list showing suggested operators
+// Operator suggestions dropdown.
 @Composable
 private fun OperatorSuggestionsView(
     modifier: Modifier = Modifier,
     operatorSuggestions: List<String>,
-    selectedTransportationKind: TransportationLineKind,
     onOperatorSelected: (String) -> Unit,
     onDismissRequest: () -> Unit = {},
 ) {
-    val kindLabel = when (selectedTransportationKind) {
-        TransportationLineKind.RAILWAY -> stringResource(R.string.railway)
-        TransportationLineKind.BUS -> stringResource(R.string.bus)
-    }
-
     CommonComponents.CustomDropdown(
         items = operatorSuggestions,
         onItemSelected = { operatorName -> onOperatorSelected(operatorName) },
@@ -1484,12 +1422,11 @@ private fun OperatorSuggestionsView(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing())
             ) {
-                // Transportation kind tag
+                // Transportation kind tag.
                 CommonComponents.CustomTag(
-                    text = kindLabel,
+                    text = "",
                     backgroundColor = Gray
-                )
-                
+                )                
                 Text(
                     text = operatorName,
                     fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
@@ -1502,8 +1439,7 @@ private fun OperatorSuggestionsView(
     )
 }
 
-// MARK: - Line Suggestions View
-// Dropdown list showing suggested lines
+// Line suggestions dropdown.
 @Composable
 private fun LineSuggestionsView(
     modifier: Modifier = Modifier,
@@ -1524,15 +1460,14 @@ private fun LineSuggestionsView(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing())
             ) {
-                // Display lineCode using CustomTag
-                // If lineCode is empty, show CustomTag with empty text
+                // Line code tag.
                 val tagColor = line.lineColor?.safeColor
                 CommonComponents.CustomTag(
                     text = line.lineCode ?: "",
                     backgroundColor = tagColor
                 )
                 
-                // Display line name
+                // Line name.
                 Text(
                     text = viewModel.lineDisplayName(line),
                     fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
@@ -1544,8 +1479,7 @@ private fun LineSuggestionsView(
     )
 }
 
-// MARK: - Color Selection Section
-// Color picker overlay for selecting line colors
+// Color picker overlay.
 @Composable
 private fun ColorSelectionSection(
     onColorSelected: (String) -> Unit,
@@ -1573,7 +1507,7 @@ private fun ColorSelectionSection(
                 )
                 .zIndex(100f),
         ) {
-            // Color Selection Header
+            // Color selection header.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1591,7 +1525,7 @@ private fun ColorSelectionSection(
                     color = Black
                 )
                 
-                // Cancel button
+                // Cancel button.
                 TextButton(onClick = onCancel) {
                     Text(
                         text = stringResource(R.string.cancel),
@@ -1600,7 +1534,7 @@ private fun ColorSelectionSection(
                 }
             }
             
-            // Color Selection Grid
+            // Color selection grid.
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
                 modifier = Modifier
@@ -1611,12 +1545,10 @@ private fun ColorSelectionSection(
                 verticalArrangement = Arrangement.spacedBy(ScreenSize.settingsLineSheetGridSpacing())
             ) {
                 items(lineColors) { customColor ->
-                    // Use ColorExtensions.kt's color property
-                    // This property uses android.graphics.Color.parseColor for reliable color parsing
+                    // Resolve color and stored RGB.
                     val color = customColor.color
-                    // Use ColorExtensions.kt's RGB property for storing color string
                     val rgbString = customColor.RGB
-                    // Use CustomColor.resourceName for localization
+                    // Localized color name.
                     val colorName = when (customColor.resourceName) {
                         "red" -> stringResource(R.string.red)
                         "darkRed" -> stringResource(R.string.darkRed)
@@ -1651,7 +1583,7 @@ private fun ColorSelectionSection(
                             .clickable { onColorSelected(rgbString) },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        // Color circle with border
+                        // Color circle with border.
                         Box(
                             modifier = Modifier
                                 .size(ScreenSize.settingsLineSheetColorCircleSize())
@@ -1673,7 +1605,7 @@ private fun ColorSelectionSection(
                             )
                         }
                         
-                        // Color name label (localized)
+                        // Color name label.
                         Text(
                             text = colorName,
                             fontSize = ScreenSize.settingsLineSheetCaptionFontSize().value.sp,
@@ -1687,8 +1619,7 @@ private fun ColorSelectionSection(
     }
 }
 
-// MARK: - Departure Stop Suggestions View
-// Dropdown list showing suggested departure stops
+// Departure stop suggestions dropdown.
 @Composable
 private fun DepartureStopSuggestionsView(
     modifier: Modifier = Modifier,
@@ -1712,8 +1643,7 @@ private fun DepartureStopSuggestionsView(
     )
 }
 
-// MARK: - Arrival Stop Suggestions View
-// Dropdown list showing suggested arrival stops
+// Arrival stop suggestions dropdown.
 @Composable
 private fun ArrivalStopSuggestionsView(
     modifier: Modifier = Modifier,
@@ -1736,37 +1666,4 @@ private fun ArrivalStopSuggestionsView(
         }
     )
 }
-
-// MARK: - Loading Overlay
-// Dark overlay with progress bar when loading
-@Composable
-private fun LoadingOverlay(
-    message: String?
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Black.copy(alpha = 0.7f)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(ScreenSize.splashLoadingSpacing())
-        ) {
-            CircularProgressIndicator(
-                color = White,
-                modifier = Modifier.size(ScreenSize.splashIconSize())
-            )
-            
-            if (message != null) {
-                Text(
-                    text = message,
-                    fontSize = ScreenSize.splashLoadingFontSize().value.sp,
-                    color = White
-                )
-            }
-        }
-    }
-}
-
 

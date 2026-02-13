@@ -19,8 +19,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrl
 import java.io.File
 import java.util.concurrent.TimeUnit
 
-// Railway DTO for ODPT API data.
-// Maps JSON fields to internal models.
+// DTO for railway data from ODPT API
 data class RailwayDTO(
     val title: String,
     val sameAs: String,
@@ -37,8 +36,7 @@ data class RailwayDTO(
     val date: String? = null
 )
 
-// Bus route pattern DTO for ODPT API data.
-// Maps JSON fields to internal models.
+// DTO for bus route pattern data from ODPT API
 data class BusRoutePatternDTO(
     @SerializedName(value = "dc:title", alternate = ["title"])
     val title: String? = null,
@@ -69,10 +67,10 @@ data class BusStopPoleOrderDTO(
     val note: String? = null
 )
 
-// ODPT data parser to TransportationLine models.
+// Converts raw JSON data from ODPT API to internal TransportationLine models
 object ODPTParser {
     
-    // Parse bus route patterns into TransportationLine objects.
+    // Parse bus route pattern data and convert to TransportationLine objects
     fun parseBusRoutes(data: ByteArray): List<TransportationLine> {
         val jsonString = String(data)
         val jsonElement = JsonParser.parseString(jsonString)
@@ -81,53 +79,44 @@ object ODPTParser {
         }
         val jsonArray = jsonElement.asJsonArray
         
-        // Filter to odpt:BusroutePattern only.
+        // Filter to only bus route patterns (odpt:BusroutePattern)
         val busOnlyData = jsonArray.mapNotNull { element: JsonElement ->
             val jsonObject = element.asJsonObject
             val itemType = jsonObject.get("@type")?.asString
             if (itemType == "odpt:BusroutePattern") element else null
         }
         
-        // If no bus data found, return empty.
+        // If no bus data found, skip it
         if (busOnlyData.isEmpty()) {
             return emptyList()
         }
         
-        // Decode filtered data into DTOs.
+        // Decode filtered data into DTOs (Swift implementation parity)
         val gson = Gson()
         val filteredJson = gson.toJson(busOnlyData)
         val dtoListType = object : TypeToken<List<BusRoutePatternDTO>>() {}.type
         val dtos: List<BusRoutePatternDTO> = try {
             gson.fromJson(filteredJson, dtoListType)
-        } catch (e: Exception) {
-            android.util.Log.d("ODPTParser", "🚌 parseBusRoutes: Failed to decode DTOs: ${e.message}", e)
+        } catch (_: Exception) {
             return emptyList()
         }
         
-        // Map DTOs to models.
         return dtos.mapNotNull { dto: BusRoutePatternDTO ->
-            // Ensure sameAs and title are present.
+            // Ensure sameAs and title are not null (should be guaranteed by filter above)
             val sameAs = dto.sameAs ?: return@mapNotNull null
             var title = dto.title ?: return@mapNotNull null
             
-            // Fix trailing "行行" to "行".
+            // Fix trailing "行行" to "行"
             if (title.endsWith("行行")) {
                 title = title.dropLast(1)
             }
             
-            // Extract English name from odpt:busroute.
+            // Extract English name from odpt:busroute value using LineExtensions
             val englishName = dto.busRoute?.busRouteEnglishName()
             val busStopPoleOrder = dto.busStopPoleOrder?.mapNotNull { stopDto ->
                 val busStopPole = stopDto.busStopPole ?: return@mapNotNull null
                 val stopName = stopDto.note?.takeIf { it.isNotBlank() }
                     ?: busStopPole.split(".").lastOrNull().orEmpty()
-
-                if (stopName.length <= 2) {
-                    android.util.Log.d(
-                        "ODPTParser",
-                        "🚌 busStop short name: line=$sameAs pole=$busStopPole note=${stopDto.note} name=$stopName"
-                    )
-                }
 
                 TransportationStop(
                     kind = TransportationLineKind.BUS,
@@ -165,12 +154,11 @@ object ODPTParser {
         }
     }
     
-    // Parse railway data from JSON files.
-    // Uses DTOs for type-safe decoding.
+    // Parse railway data from JSON (API and local file formats supported)
     fun parseRailwayRoutes(data: ByteArray): List<TransportationLine> {
         try {
             val jsonString = String(data)
-            // Ensure the payload is a JSON array.
+            // Check if it's a JSON array or object
             val jsonElement = JsonParser.parseString(jsonString)
             if (!jsonElement.isJsonArray) {
                 throw ODPTError.InvalidData("Railway JSON is not an array")
@@ -178,7 +166,7 @@ object ODPTParser {
             
             val jsonArray = jsonElement.asJsonArray
             
-            // Convert JsonObject to DTO (supports odpt:color and odpt:lineColor).
+            // Convert JSON array to DTO objects
             val dtos = jsonArray.mapNotNull { element: JsonElement ->
                 val jsonObject = element.asJsonObject
                 val title = jsonObject.get("dc:title")?.asString
@@ -188,7 +176,7 @@ object ODPTParser {
                     return@mapNotNull null
                 }
                 
-                // Convert JsonObject to Map<String, Any> for extensions.
+                // Convert JsonObject to Map<String, Any> for extension functions
                 val elementMap = jsonObject.entrySet().associate { entry: Map.Entry<String, JsonElement> ->
                     entry.key to when (val value = entry.value) {
                         is com.google.gson.JsonPrimitive -> {
@@ -205,26 +193,30 @@ object ODPTParser {
                                         else null
                                     }
                                     else -> {
-                                        // Skip non-primitive elements in arrays.
+                                        // Skip non-primitive elements in array
+                                        // This is expected for some ODPT API fields that may contain objects
+                                        // The data will be skipped but the app will continue to work
                                         null
                                     }
                                 }
                             }
                         }
                         is JsonObject -> {
-                            // Convert JsonObject to Map<String, String> for railwayTitle.
+                            // Convert JsonObject to Map<String, String> for railwayTitle
+                            // Each value should be a JsonPrimitive (string)
                             value.entrySet().associate { e ->
                                 e.key to when (val nestedValue = e.value) {
                                     is com.google.gson.JsonPrimitive -> {
                                         if (nestedValue.isString) {
                                             nestedValue.asString
                                         } else {
-                                            // Convert non-string primitives to string.
+                                            // For non-string primitives, convert to string
                                             nestedValue.toString()
                                         }
                                     }
                                     else -> {
-                                        // Skip unexpected nested structures.
+                                        // If value is not JsonPrimitive, skip it or use empty string
+                                        // This handles unexpected nested structures
                                         ""
                                     }
                                 }
@@ -237,18 +229,19 @@ object ODPTParser {
                     it as Map<String, Any>
                 }
                 
-                // Extract railwayTitle using extension.
+                // Extract railwayTitle using odptRailwayTitle extension function
                 val railwayTitle = elementMap.odptRailwayTitle()
                 
-                // Use LineExtensions utilities for ODPT extraction.
+                // Use LineExtensions utilities for ODPT data extraction
                 val lineColor = elementMap.odptLineColor()
                 val destinationStation = elementMap.odptDestinationStation()
                 
-                // Extract rail direction info for timetable calls.
+                // Extract rail direction information for timetable API calls
                 val ascendingRailDirection = jsonObject.get("odpt:ascendingRailDirection")?.asString
                 val descendingRailDirection = jsonObject.get("odpt:descendingRailDirection")?.asString
                 
-                // Parse odpt:stationOrder into TransportationStop list.
+                // Parse odpt:stationOrder to create TransportationStop list
+                // Uses odpt:stationOrder from Railway JSON to create station list
                 val stationOrderArray = jsonObject.get("odpt:stationOrder")?.asJsonArray
                 val stationOrder = stationOrderArray?.mapNotNull { stationElement ->
                     if (stationElement is JsonObject) {
@@ -299,12 +292,12 @@ object ODPTParser {
                 )
             }
             
-            // Map DTOs to models.
+            // Convert DTOs to TransportationLine models
             return dtos.map { dto: RailwayDTO ->
-                // Fix trailing "行行" to "行".
+                // Fix trailing "行行" to "行"
                 val fixedTitle = if (dto.title.endsWith("行行")) dto.title.dropLast(1) else dto.title
                 
-                // Fix railwayTitle.ja trailing "行行".
+                // Fix railwayTitle's ja field if it ends with "行行"
                 val fixedRailwayTitle = dto.railwayTitle?.let { title ->
                     if (title.ja?.endsWith("行行") == true) title.copy(ja = title.ja.dropLast(1)) else title
                 }
@@ -321,7 +314,7 @@ object ODPTParser {
                     destinationStation = dto.destinationStation,
                     railwayTitle = fixedRailwayTitle,
                     lineCode = dto.lineCode,
-                    lineDirection = dto.ascendingRailDirection, // Backward compatibility.
+                    lineDirection = dto.ascendingRailDirection, // Keep for backward compatibility
                     ascendingRailDirection = dto.ascendingRailDirection,
                     descendingRailDirection = dto.descendingRailDirection,
                     stationOrder = dto.stationOrder,
@@ -338,28 +331,28 @@ object ODPTParser {
     }
 }
 
-// ODPT API service for HTTP, caching, and data retrieval.
+// Handles HTTP communication with ODPT API (authentication, caching, retrieval)
 class ODPTDataService(private val context: Context) {
-    // HTTP client configuration and timeouts.
+    // Configure HTTP client with 30-second timeouts and redirect support
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)      // 30 seconds for connection.
-        .readTimeout(30, TimeUnit.SECONDS)         // 30 seconds for reading.
-        .writeTimeout(30, TimeUnit.SECONDS)        // 30 seconds for writing.
-        .followRedirects(true)                      // Follow redirects.
+        .connectTimeout(30, TimeUnit.SECONDS)      // 30 seconds for connection
+        .readTimeout(30, TimeUnit.SECONDS)         // 30 seconds for reading
+        .writeTimeout(30, TimeUnit.SECONDS)        // 30 seconds for writing
+        .followRedirects(true)                      // Automatically handle redirects
         .followSslRedirects(true)
-        .cookieJar(CookieJar.NO_COOKIES)           // Disable cookie handling.
+        .cookieJar(CookieJar.NO_COOKIES)           // Disable cookie handling for API requests
         .build()
     private val cache: CacheStore = CacheStore(context)
     private val sharedPreferences: SharedPreferences =
         context.getSharedPreferences("ODPTDataService", Context.MODE_PRIVATE)
 
-    // Configure request headers and conditional caching.
-    // ODPT uses acl:consumerKey in the URL, not Authorization.
+    // Configure request headers (authentication, conditional headers for caching)
     private fun configureRequest(
         requestBuilder: Request.Builder,
         conditionalHeaders: Pair<String?, String?>? = null
     ): Request.Builder {
-        // ODPT uses URL query parameter acl:consumerKey.
+        // ODPT API uses URL query parameter acl:consumerKey for authentication
+        // Authorization header is not used for ODPT API
         requestBuilder.addHeader("Accept", "application/json")
         
         conditionalHeaders?.let { (etag, lastModified) ->
@@ -370,7 +363,7 @@ class ODPTDataService(private val context: Context) {
         return requestBuilder
     }
     
-    // Fetch data for a specific operator endpoint.
+    // Fetch data for individual transportation operators using their API endpoints
     suspend fun fetchIndividualOperatorData(
         transportOperator: LocalDataSource,
     ): ByteArray = withContext(Dispatchers.IO) {
@@ -386,9 +379,9 @@ class ODPTDataService(private val context: Context) {
         
         val response = client.newCall(requestBuilder.build()).execute()
         
-        // Save ETag/Last-Modified for future conditional GET.
+        // Check for successful response and save ETag/Last-Modified for future conditional GET
         if (response.code == 200) {
-            // Save ETag and Last-Modified headers.
+            // Save ETag and Last-Modified headers for future conditional requests
             response.header("ETag")?.let { etag ->
                 saveETag(etag, transportOperator)
             }
@@ -403,15 +396,13 @@ class ODPTDataService(private val context: Context) {
         }
     }
     
-    // ETag/Last-Modified helpers for caching.
+    // ETag and Last-Modified header management for conditional GET requests
     
-    // Get ETag for a specific operator.
     private fun getETag(transportOperator: LocalDataSource): String? {
         val etagKey = "${transportOperator.fileName()}_etag"
         return sharedPreferences.getString(etagKey, null)
     }
     
-    // Save ETag for a specific operator.
     private fun saveETag(etag: String, transportOperator: LocalDataSource) {
         val etagKey = "${transportOperator.fileName()}_etag"
         sharedPreferences.edit {
@@ -419,13 +410,11 @@ class ODPTDataService(private val context: Context) {
         }
     }
     
-    // Get Last-Modified for a specific operator.
     private fun getLastModified(transportOperator: LocalDataSource): String? {
         val lastModifiedKey = "${transportOperator.fileName()}_last_modified"
         return sharedPreferences.getString(lastModifiedKey, null)
     }
     
-    // Save Last-Modified for a specific operator.
     private fun saveLastModified(lastModified: String, transportOperator: LocalDataSource) {
         val lastModifiedKey = "${transportOperator.fileName()}_last_modified"
         sharedPreferences.edit {
@@ -433,25 +422,27 @@ class ODPTDataService(private val context: Context) {
         }
     }
     
-    // Conditional GET check for operator updates.
-    // Only runs when cache and headers exist.
+    // Check if operator data needs updating using conditional GET requests
     suspend fun checkIndividualOperatorForUpdates(
         transportOperator: LocalDataSource,
     ): Boolean = withContext(Dispatchers.IO) {
-        // Check if cached data exists.
+        // Check if we have cached data
         val cacheKey = transportOperator.fileName()
         val cachedData = cache.loadData(cacheKey) ?: return@withContext false
         
-        // Check for ETag/Last-Modified.
+        // If no cache exists, skip update check (data will be fetched during initial fetch)
+
+        // Check if we have ETag or Last-Modified for conditional GET
         val etag = getETag(transportOperator)
         val lastModified = getLastModified(transportOperator)
         
-        // No headers: skip update check.
+        // If we don't have conditional headers, skip update check
+        // Rule: Cache exists but no ETag/Last-Modified -> do nothing
         if (etag == null && lastModified == null) {
             return@withContext false
         }
         
-        // Use conditional GET with ETag/Last-Modified.
+        // Use conditional GET request with ETag and Last-Modified headers
         try {
             val urlString = transportOperator.apiLink(
                 dataType = APIDataType.LINE,
@@ -467,42 +458,41 @@ class ODPTDataService(private val context: Context) {
             
             when (response.code) {
                 304 -> {
-                    // Server confirms no changes.
+                    // No update needed - server confirms data hasn't changed
                     return@withContext false
                 }
                 200 -> {
-                    // Get current ETag.
+                    // Get current ETag from SharedPreferences
                     val currentEtag = getETag(transportOperator)
                     
-                    // Get new ETag from response.
+                    // Get new ETag from response
                     val newEtag = response.header("ETag")
                     
-                    // Fast path: if ETags match, skip update.
+                    // If ETags match, data not changed (no update needed)
                     if (currentEtag != null && newEtag != null && currentEtag == newEtag) {
-                        return@withContext false // ETag confirms no change.
+                        return@withContext false // No update needed - ETag confirms no change
                     }
                     
-                    // Save ETag and Last-Modified headers.
+                    // Save ETag and Last-Modified headers for future conditional requests
                     newEtag?.let { saveETag(it, transportOperator) }
                     response.header("Last-Modified")?.let { saveLastModified(it, transportOperator) }
                     
-                    // Fallback: compare response data to cache.
+                    // Compare data content to determine if update needed
                     val responseData = response.body.bytes()
                     val dataMatches = cachedData.contentEquals(responseData)
                     return@withContext !dataMatches
                 }
                 else -> {
-                    android.util.Log.d("ODPTDataService", "${transportOperator.operatorDisplayName(context)}: Unexpected response status: ${response.code}")
                     return@withContext false // Don't update on error.
                 }
             }
         } catch (e: Exception) {
-            android.util.Log.d("ODPTDataService", "${transportOperator.operatorDisplayName(context)}: Request failed: ${e.message}", e)
-            return@withContext false // Don't update on error.
+            android.util.Log.d("ODPTDataService", "checkIndividualOperatorForUpdates failed", e)
+            return@withContext false
         }
     }
     
-    // Common operator update flow.
+    // Process operator updates and manage cache/file writes
     private suspend fun processOperatorUpdate(
         transportOperator: LocalDataSource,
     ): Pair<ByteArray, Boolean> {
@@ -510,10 +500,10 @@ class ODPTDataService(private val context: Context) {
         if (needsUpdate) {
             val data = fetchIndividualOperatorData(transportOperator)
             
-            // Write updated data to file.
+            // Write updated data to JSON file
             writeIndividualOperatorDataToFile(data, transportOperator)
             
-            // Update cache with new data.
+            // Update cache with new data
             val cacheKey = transportOperator.fileName()
             cache.saveData(data, cacheKey)
             
@@ -523,7 +513,7 @@ class ODPTDataService(private val context: Context) {
         }
     }
     
-    // Update operator data and save to storage.
+    // Update individual operator data and save to local storage
     suspend fun updateIndividualOperator(
         transportOperator: LocalDataSource,
     ): Result<Unit> {
@@ -531,12 +521,11 @@ class ODPTDataService(private val context: Context) {
             val (_, _) = processOperatorUpdate(transportOperator)
             Result.success(Unit)
         } catch (e: Exception) {
-            android.util.Log.d("ODPTDataService", "${transportOperator.operatorDisplayName(context)}: Failed to update data: ${e.message}", e)
             Result.failure(e)
         }
     }
     
-    // Write operator data to local storage.
+    // Write operator data to local storage (LineData directory)
     suspend fun writeIndividualOperatorDataToFile(
         data: ByteArray,
         transportOperator: LocalDataSource
@@ -544,18 +533,18 @@ class ODPTDataService(private val context: Context) {
         val fileManager = context.filesDir
         val lineDataDirectory = File(fileManager, "LineData")
         
-        // Create LineData directory if needed.
+        // Create LineData directory (will create automatically if needed)
         lineDataDirectory.mkdirs()
         
-        // Use consistent file naming.
+        // Use consistent file naming with LocalDataSource.fileName
         val fileName = transportOperator.fileName()
         val file = File(lineDataDirectory, fileName)
         
-        // Write data to file.
+        // Write data to file atomically for safety
         file.writeBytes(data)
     }
     
-    // Fetch ODPT data and return payload + response.
+    // Fetch data from ODPT API and return response data and status
     suspend fun fetchODPTData(urlString: String): Pair<ByteArray, Response> = withContext(Dispatchers.IO) {
         val url = urlString.toHttpUrl()
         
@@ -568,7 +557,7 @@ class ODPTDataService(private val context: Context) {
         Pair(responseData, response)
     }
     
-    // Convert JsonObject to Map recursively.
+    // Recursively convert JsonObject to Map for nested structures
     private fun parseJsonObjectToMap(jsonObject: JsonObject): Map<*, *> {
         return jsonObject.entrySet().associate { entry ->
             entry.key to when (val value = entry.value) {
@@ -581,7 +570,7 @@ class ODPTDataService(private val context: Context) {
                     }
                 }
                 is JsonArray -> {
-                    // Recursively parse array elements.
+                    // Recursively parse array elements
                     value.mapNotNull { element ->
                         when {
                             element.isJsonPrimitive -> element.asString
@@ -596,20 +585,18 @@ class ODPTDataService(private val context: Context) {
         }
     }
     
-    // Parse JSON array from byte array.
-    // Handles array and single object responses.
+    // Parse JSON array from byte array (handles both arrays and single objects)
     fun parseJSONArray(data: ByteArray): List<Map<*, *>> {
         val jsonString = String(data)
         val jsonElement = JsonParser.parseString(jsonString)
         
-        // Handle array and single object.
+        // Handle both JSON array and single JSON object
         val jsonArray = if (jsonElement.isJsonArray) {
             jsonElement.asJsonArray
         } else if (jsonElement.isJsonObject) {
-            // Wrap a single object in an array.
+            // If it's a single object, wrap it in an array
             JsonArray().apply { add(jsonElement) }
         } else {
-            android.util.Log.d("ODPTDataService", "parseJSONArray: Invalid JSON type: ${jsonElement.javaClass.simpleName}")
             return emptyList()
         }
         

@@ -15,16 +15,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-// MARK: - Authentication View Model
-// Handles user authentication, registration, and account management
+// Authentication view model for login, signup, and account actions.
 class LoginViewModel(context: Context) : ViewModel() {
     private val appContext = context.applicationContext
     // Lazy init so Firebase Auth is not touched at ViewModel creation (avoids crash on DEVELOPER_ERROR at app start)
     private val auth by lazy { FirebaseAuth.getInstance() }
     private val sharedPreferences: SharedPreferences = appContext.getSharedPreferences("LoginPrefs", Context.MODE_PRIVATE)
     
-    // MARK: - State Variables
-    // User input and authentication state
+    // State for user input and auth results.
     private val _email = MutableStateFlow("")
     val email: StateFlow<String> = _email.asStateFlow()
     
@@ -64,34 +62,31 @@ class LoginViewModel(context: Context) : ViewModel() {
     private val _isSignUpSuccess = MutableStateFlow(false)
     val isSignUpSuccess: StateFlow<Boolean> = _isSignUpSuccess.asStateFlow()
     
-    // MARK: - Update Functions
-    // Update email value
-    // updateAlert: when false, signUpCheck does not overwrite alert (used when clearing fields on login screen to avoid overwriting logout message)
+    // Update email value; optionally skip alert overwrite.
     fun updateEmail(value: String, updateAlert: Boolean = true) {
         _email.value = value
         signUpCheck(updateAlert = updateAlert)
     }
     
-    // Update password value
+    // Update password value.
     fun updatePassword(value: String, updateAlert: Boolean = true) {
         _password.value = value
         signUpCheck(updateAlert = updateAlert)
     }
     
-    // Update password confirm value
+    // Update password confirm value.
     fun updatePasswordConfirm(value: String, updateAlert: Boolean = true) {
         _passwordConfirm.value = value
         signUpCheck(updateAlert = updateAlert)
     }
 
-    // Update reset email value
+    // Update reset email value.
     fun updateResetEmail(value: String) {
         _resetEmail.value = value
     }
     
-    // MARK: - Logout Function
-    // Signs out current user and updates login state
-    // preserveMessage: when true, does not overwrite alert (used when called after delete() to show delete success message)
+    // Sign out and update login state.
+    // preserveMessage keeps existing alerts.
     fun logOut(preserveMessage: Boolean = false) {
         _isShowMessage.value = false
         if (!preserveMessage) {
@@ -131,9 +126,7 @@ class LoginViewModel(context: Context) : ViewModel() {
         }
     }
     
-    // MARK: - Login Validation
-    // Validates login form inputs before authentication
-    // updateAlert: when false, only updates isValidLogin without overwriting alert (used on screen open to avoid overwriting logout message etc.)
+    // Validate login inputs; optionally skip alert overwrite.
     fun loginCheck(updateAlert: Boolean = true) {
         val validation = ValidationMessages.loginValidationMessage(appContext, _email.value, _password.value)
         if (updateAlert) {
@@ -143,8 +136,7 @@ class LoginViewModel(context: Context) : ViewModel() {
         _isValidLogin.value = (validation.first.isEmpty() && validation.second.isEmpty())
     }
     
-    // MARK: - Login Authentication
-    // Authenticates user with Firebase Auth
+    // Authenticate user with Firebase Auth.
     fun login() {
         _isShowMessage.value = false
         if (_isValidLogin.value) {
@@ -186,9 +178,7 @@ class LoginViewModel(context: Context) : ViewModel() {
         }
     }
     
-    // MARK: - Sign Up Validation
-    // Validates sign up form inputs including terms agreement
-    // updateAlert: when false, only updates isValidSignUp without overwriting alert (used on screen open to avoid overwriting logout message etc.)
+    // Validate sign-up inputs, including terms agreement.
     fun signUpCheck(updateAlert: Boolean = true) {
         val validation = ValidationMessages.signUpValidationMessage(
             appContext,
@@ -204,8 +194,7 @@ class LoginViewModel(context: Context) : ViewModel() {
         _isValidSignUp.value = (validation.first.isEmpty() && validation.second.isEmpty())
     }
     
-    // MARK: - Sign Up Authentication
-    // Creates new user account with Firebase Auth and sends verification email
+    // Create account and send verification email.
     fun signUp() {
         if (_isValidSignUp.value) {
             _alertTitle.value = ""
@@ -246,8 +235,7 @@ class LoginViewModel(context: Context) : ViewModel() {
         }
     }
     
-    // MARK: - Password Reset
-    // Sends password reset email to user's email address
+    // Send password reset email.
     fun reset() {
         if (_resetEmail.value.isValidEmail()) {
             _alertTitle.value = ""
@@ -279,15 +267,13 @@ class LoginViewModel(context: Context) : ViewModel() {
         }
     }
     
-    // MARK: - Terms Agreement Toggle
-    // Toggles terms agreement state
+    // Toggle terms agreement.
     fun toggle() {
         _isTermsAgree.value = !_isTermsAgree.value
         signUpCheck()
     }
     
-    // MARK: - Clear Fields
-    // Clears all input fields
+    // Clear all input fields.
     fun clearFields() {
         _email.value = ""
         _password.value = ""
@@ -295,14 +281,12 @@ class LoginViewModel(context: Context) : ViewModel() {
         _isTermsAgree.value = false
     }
     
-    // MARK: - Dismiss Message
-    // Dismisses the alert message
+    // Dismiss the alert message.
     fun dismissMessage() {
         _isShowMessage.value = false
     }
     
-    // MARK: - Account Deletion
-    // Deletes current user account from Firebase Auth (requires password for re-authentication)
+    // Delete current user account (requires re-auth).
     fun delete(password: String) {
         _isShowMessage.value = false
         if (password.isBlank()) {

@@ -19,19 +19,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
 
-// MARK: - Transit Data Model
-// Manages transit information, timetables, and real-time updates
+// Manages transit state, timetables, and real-time updates.
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     
-    // Timer for real-time updates
+    // Timer for live date/time updates.
     private var timerJob: Job? = null
     
     private val sharedPreferences: SharedPreferences = application.getSharedPreferences("MainViewModel", Application.MODE_PRIVATE)
     
-    // Date and time state
+    // Date/time state used by the UI.
     var selectDate by mutableStateOf(Date())
         private set
-    /** When timer is running, updated every second; null when stopped. UI uses this ?: selectDate for localized date display. */
+    // Updated per second when running; null when stopped.
     var displayDate by mutableStateOf<Date?>(null)
         private set
     var dateLabel by mutableStateOf("")
@@ -43,30 +42,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var isBack by mutableStateOf(true)
         private set
     
-    // Route visibility settings with SharedPreferences persistence
-    // Separate flags for back and go routes
+    // Route2 visibility flags for back and go.
     var isShowBackRoute2 by mutableStateOf(false)
         private set
     var isShowGoRoute2 by mutableStateOf(false)
         private set
     
-    // Computed property: returns the appropriate route2 flag based on isBack
+    // Route2 visibility for the active direction.
     val isShowRoute2: Boolean
         get() = if (isBack) isShowBackRoute2 else isShowGoRoute2
 
-    // Line change settings with SharedPreferences persistence
+    // Transfer count settings.
     var changeLine1 by mutableIntStateOf(0)
         private set
     var changeLine2 by mutableIntStateOf(0)
         private set
     
-    // Route direction identifiers with SharedPreferences persistence
+    // Route direction keys.
     var goOrBack1 by mutableStateOf("back1")
         private set
     var goOrBack2 by mutableStateOf("back2")
         private set
     
-    // Line data arrays for real-time updates
+    // Route data arrays.
     var home by mutableStateOf("")
         private set
     var office by mutableStateOf("")
@@ -104,7 +102,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var lineKindArray2 by mutableStateOf<List<TransportationLineKind?>>(emptyList())
         private set
     
-    // MARK: - Initialization
+    // Initialize default state.
     init {
         isBack = true
         goOrBack1 = "back1"
@@ -143,28 +141,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         lineKindArray2 = "back2".lineKindArray(sharedPreferences).map { it as TransportationLineKind? }
     }
     
-    // MARK: - Route Management
-    // Updates route direction identifiers
+    // Update route direction identifiers.
     fun setGoOrBack() {
         goOrBack1 = isBack.goOrBack1()
         goOrBack2 = isBack.goOrBack2()
     }
     
-    // Updates route visibility settings from SharedPreferences
-    // Update both back and go route flags
+    // Refresh route2 visibility from SharedPreferences.
     fun setRoute2() {
         isShowBackRoute2 = "back2".isShowRoute2(sharedPreferences)
         isShowGoRoute2 = "go2".isShowRoute2(sharedPreferences)
     }
     
-    // Set route 2 visibility for both back and go routes
-    // Used when updating from settings screens
+    // Set route2 visibility for both directions.
     fun setRoute2Value(value: Boolean) {
         isShowBackRoute2 = value
         isShowGoRoute2 = value
     }
     
-    // Updates line change settings based on current direction
+    // Refresh line data for the active direction.
     fun setLineData() {
         val appContext = getApplication<Application>()
         home = goOrBack1.departurePoint(sharedPreferences, appContext)
@@ -192,46 +187,40 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         transferTimeArray2 = goOrBack2.transferTimeArray(sharedPreferences)
     }
     
-    // MARK: - SharedPreferences Data Update
-    // Updates all data from SharedPreferences when changes are detected
+    // Refresh all cached values from SharedPreferences.
     fun updateAllDataFromUserDefaults() {
-        // Update route direction identifiers
         setGoOrBack()
-        // Update route 2 visibility settings
         setRoute2()
-        // Update line settings
         setLineData()
-        // Update transfer settings
         setTransferData()
     }
     
-    // MARK: - Direction Control
-    // Switches to return direction and updates line settings
+    // Update date shown in UI.
     fun updateDate(date: Date) {
         selectDate = date
         displayDate = null
         dateLabel = date.formatDate(getApplication())
     }
     
+    // Update time label from the given date.
     fun updateTime(date: Date) {
         timeLabel = date.setTime
     }
     
+    // Switch to back direction.
     fun backButton() {
         isBack = true
         updateAllDataFromUserDefaults()
     }
     
-    // Switches to outbound direction and updates line settings
+    // Switch to go direction.
     fun goButton() {
         isBack = false
         updateAllDataFromUserDefaults()
     }
     
-    // MARK: - Timer Control
-    // Starts real-time timer for updating date and time
+    // Start live time updates.
     fun startButton() {
-        // Cancel existing timer before starting new one
         timerJob?.cancel()
         isTimeStop = false
         selectDate = Date()
@@ -247,7 +236,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
     
-    // Stops real-time timer
+    // Stop live time updates.
     fun stopButton() {
         isTimeStop = true
         displayDate = null
@@ -255,31 +244,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         timerJob = null
     }
     
-    // MARK: - Timer State Management
-    // Ensures timer is running when view appears
-    fun ensureTimerRunning() {
-        // Always start timer when view appears, regardless of current state
-        startButton()
-    }
-    
-    // Stops timer when view disappears
-    fun stopTimerOnDisappear() {
-        // Always stop timer when view disappears
-        stopButton()
-    }
-    
     override fun onCleared() {
         super.onCleared()
         stopButton()
     }
     
-    // MARK: - Computed Properties
-    // Current date and time information
+    // Current time derived from the label.
     val currentTime: Int
         get() = timeLabel.currentTime
     
-    
-    // Current time-based schedule information using line-specific calendar types
+    // Time arrays based on line calendars.
     val timeArray1: List<Int>
         get() = goOrBack1.timeArray(sharedPreferences, selectDate, currentTime)
     
@@ -292,7 +266,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val timeArrayString2: List<String>
         get() = timeArray2.map { it.stringTime }
     
-    // Countdown information for next trains
+    // Countdown values for the next trains.
     val countdownTime1: String
         get() = if (timeArray1.size > 1) currentTime.countdownTime(timeArray1[1]) else ""
     

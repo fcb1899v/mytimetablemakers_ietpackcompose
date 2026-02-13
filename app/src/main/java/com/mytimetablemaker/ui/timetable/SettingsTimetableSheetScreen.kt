@@ -10,7 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -44,7 +44,6 @@ import androidx.core.content.edit
 import androidx.core.view.WindowCompat
 import com.mytimetablemaker.models.getTrainTypeDisplayName
 
-// MARK: - Settings Timetable Sheet Screen
 // Sheet for editing timetable times with add/delete/copy functionality
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +57,7 @@ fun SettingsTimetableSheetScreen(
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("MainViewModel", Context.MODE_PRIVATE)
     
-    // State variables
+    // State management
     var departureTime by remember { mutableStateOf<Int?>(null) }
     var displayDepartureTime by remember { mutableStateOf<Int?>(null) }
     var rideTime by remember { mutableStateOf<Int?>(null) }
@@ -74,7 +73,7 @@ fun SettingsTimetableSheetScreen(
     val verticalSpacing = ScreenSize.settingsSheetVerticalSpacing()
     val titleFontSize = ScreenSize.settingsTitleFontSize()
     
-    // Status bar setup (align with SettingsLineSheet / SettingsTransferSheet)
+    // Configure status bar
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (context as? android.app.Activity)?.window
@@ -87,20 +86,20 @@ fun SettingsTimetableSheetScreen(
         onDispose { }
     }
     
-    // Initialize state
+    // Initialize state on screen load
     LaunchedEffect(Unit) {
-        // Load saved ride time as default value (using route-level key without hour)
+        // Load saved ride time as default value (using route-level key without hour identifier)
         val rideTimeKey = goorback.rideTimeKey(num)
         val savedRideTime = rideTimeKey.userDefaultsInt(sharedPreferences, 0)
         rideTime = if (savedRideTime == 0) null else savedRideTime
         
-        // Load available calendar types (loadAvailableCalendarTypes returns full rawValue e.g. "odpt.Calendar:Weekday")
+        // Load available calendar types (returns full rawValue strings like "odpt.Calendar:Weekday")
         val loadedTypesString = goorback.loadAvailableCalendarTypes(sharedPreferences, num)
         availableOdptCalendar = loadedTypesString.mapNotNull { typeString ->
             ODPTCalendarType.fromRawValue(typeString)
         }
         
-        // Load transportation times
+        // Load initial transportation times
         transportationTimes = goorback.loadTransportationTimes(
             currentCalendarType,
             num,
@@ -109,7 +108,7 @@ fun SettingsTimetableSheetScreen(
         )
     }
     
-    // Update transportation times when hour or calendar type changes
+    // Reload times when hour or calendar type changes
     LaunchedEffect(currentHour, currentCalendarType) {
         transportationTimes = goorback.loadTransportationTimes(
             currentCalendarType,
@@ -119,8 +118,7 @@ fun SettingsTimetableSheetScreen(
         )
     }
     
-    // MARK: - Helper Functions
-    // Check if the selected departure time exists in the timetable (for deletion)
+    // Check if departure time exists in timetable (for validation before deletion)
     fun isTimeExistsForDeletion(): Boolean {
         val departureTimeValue = departureTime ?: return false
         val timetableKey = goorback.timetableKey(currentCalendarType, num, currentHour)
@@ -128,7 +126,7 @@ fun SettingsTimetableSheetScreen(
         return timetableString.containsTimeInAnyFormat(departureTimeValue)
     }
     
-    // Check if the exact same entry (departure time, ride time, and train type) already exists
+    // Check if exact same entry exists (time, ride time, train type) to prevent duplicates
     fun isExactSameEntryExists(): Boolean {
         val departureTimeValue = departureTime ?: return false
         val rideTimeValue = rideTime ?: return false
@@ -151,18 +149,18 @@ fun SettingsTimetableSheetScreen(
         
         val isRailway = goorback.lineKind(sharedPreferences, num) == TransportationLineKind.RAILWAY
         
-        // Check if exact same entry exists
+        // Check for exact match: Railway checks time+type+ride, Bus checks time+ride only
         for ((index, time) in departureTimes.withIndex()) {
             val matchesTime = time == newTimeString || time == departureTimeValue.toString()
             val matchesRideTime = if (index < rideTimes.size) rideTimes[index] == newRideTimeString else false
             
-            // For railway, also check train type; for bus, skip train type check
+            // Railway checks train type, bus doesn't
             val matchesType: Boolean
             if (isRailway) {
                 val existingType = if (index < trainTypes.size) trainTypes[index] else ""
                 matchesType = existingType == newTrainType
             } else {
-                matchesType = true // Bus doesn't have train type
+                matchesType = true
             }
             
             if (matchesTime && matchesType && matchesRideTime) {
@@ -173,7 +171,8 @@ fun SettingsTimetableSheetScreen(
         return false
     }
     
-    // Get available train types for selection
+    // Get available train types for dropdown selection
+    // Returns default types + operator-specific types if available
     fun getAvailableTrainTypes(): List<String> {
         val defaultTypeList = listOf(
             DisplayTrainType.DEFAULT_LOCAL.rawValue,
@@ -182,38 +181,40 @@ fun SettingsTimetableSheetScreen(
             DisplayTrainType.DEFAULT_SPECIAL_RAPID.rawValue,
             DisplayTrainType.DEFAULT_LIMITED_EXPRESS.rawValue
         )
-        
-        // First, try to get existing train types from the current line
-        val existingTrainTypes = goorback.loadTrainTypeList(currentCalendarType, num, sharedPreferences)
-        
-        // If no existing train types are found, use default list + operator-specific types for railway
-        if (existingTrainTypes.isEmpty()) {
-            val operatorCode = goorback.operatorCode(sharedPreferences, num)
-            val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode }
-            if (dataSource != null && dataSource.hasTrainTimeTable()) {
-                val operatorTypes = dataSource.operatorTrainType().mapNotNull { it.split(".").lastOrNull() }.filter { it.isNotEmpty() }
-                return (defaultTypeList + operatorTypes).distinct()
-            }
+
+        // Manual input mode should always show only the five default types.
+        val isLineSelected = goorback.lineSelected(sharedPreferences, num)
+        val hasOperatorCode = goorback.operatorCode(sharedPreferences, num).isNotEmpty()
+        val hasLineCode = goorback.lineCode(sharedPreferences, num).isNotEmpty()
+        val isFetchedMode = isLineSelected && hasOperatorCode && hasLineCode
+        if (!isFetchedMode) {
             return defaultTypeList
         }
         
-        // Check if existingTrainTypes contains only default types
-        val hasOnlyDefaultTypes = existingTrainTypes.all { trainType ->
-            defaultTypeList.contains(trainType)
-        }
+        // First, try to get existing train types from the current line's saved data
+        val existingTrainTypes = goorback
+            .loadTrainTypeList(currentCalendarType, num, sharedPreferences)
+            .distinct()
         
-        // If existingTrainTypes has only default types, return defaultTypeList
-        // Otherwise, return existingTrainTypes (which includes custom types)
-        return if (hasOnlyDefaultTypes) defaultTypeList else existingTrainTypes
+        // If no existing train types are found, use default list.
+        if (existingTrainTypes.isEmpty()) {
+            return defaultTypeList
+        }
+
+        // In fetched mode, show only operator-derived train types.
+        val operatorTypes = existingTrainTypes
+            .filterNot { trainType -> defaultTypeList.contains(trainType) }
+            .distinct()
+
+        return operatorTypes
     }
     
-    // Update train type list
+    // Add new train type to list if not already present
     fun updateTrainTypeList(trainType: String) {
         val trainTypeListKey = goorback.trainTypeListKey(currentCalendarType, num)
         val existingListString = sharedPreferences.getString(trainTypeListKey, null) ?: ""
         val existingList = existingListString.timetableComponents.toMutableList()
         
-        // Add new train type if not already in the list
         if (!existingList.contains(trainType)) {
             existingList.add(trainType)
             sharedPreferences.edit {
@@ -223,6 +224,7 @@ fun SettingsTimetableSheetScreen(
     }
     
     // Save train type list for all hours
+    // Collects all transportation times across all valid hours and saves consolidated train type list
     fun saveTrainTypeListForAllHours() {
         val validHours = goorback.validHourRange(currentCalendarType, num, sharedPreferences)
         val allTransportationTimes = mutableListOf<TransportationTime>()
@@ -238,7 +240,7 @@ fun SettingsTimetableSheetScreen(
             allTransportationTimes.addAll(times)
         }
         
-        // Save train type list
+        // Save consolidated train type list
         goorback.saveTrainTypeList(
             allTransportationTimes,
             currentCalendarType,
@@ -247,20 +249,18 @@ fun SettingsTimetableSheetScreen(
         )
     }
     
-    // Add time and train type pair
+    // Add or update departure time with train type and ride time, then sort all entries
     fun addTimeAndTrainTypePair(departureTime: Int, trainType: String?, rideTime: Int) {
         val timetableKey = goorback.timetableKey(currentCalendarType, num, currentHour)
         val timetableTrainTypeKey = goorback.timetableTrainTypeKey(currentCalendarType, num, currentHour)
         val timetableRideTimeKey = goorback.timetableRideTimeKey(currentCalendarType, num, currentHour)
         val routeRideTimeKey = goorback.rideTimeKey(num)
         
-        // Get current data
+        // Load current timetable data
         val currentTimetableString = sharedPreferences.getString(timetableKey, null) ?: ""
         val currentTrainTypeString = sharedPreferences.getString(timetableTrainTypeKey, null) ?: ""
         val currentRideTimeString = sharedPreferences.getString(timetableRideTimeKey, null) ?: ""
         val defaultRideTime = routeRideTimeKey.userDefaultsInt(sharedPreferences, 0)
-        
-        // Convert to arrays
         val departureTimes = currentTimetableString.timetableComponents.toMutableList()
         val trainTypes = currentTrainTypeString.timetableComponents.toMutableList()
         val rideTimes = currentRideTimeString.timetableComponents.toMutableList()
@@ -269,7 +269,7 @@ fun SettingsTimetableSheetScreen(
         val newTrainType = trainType ?: ""
         val newRideTimeString = rideTime.addZeroTime()
         
-        // Check if the same time already exists
+        // Check if time already exists
         var existingIndex: Int? = null
         for ((index, time) in departureTimes.withIndex()) {
             if (time == newTimeString || time == departureTime.toString()) {
@@ -281,8 +281,7 @@ fun SettingsTimetableSheetScreen(
         if (existingIndex != null) {
             // Overwrite existing time with new train type and ride time
             val index = existingIndex
-            // Pad trainTypes/rideTimes to match departureTimes size when they're shorter
-            // (e.g. when timetableTrainTypeKey/timetableRideTimeKey was empty)
+            // Pad arrays to match departureTimes size if shorter (when keys were empty)
             while (trainTypes.size <= index) {
                 trainTypes.add("defaultLocal")
             }
@@ -329,25 +328,26 @@ fun SettingsTimetableSheetScreen(
         }
     }
     
-    // Delete time and train type pair
+    // Delete departure time entry and its associated train type and ride time
+    // Removes the entry from all three synchronized arrays
     fun deleteTimeAndTrainTypePair(departureTime: Int) {
         val timetableKey = goorback.timetableKey(currentCalendarType, num, currentHour)
         val timetableTrainTypeKey = goorback.timetableTrainTypeKey(currentCalendarType, num, currentHour)
         val timetableRideTimeKey = goorback.timetableRideTimeKey(currentCalendarType, num, currentHour)
         val routeRideTimeKey = goorback.rideTimeKey(num)
         
-        // Get current data
+        // Load current timetable data
         val currentTimetableString = sharedPreferences.getString(timetableKey, null) ?: ""
         val currentTrainTypeString = sharedPreferences.getString(timetableTrainTypeKey, null) ?: ""
         val currentRideTimeString = sharedPreferences.getString(timetableRideTimeKey, null) ?: ""
         val defaultRideTime = routeRideTimeKey.userDefaultsInt(sharedPreferences, 0)
         
-        // Convert to arrays
+        // Parse to lists
         val departureTimes = currentTimetableString.timetableComponents.toMutableList()
         val trainTypes = currentTrainTypeString.timetableComponents.toMutableList()
         val rideTimes = currentRideTimeString.timetableComponents.toMutableList()
         
-        // Find and remove the time (try both single and double digit formats)
+        // Find and remove the time (try both single-digit and double-digit formats)
         val singleDigitTime = departureTime.toString()
         val doubleDigitTime = departureTime.addZeroTime()
         
@@ -359,7 +359,7 @@ fun SettingsTimetableSheetScreen(
             }
         }
         
-        // Remove the time, corresponding train type, and ride time
+        // Remove entry and associated data
         if (indexToRemove != null) {
             val index = indexToRemove
             departureTimes.removeAt(index)
@@ -397,19 +397,19 @@ fun SettingsTimetableSheetScreen(
         }
     }
     
-    // Add or update time entry in timetable
+    // Add new time entry to timetable with validation
     fun addTime() {
         val departureTimeValue = departureTime ?: return
         val rideTimeValue = rideTime ?: return
         
-        // Add time, train type, and ride time as a triplet, then sort all together
+        // Add triplet and sort all entries
         addTimeAndTrainTypePair(
             departureTime = departureTimeValue,
             trainType = selectedTrainType,
             rideTime = rideTimeValue
         )
         
-        // Update transportationTimes array with fresh data from SharedPreferences
+        // Reload transportation times
         transportationTimes = goorback.loadTransportationTimes(
             currentCalendarType,
             num,
@@ -417,20 +417,20 @@ fun SettingsTimetableSheetScreen(
             sharedPreferences
         )
         
-        // Save train type list for all hours
+        // Update global train type list
         saveTrainTypeListForAllHours()
         
-        // Save display value
+        // Update display state
         displayDepartureTime = departureTimeValue
     }
     
-    // Delete time entry from timetable
+    // Remove time entry from timetable
     fun deleteTime() {
         val departureTimeValue = departureTime ?: return
         
         deleteTimeAndTrainTypePair(departureTime = departureTimeValue)
         
-        // Update transportationTimes array with fresh data from SharedPreferences
+        // Reload transportation times
         transportationTimes = goorback.loadTransportationTimes(
             currentCalendarType,
             num,
@@ -438,18 +438,20 @@ fun SettingsTimetableSheetScreen(
             sharedPreferences
         )
         
-        // Save train type list for all hours
+        // Update global train type list
         saveTrainTypeListForAllHours()
         
-        // Save display value
+        // Update display state
         displayDepartureTime = departureTimeValue
     }
     
-    // Copy timetable times from another hour or route
+    // Copy timetable data (times, train types, ride times) from another hour or route
+    // Overwrites current hour's data with data from the selected source
     fun copyTime(index: Int) {
         val keyArray = goorback.choiceCopyTimeKeyArray(currentCalendarType, num, currentHour)
         if (index < 0 || index >= keyArray.size) return
         
+        // Get source and destination keys for all three data arrays
         val sourceTimetableKey = keyArray[index]
         val sourceTrainTypeKey = "${sourceTimetableKey}traintype"
         val sourceRideTimeKey = "${sourceTimetableKey}ridetime"
@@ -458,17 +460,19 @@ fun SettingsTimetableSheetScreen(
         val timetableTrainTypeKey = goorback.timetableTrainTypeKey(currentCalendarType, num, currentHour)
         val timetableRideTimeKey = goorback.timetableRideTimeKey(currentCalendarType, num, currentHour)
         
+        // Copy all timetable data from source to current hour
         val copiedTime = goorback.choiceCopyTime(currentCalendarType, num, currentHour, index, sharedPreferences)
         val copiedTrainTypes = sharedPreferences.getString(sourceTrainTypeKey, null) ?: ""
         val copiedRideTimes = sharedPreferences.getString(sourceRideTimeKey, null) ?: ""
         
+        // Save copied data to current hour's keys
         sharedPreferences.edit {
             putString(timetableKey, copiedTime)
                 .putString(timetableTrainTypeKey, copiedTrainTypes)
                 .putString(timetableRideTimeKey, copiedRideTimes)
         }
         
-        // Update transportationTimes when time is copied
+        // Reload with copied data
         transportationTimes = goorback.loadTransportationTimes(
             currentCalendarType,
             num,
@@ -476,7 +480,7 @@ fun SettingsTimetableSheetScreen(
             sharedPreferences
         )
         
-        // Save train type list for all hours
+        // Update global train type list
         saveTrainTypeListForAllHours()
     }
     
@@ -641,9 +645,7 @@ fun SettingsTimetableSheetScreen(
                         onToggleDropdown = {
                             isCalendarTypeDropdownOpen = false
                             isCopyTimeDropdownOpen = !isCopyTimeDropdownOpen
-                        },
-                        hour = currentHour,
-                        onCopyTime = { index -> copyTime(index) }
+                        }
                     )
                     
                     Spacer(modifier = Modifier.weight(1f))
@@ -663,7 +665,6 @@ fun SettingsTimetableSheetScreen(
                                 sharedPreferences
                             )
                         },
-                        onDismiss = { isCalendarTypeDropdownOpen = false },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .offset(y = ScreenSize.timetableCalendarMenuOffsetY())
@@ -672,12 +673,11 @@ fun SettingsTimetableSheetScreen(
                 }
                 if (isCopyTimeDropdownOpen) {
                     CopyTimeDropdownView(
-                        hour = currentHour,
+                        currentHour = currentHour,
                         onCopyTime = { index ->
                             copyTime(index)
                             isCopyTimeDropdownOpen = false
                         },
-                        onDismiss = { isCopyTimeDropdownOpen = false },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .offset(y = ScreenSize.timetableCopyMenuOffsetY())
@@ -689,8 +689,7 @@ fun SettingsTimetableSheetScreen(
     }
 }
 
-// MARK: - Calendar Dropdown Section
-// Dropdown list is rendered as overlay in parent Box (same as TimetableContentScreen)
+// Calendar type dropdown selector
 @Composable
 private fun CalendarDropDownSection(
     selectedCalendarType: ODPTCalendarType,
@@ -737,7 +736,7 @@ private fun CalendarDropDownSection(
     }
 }
 
-// MARK: - Hour Control Section
+// Hour navigation controls with train count display
 @Composable
 private fun HourControlSection(
     hour: Int,
@@ -785,7 +784,7 @@ private fun HourControlSection(
     }
 }
 
-// MARK: - Timetable Display Section
+// Display timetable entries in a grid
 @Composable
 private fun TimetableDisplaySection(
     transportationTimes: List<TransportationTime>
@@ -810,7 +809,7 @@ private fun TimetableDisplaySection(
             horizontalArrangement = Arrangement.Center,
             verticalArrangement = Arrangement.Center,
         ) {
-            itemsIndexed(transportationTimes) { index, transportationTime ->
+            items(transportationTimes) { transportationTime ->
                 Row(
                     modifier = Modifier
                         .width(itemWidth.dp)
@@ -847,7 +846,7 @@ private fun TimetableDisplaySection(
     }
 }
 
-// MARK: - Departure Time Select Section
+// Minute picker for departure time selection
 @Composable
 private fun DepartureTimeSelectSection(
     departureTime: Int?,
@@ -915,7 +914,7 @@ private fun DepartureTimeSelectSection(
     }
 }
 
-// MARK: - Ride Time Select Section
+// Ride time input with 2-digit picker
 @Composable
 private fun RideTimeSelectSection(
     rideTime: Int?,
@@ -1127,7 +1126,7 @@ private fun TrainTypeSelectSection(
     }
 }
 
-// MARK: - Add Delete Button Section
+// Add and delete buttons with validation
 @Composable
 private fun AddDeleteButtonSection(
     isTimeExistsForDeletion: Boolean,
@@ -1179,13 +1178,11 @@ private fun AddDeleteButtonSection(
     }
 }
 
-// MARK: - Copy Time Button Section
+// Copy time from other hours button
 @Composable
 private fun CopyTimeButtonSection(
     isCopyTimeDropdownOpen: Boolean,
-    onToggleDropdown: () -> Unit,
-    hour: Int,
-    onCopyTime: (Int) -> Unit
+    onToggleDropdown: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
         Button(
@@ -1242,12 +1239,11 @@ private fun CopyTimeButtonSection(
     }
 }
 
-// MARK: - Calendar Type Dropdown View
+// Calendar type selection dropdown dialog
 @Composable
 private fun CalendarTypeDropdownView(
     availableCalendarTypes: List<ODPTCalendarType>,
     onCalendarTypeSelected: (ODPTCalendarType) -> Unit,
-    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -1305,86 +1301,18 @@ private fun CalendarTypeDropdownView(
     }
 }
 
-// MARK: - Train Type Dropdown View
-@Composable
-private fun TrainTypeDropdownView(
-    availableTrainTypes: List<String>,
-    onTrainTypeSelected: (String) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    
-    Column(
-        modifier = modifier
-            .width(ScreenSize.timetableTypeMenuWidth())
-            .background(
-                color = Primary,
-            )
-            .border(
-                width = ScreenSize.borderWidth(),
-                color = White,
-            ),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        availableTrainTypes.forEachIndexed { index, trainType ->
-            Button(
-                onClick = {
-                    onTrainTypeSelected(trainType)
-                },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Transparent,
-                    contentColor = Color.Unspecified
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            vertical = ScreenSize.settingsSheetInputPaddingVertical(),
-                            horizontal = ScreenSize.settingsSheetInputPaddingHorizontal()
-                        ),
-                    horizontalArrangement = Arrangement.spacedBy(ScreenSize.settingsSheetHorizontalSpacing()),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Train,
-                        contentDescription = null,
-                        modifier = Modifier.size(ScreenSize.settingsSheetIconSize()),
-                        tint = colorForTrainType(trainType)
-                    )
-                    Text(
-                        text = getTrainTypeDisplayName(trainType, context),
-                        fontSize = ScreenSize.settingsSheetInputFontSize().value.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = White,
-                        maxLines = 1
-                    )
-                }
-            }
-            
-            if (index < availableTrainTypes.size - 1) {
-                HorizontalDivider(
-                    modifier = Modifier.height(ScreenSize.borderWidth()),
-                    color = White
-                )
-            }
-        }
-    }
-}
 
-// MARK: - Copy Time Dropdown View
+
+// Copy time source selection dropdown dialog
 @Composable
 private fun CopyTimeDropdownView(
-    hour: Int,
+    currentHour: Int,
     onCopyTime: (Int) -> Unit,
-    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val startIndex = if (hour == 4) 1 else 0
-    val items = hour.choiceCopyTimeList(context)
+    val startIndex = if (currentHour == 4) 1 else 0
+    val items = currentHour.choiceCopyTimeList(context)
     
     Column(
         modifier = modifier
@@ -1399,7 +1327,7 @@ private fun CopyTimeDropdownView(
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         (startIndex until items.size).forEach { index ->
-            if (!(hour == 25 && index == 1)) {
+            if (!(currentHour == 25 && index == 1)) {
                 Button(
                     onClick = {
                         onCopyTime(index)

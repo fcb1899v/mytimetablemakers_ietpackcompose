@@ -38,8 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.core.net.toUri
 import androidx.core.content.edit
 
-// MARK: - Settings Content Screen
-// Main settings screen with route configuration, account management, and app information
+// Settings screen for routes, account, and app info.
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContentScreen(
@@ -52,11 +51,10 @@ fun SettingsContentScreen(
     onNavigateToLogin: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    // Use the same SharedPreferences instance as MainViewModel to ensure listeners work
+    // SharedPreferences used by MainViewModel.
     val sharedPreferences = context.getSharedPreferences("MainViewModel", android.content.Context.MODE_PRIVATE)
     
-    // MARK: - State Properties
-    // Control visibility of sheets, alerts, and navigation state
+    // UI state for sheets, alerts, and navigation.
     var showTransferSheet by remember { mutableStateOf(false) }
     var showLineSheet by remember { mutableStateOf(false) }
     var selectedRoute by remember { mutableStateOf("back1") }
@@ -69,13 +67,13 @@ fun SettingsContentScreen(
     var showSaveFirestoreAlert by remember { mutableStateOf(false) }
     var saveFirestorePassword by remember { mutableStateOf("") }
     
-    // Observe login status and messages from LoginViewModel
+    // Login state and alert messages.
     val isLoginSuccess by loginViewModel.isLoginSuccess.collectAsState()
     val isShowLoginMessage by loginViewModel.isShowMessage.collectAsState()
     val loginAlertTitle by loginViewModel.alertTitle.collectAsState()
     val loginAlertMessage by loginViewModel.alertMessage.collectAsState()
     
-    // Set status bar color to Primary
+    // Set status bar to match the header color.
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (view.context as? android.app.Activity)?.window
@@ -90,14 +88,14 @@ fun SettingsContentScreen(
         onDispose { }
     }
     
-    // Load Route 2 setting on appear
+    // Load Route 2 setting on appear.
     LaunchedEffect(Unit) {
         loadRoute2Setting(sharedPreferences) { value ->
             showRoute2 = value
         }
     }
     
-    // Listen to SharedPreferences changes for route2 setting
+    // Sync Route 2 toggle with SharedPreferences.
     DisposableEffect(Unit) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
             if (key == "back2".isShowRoute2Key() || key == "go2".isShowRoute2Key()) {
@@ -136,11 +134,11 @@ fun SettingsContentScreen(
                 .background(White)
                 .padding(paddingValues)
         ) {
-        // MARK: - Main Content
+        // Main content.
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // MARK: - Top App Bar
+            // Top app bar.
             val topBarHeight = ScreenSize.settingsSheetTopBarHeight()
             val backButtonPadding = ScreenSize.settingsSheetBackButtonPadding()
             val titleFontSize = ScreenSize.settingsTitleFontSize()
@@ -151,7 +149,7 @@ fun SettingsContentScreen(
                     .height(topBarHeight)
                     .background(Primary)
             ) {
-                // Back button aligned to the left
+                // Back button.
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
@@ -163,7 +161,7 @@ fun SettingsContentScreen(
                     )
                 }
                 
-                // Title centered on screen
+                // Title.
                 Text(
                     text = stringResource(R.string.settings),
                     fontSize = titleFontSize.value.sp,
@@ -174,7 +172,7 @@ fun SettingsContentScreen(
                 )
             }
             
-            // MARK: - Loading Indicator
+            // Loading overlay.
             if (firestoreViewModel.isLoading) {
                 Box(
                     modifier = Modifier
@@ -193,24 +191,24 @@ fun SettingsContentScreen(
                 }
             }
             
-            // MARK: - Settings Form
+            // Settings form.
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(top = ScreenSize.settingsHeaderPadding())
             ) {
-                // MARK: - Various Settings Section
+                // Various settings.
                 SettingsSection(
                     title = stringResource(R.string.variousSettings)
                 ) {
-                    // Home and Destination button
+                    // Home/destination settings.
                     SettingsButton(
                         title = stringResource(R.string.homeDestinationSettings),
                         onClick = { showTransferSheet = true }
                     )
                     
-                    // Route Settings button
+                    // Route settings.
                     SettingsButton(
                         title = stringResource(R.string.routeSettings),
                         onClick = {
@@ -219,7 +217,7 @@ fun SettingsContentScreen(
                         }
                     )
                     
-                    // Route 2 display toggle
+                    // Route 2 display toggle.
                     TextButton(
                         onClick = { },
                         modifier = Modifier
@@ -249,7 +247,7 @@ fun SettingsContentScreen(
                         }
                     }
                     
-                    // Firestore data management buttons (only shown when logged in)
+                    // Firestore actions (logged-in only).
                     if (isLoginSuccess) {
                         SettingsButton(
                             title = stringResource(R.string.getSavedData),
@@ -262,7 +260,7 @@ fun SettingsContentScreen(
                     }
                 }
                 
-                // MARK: - Account Section
+                // Account actions.
                 SettingsSection(
                     title = stringResource(R.string.account)
                 ) {
@@ -283,7 +281,7 @@ fun SettingsContentScreen(
                     }
                 }
                 
-                // MARK: - About Section
+                // About section.
                 SettingsSection(
                     title = stringResource(R.string.about)
                 ) {
@@ -328,7 +326,7 @@ fun SettingsContentScreen(
                     }
                 }
                 
-                // MARK: - Ad Banner (画面最下部)
+                // Ad banner at the bottom.
                 Spacer(modifier = Modifier.weight(1f))
                 Box(
                     modifier = Modifier
@@ -342,8 +340,7 @@ fun SettingsContentScreen(
         }
     }
     
-    // MARK: - Alerts
-    // Logout Alert
+    // Alerts.
     if (showLogoutAlert) {
         CommonComponents.CustomAlertDialog(
             onDismissRequest = { showLogoutAlert = false },
@@ -358,7 +355,7 @@ fun SettingsContentScreen(
         )
     }
     
-    // Delete Account Alert (with password input)
+    // Delete account alert.
     if (showDeleteAlert) {
         CommonComponents.CustomAlertDialog(
             onDismissRequest = {
@@ -396,7 +393,7 @@ fun SettingsContentScreen(
         )
     }
     
-    // Get Firestore Alert (with password input)
+    // Get Firestore alert.
     if (showGetFirestoreAlert) {
         CommonComponents.CustomAlertDialog(
             onDismissRequest = {
@@ -433,7 +430,7 @@ fun SettingsContentScreen(
         )
     }
     
-    // Save Firestore Alert (with password input)
+    // Save Firestore alert.
     if (showSaveFirestoreAlert) {
         CommonComponents.CustomAlertDialog(
             onDismissRequest = {
@@ -470,7 +467,7 @@ fun SettingsContentScreen(
         )
     }
     
-    // MARK: - Logout Result Alert (show on Settings when user logs out, consume here so it doesn't show again on LoginContentScreen)
+    // Logout result alert.
     if (isShowLoginMessage) {
         CommonComponents.CustomAlertDialog(
             onDismissRequest = { loginViewModel.dismissMessage() },
@@ -481,7 +478,7 @@ fun SettingsContentScreen(
         )
     }
     
-    // MARK: - Firestore Result Alert
+    // Firestore result alert.
     if (firestoreViewModel.isShowMessage) {
         CommonComponents.CustomAlertDialog(
             onDismissRequest = { firestoreViewModel.dismissMessage() },
@@ -499,7 +496,7 @@ fun SettingsContentScreen(
         )
     }
     
-    // Handle sheet navigation
+    // Handle sheet navigation.
     LaunchedEffect(showTransferSheet) {
         if (showTransferSheet) {
             onNavigateToTransferSheet()
@@ -516,8 +513,7 @@ fun SettingsContentScreen(
     }
 }
 
-// MARK: - Settings Section
-// Reusable section component for settings form
+// Settings section for grouped items.
 @Composable
 private fun SettingsSection(
     title: String,
@@ -540,8 +536,7 @@ private fun SettingsSection(
     }
 }
 
-// MARK: - Settings Button
-// Reusable button component for settings actions
+// Settings button row.
 @Composable
 private fun SettingsButton(
     title: String,
@@ -586,10 +581,7 @@ private fun SettingsButton(
     }
 }
 
-// MARK: - Helper Functions
-
-// Load Route 2 display setting from SharedPreferences
-// Since saveRoute2Setting saves the same value to both back2 and go2, we can read either one
+// Load Route 2 display setting from SharedPreferences.
 private fun loadRoute2Setting(
     sharedPreferences: SharedPreferences,
     onLoaded: (Boolean) -> Unit
@@ -598,36 +590,34 @@ private fun loadRoute2Setting(
     onLoaded(route2Value)
 }
 
-// Save Route 2 display setting to SharedPreferences and update ViewModel
-// Save the same value to both back2 and go2
+// Save Route 2 display setting and update the ViewModel.
 private fun saveRoute2Setting(
     sharedPreferences: SharedPreferences,
     value: Boolean,
     mainViewModel: MainViewModel
 ) {
-    // Save to SharedPreferences for both routes
-    // Use commit() to ensure synchronous save
+    // Save to both back2 and go2.
     sharedPreferences.edit(commit = true) {
         putBoolean("back2".isShowRoute2Key(), value)
         putBoolean("go2".isShowRoute2Key(), value)
     }
     
-    // Update MainViewModel (update both back and go route flags)
+    // Update MainViewModel flags.
     mainViewModel.setRoute2Value(value)
 }
 
-// Open URL in browser
+// Open URL in browser.
 private fun openUrl(context: android.content.Context, url: String) {
     try {
         val intent = Intent(Intent.ACTION_VIEW, url.toUri())
         context.startActivity(intent)
     } catch (e: Exception) {
-        android.util.Log.d("SettingsContentScreen", "Failed to open URL: $url", e)
+        android.util.Log.e("SettingsContentScreen", "Failed to open URL: $url", e)
         android.widget.Toast.makeText(context, context.getString(R.string.couldNotOpenLink), android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 
-// Get app version from package manager
+// Get app version from PackageManager.
 private fun getAppVersion(context: android.content.Context): String {
     return try {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)

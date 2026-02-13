@@ -38,7 +38,7 @@ class CacheStore(context: Context) {
                 }
                 data
             } catch (e: IOException) {
-                android.util.Log.d("CacheStore", "loadData: IOException while loading from ${url.absolutePath}: ${e.message}", e)
+                android.util.Log.e("CacheStore", "loadData: IOException while loading from ${url.absolutePath}", e)
                 null
             }
         } else {
@@ -57,8 +57,7 @@ class CacheStore(context: Context) {
             }
             tempFile.renameTo(url)
         } catch (e: IOException) {
-            android.util.Log.d("CacheStore", "saveData: IOException while saving to ${url.absolutePath}: ${e.message}", e)
-            e.printStackTrace()
+            android.util.Log.e("CacheStore", "saveData: IOException while saving to ${url.absolutePath}", e)
         }
     }
     
@@ -156,7 +155,7 @@ class SharedDataManager private constructor(private val application: Application
                             gtfsService.downloadGTFSZipOnly(gtfsURL, consumerKey, transportOperator)
                         }
                     } catch (e: Exception) {
-                        android.util.Log.d("SharedDataManager", "⚠️ Failed to download GTFS ZIP for ${transportOperator.operatorDisplayName(application)}: ${e.message}", e)
+                            android.util.Log.e("SharedDataManager", "Failed to download GTFS ZIP for ${transportOperator.operatorDisplayName(application)}", e)
                     }
                 }
                 // Skip line fetch at startup; load on selection.
@@ -228,7 +227,7 @@ class SharedDataManager private constructor(private val application: Application
                     odptService.writeIndividualOperatorDataToFile(data, transportOperator)
                 }
             } catch (e: Exception) {
-                android.util.Log.d("SharedDataManager", "❌ Failed to initialize ${transportOperator.operatorDisplayName(application)}: ${e.message}", e)
+                    android.util.Log.e("SharedDataManager", "Failed to initialize ${transportOperator.operatorDisplayName(application)}", e)
             }
         }
     }
@@ -245,28 +244,25 @@ class SharedDataManager private constructor(private val application: Application
     // Splash initialization for loading and update checks.
     // `isLoading` should be true before calling.
     suspend fun performSplashInitialization() = withContext(Dispatchers.IO) {
-        android.util.Log.d("SharedDataManager", "🔄 Starting data initialization...")
         
         // Check if any cache exists.
         val hasAnyCache = checkCacheAvailability()
         
         if (!hasAnyCache) {
             // No cache: fetch all operators from API.
-            android.util.Log.d("SharedDataManager", "📥 No cache found - fetching all operators' data")
             try {
                 performInitialFetch(TransportationLineKind.RAILWAY)
                 performInitialFetch(TransportationLineKind.BUS)
             } catch (e: Exception) {
-                android.util.Log.d("SharedDataManager", "❌ Initial fetch failed: ${e.message}", e)
+                    android.util.Log.e("SharedDataManager", "Initial fetch failed", e)
             }
         } else {
             // Cache exists: preload into memory for faster access.
-            android.util.Log.d("SharedDataManager", "📂 Cache found - loading from cache")
             try {
                 getLines(TransportationLineKind.RAILWAY, allowFetch = false)
                 getLines(TransportationLineKind.BUS, allowFetch = false)
             } catch (e: Exception) {
-                android.util.Log.d("SharedDataManager", "❌ Cache load failed: ${e.message}", e)
+                    android.util.Log.e("SharedDataManager", "Cache load failed", e)
             }
         }
         
@@ -277,59 +273,6 @@ class SharedDataManager private constructor(private val application: Application
         delay(500)
     }
 
-    // Manual updates by operator to avoid unnecessary downloads.
-    suspend fun performRailwayUpdate() = withContext(Dispatchers.IO) {
-        if (consumerKey.isEmpty()) {
-            android.util.Log.d("SharedDataManager", "⚠️ ODPT_ACCESS_TOKEN is empty. Railway update will fail.")
-            return@withContext
-        }
-
-        val operators = LocalDataSource.entries.filter { it.transportationType() == TransportationKind.RAILWAY }
-        for (transportOperator in operators) {
-            try {
-                if (transportOperator.apiType() == ODPTAPIType.GTFS) {
-                    continue
-                }
-                val cacheKey = transportOperator.fileName()
-                if (cache.loadData(cacheKey) == null) {
-                    val data = odptService.fetchIndividualOperatorData(transportOperator)
-                    cache.saveData(data, cacheKey)
-                    odptService.writeIndividualOperatorDataToFile(data, transportOperator)
-                } else {
-                    odptService.updateIndividualOperator(transportOperator)
-                }
-            } catch (e: Exception) {
-                android.util.Log.d("SharedDataManager", "❌ Railway update failed for ${transportOperator.operatorDisplayName(application)}: ${e.message}", e)
-            }
-        }
-    }
-
-    // Perform updates for bus operators, including GTFS.
-    suspend fun performBusUpdate() = withContext(Dispatchers.IO) {
-        if (consumerKey.isEmpty()) {
-            android.util.Log.d("SharedDataManager", "⚠️ ODPT_ACCESS_TOKEN is empty. Some bus updates may fail.")
-        }
-
-        val operators = LocalDataSource.entries.filter { it.transportationType() == TransportationKind.BUS }
-        for (transportOperator in operators) {
-            try {
-                if (transportOperator.apiType() == ODPTAPIType.GTFS) {
-                    val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
-                    if (gtfsURL.isNotEmpty()) {
-                        gtfsService.downloadGTFSZipOnly(gtfsURL, consumerKey, transportOperator)
-                    }
-                } else {
-                    val data = odptService.fetchIndividualOperatorData(transportOperator)
-                    val cacheKey = transportOperator.fileName()
-                    cache.saveData(data, cacheKey)
-                    odptService.writeIndividualOperatorDataToFile(data, transportOperator)
-                }
-            } catch (e: Exception) {
-                android.util.Log.d("SharedDataManager", "❌ Bus update failed for ${transportOperator.operatorDisplayName(application)}: ${e.message}", e)
-            }
-        }
-    }
-    
     // Convert TransportationLineKind to TransportationKind.
     private fun TransportationLineKind.toTransportationKind(): TransportationKind {
         return when (this) {

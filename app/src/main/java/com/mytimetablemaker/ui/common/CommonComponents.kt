@@ -4,14 +4,12 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
@@ -32,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.ScreenSize
 import kotlinx.coroutines.launch
@@ -50,12 +50,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.Dp
 import com.mytimetablemaker.ui.theme.*
 
-// MARK: - Common Components Object
-// Container for reusable UI components
+// Shared UI components for consistent styling.
 object CommonComponents {
     
-    // MARK: - Custom Button
-    // Custom button component for consistent styling
+    // Custom button with consistent styling.
     @Composable
     fun CustomButton(
         title: String,
@@ -108,9 +106,52 @@ object CommonComponents {
             }
         }
     }
+
+    // Text with a simple 8-direction shadow stack.
+    @Composable
+    fun CustomShadowText(
+        text: String,
+        fontSize: androidx.compose.ui.unit.TextUnit,
+        fontWeight: FontWeight,
+        textColor: Color,
+        shadowColor: Color,
+        shadowOffset: Dp,
+        modifier: Modifier = Modifier,
+        maxLines: Int = 1,
+        overflow: TextOverflow = TextOverflow.Ellipsis
+    ) {
+        val shadowOffsets = listOf(
+            shadowOffset to 0.dp,
+            -shadowOffset to 0.dp,
+            0.dp to shadowOffset,
+            0.dp to -shadowOffset,
+            shadowOffset to shadowOffset,
+            shadowOffset to -shadowOffset,
+            -shadowOffset to shadowOffset,
+            -shadowOffset to -shadowOffset
+        )
+        shadowOffsets.forEach { (offsetX, offsetY) ->
+            Text(
+                text = text,
+                fontSize = fontSize,
+                fontWeight = fontWeight,
+                color = shadowColor,
+                maxLines = maxLines,
+                modifier = modifier.offset(x = offsetX, y = offsetY)
+            )
+        }
+        Text(
+            text = text,
+            fontSize = fontSize,
+            fontWeight = fontWeight,
+            color = textColor,
+            maxLines = maxLines,
+            overflow = overflow,
+            modifier = modifier
+        )
+    }
     
-    // MARK: - Custom Back Button
-    // Reusable back button component with consistent styling
+    // Reusable back button.
     @Composable
     fun CustomBackButton(
         foregroundColor: Color = White,
@@ -138,8 +179,7 @@ object CommonComponents {
         }
     }
     
-    // MARK: - Custom Toggle
-    // Customizable toggle component with left/right text and Switch
+    // Toggle with labels and custom segmented control (SwiftUI-style pill with sliding circle).
     @Composable
     fun CustomToggle(
         isLeftSelected: Boolean,
@@ -158,7 +198,7 @@ object CommonComponents {
                 .padding(horizontal = ScreenSize.customTogglePaddingHorizontal())
                 .wrapContentWidth()
         ) {
-            // Left label
+            // Left label (visual only, matches SwiftUI - only center switch is tappable)
             val leftLabelColor = animateColorAsState(
                 targetValue = if (isLeftSelected) onColor else offColor,
                 animationSpec = tween(durationMillis = 200),
@@ -171,30 +211,20 @@ object CommonComponents {
                 color = leftLabelColor.value,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .wrapContentWidth()
-                    // Enable clicking on the text to switch to the left option
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null // Disable ripple effect
-                    ) { onToggle(true) }
+                modifier = Modifier.wrapContentWidth()
             )
             
             // Switch component
-            // Material3 Switch has a default height, scale it to match customToggleHeight
             val defaultSwitchHeight = ScreenSize.customSwitchDefaultHeight()
             val targetHeight = ScreenSize.customToggleHeight()
             val scaleFactor = targetHeight.value / defaultSwitchHeight.value
-            
             Box(
                 modifier = Modifier.height(targetHeight),
                 contentAlignment = Alignment.Center
             ) {
                 Switch(
-                    checked = !isLeftSelected, // Switch is checked when right is selected
-                    onCheckedChange = { checked ->
-                        onToggle(!checked) // Invert because Switch checked means right selected
-                    },
+                    checked = !isLeftSelected,
+                    onCheckedChange = { checked -> onToggle(!checked) },
                     modifier = Modifier.scale(scaleX = scaleFactor, scaleY = scaleFactor),
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = circleColor,
@@ -205,7 +235,7 @@ object CommonComponents {
                 )
             }
             
-            // Right label
+            // Right label (visual only, matches SwiftUI - only center switch is tappable)
             val rightLabelColor = animateColorAsState(
                 targetValue = if (isLeftSelected) offColor else onColor,
                 animationSpec = tween(durationMillis = 200),
@@ -218,20 +248,12 @@ object CommonComponents {
                 color = rightLabelColor.value,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .wrapContentWidth()
-                    // Enable clicking on the text to switch to the right option
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null // Disable ripple effect
-                    ) { onToggle(false) }
+                modifier = Modifier.wrapContentWidth()
             )
         }
     }
     
-    // MARK: - Custom Rectangle Button
-    // Custom rectangle button component for consistent styling
-    // Used for buttons that don't need to fill the full width
+    // Rectangle button for compact actions.
     @Composable
     fun CustomRectangleButton(
         title: String,
@@ -273,8 +295,7 @@ object CommonComponents {
         }
     }
     
-    // MARK: - Custom 2 Digit Picker
-    // Picker component for selecting two-digit numbers with separate tens and ones place
+    // Two-digit picker with tens/ones columns.
     @Composable
     @OptIn(ExperimentalFoundationApi::class)
     fun Custom2DigitPicker(
@@ -388,12 +409,14 @@ object CommonComponents {
             val wasUserScrolling = tensWasUserScrolling
             val isUserScrolling = tensListState.isScrollInProgress && !tensIsProgrammaticScroll
             tensWasUserScrolling = isUserScrolling
-            val isUserScrollingNow = tensWasUserScrolling
-            if (!tensListState.isScrollInProgress && wasUserScrolling && isUserScrollingNow && !tensIsProgrammaticScroll) {
+            if (!tensListState.isScrollInProgress && wasUserScrolling && !tensIsProgrammaticScroll) {
+                // Wait a little for snap fling settle, then fix value only (no extra scroll animation).
+                kotlinx.coroutines.delay(80)
+                if (tensListState.isScrollInProgress || tensIsProgrammaticScroll) return@LaunchedEffect
                 val layoutInfo = tensListState.layoutInfo
                 val visibleItems = layoutInfo.visibleItemsInfo
                 if (visibleItems.isNotEmpty()) {
-                    val viewportCenter = layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset / 2
+                    val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
                     val centerItem = visibleItems.minByOrNull { 
                         kotlin.math.abs(it.offset + it.size / 2 - viewportCenter) 
                     }
@@ -402,15 +425,8 @@ object CommonComponents {
                     if (centerIndex in tensList.indices) {
                         val newTens = tensList[centerIndex]
                         val newValue = newTens * 10 + onesDigit
-                        coroutineScope.launch {
-                            tensListState.animateScrollToItem(
-                                index = centerIndex,
-                                scrollOffset = 0
-                            )
-                            kotlinx.coroutines.delay(100)
-                            if (newValue in minValue..maxValue && newValue != value) {
-                                onValueChange(newValue)
-                            }
+                        if (newValue in minValue..maxValue && newValue != value) {
+                            onValueChange(newValue)
                         }
                     }
                 }
@@ -421,12 +437,14 @@ object CommonComponents {
             val wasUserScrolling = onesWasUserScrolling
             val isUserScrolling = onesListState.isScrollInProgress && !onesIsProgrammaticScroll
             onesWasUserScrolling = isUserScrolling
-            val isUserScrollingNow = onesWasUserScrolling
-            if (!onesListState.isScrollInProgress && wasUserScrolling && isUserScrollingNow && !onesIsProgrammaticScroll) {
+            if (!onesListState.isScrollInProgress && wasUserScrolling && !onesIsProgrammaticScroll) {
+                // Wait a little for snap fling settle, then fix value only (no extra scroll animation).
+                kotlinx.coroutines.delay(80)
+                if (onesListState.isScrollInProgress || onesIsProgrammaticScroll) return@LaunchedEffect
                 val layoutInfo = onesListState.layoutInfo
                 val visibleItems = layoutInfo.visibleItemsInfo
                 if (visibleItems.isNotEmpty()) {
-                    val viewportCenter = layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset / 2
+                    val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
                     val centerItem = visibleItems.minByOrNull { 
                         kotlin.math.abs(it.offset + it.size / 2 - viewportCenter) 
                     }
@@ -435,15 +453,8 @@ object CommonComponents {
                     if (centerIndex in onesList.indices) {
                         val newOnes = onesList[centerIndex]
                         val newValue = tensDigit * 10 + newOnes
-                        coroutineScope.launch {
-                            onesListState.animateScrollToItem(
-                                index = centerIndex,
-                                scrollOffset = 0
-                            )
-                            kotlinx.coroutines.delay(100)
-                            if (newValue in minValue..maxValue && newValue != value) {
-                                onValueChange(newValue)
-                            }
+                        if (newValue in minValue..maxValue && newValue != value) {
+                            onValueChange(newValue)
                         }
                     }
                 }
@@ -534,18 +545,20 @@ object CommonComponents {
         }
     }
     
-    // MARK: - Custom Tag
-    // Small tag display component for showing metadata
+    // Small tag for metadata with rounded rectangle shape.
     @Composable
     fun CustomTag(
         text: String,
         modifier: Modifier = Modifier,
         backgroundColor: Color? = null,
     ) {
+        val tagSize = ScreenSize.settingsSheetLineTagSize()
+        val cornerRadius = tagSize / 2f // Half of height for rounded rectangle
+        
         Box(
             modifier = modifier
-                .size(ScreenSize.settingsSheetLineTagSize())
-                .clip(CircleShape)
+                .size(tagSize)
+                .clip(RoundedCornerShape(cornerRadius))
                 .background(
                     backgroundColor?.copy(alpha = 0.5f) ?: Gray.copy(alpha = 0.5f)
                 ),
@@ -562,8 +575,40 @@ object CommonComponents {
         }
     }
     
-    // MARK: - Custom Dropdown
-    // Custom dropdown component that doesn't interfere with IME
+    // Loading progress indicator with dark overlay.
+    @Composable
+    fun CustomProgressIndicator(
+        text: String? = null
+    ) {
+        Dialog(
+            onDismissRequest = {},
+            properties = DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false,
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(ScreenSize.splashLoadingSpacing())
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(ScreenSize.customProgressIndicatorSize()),
+                    color = White
+                )
+                
+                if (text != null) {
+                    Text(
+                        text = text,
+                        fontSize = ScreenSize.splashLoadingFontSize().value.sp,
+                        color = White
+                    )
+                }
+            }
+        }
+    }
+    
+    // Dropdown that avoids IME focus issues.
     @Composable
     fun <T> CustomDropdown(
         items: List<T>,
@@ -628,40 +673,7 @@ object CommonComponents {
         }
     }
     
-    // MARK: - Custom Background
-    // Custom background for input fields
-    @Composable
-    fun CustomBackground(
-        backgroundColor: Color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(ScreenSize.settingsSheetCornerRadius()))
-                .background(backgroundColor.copy(alpha = 0.95f))
-        )
-    }
-    
-    // MARK: - Custom Border
-    // Custom border for input fields
-    @Composable
-    fun CustomBorder(
-        modifier: Modifier = Modifier,
-        borderColor: Color = MaterialTheme.colorScheme.outline,
-    ) {
-        Box(
-            modifier = modifier
-                .clip(RoundedCornerShape(ScreenSize.settingsSheetCornerRadius()))
-                .border(
-                    width = ScreenSize.settingsSheetStrokeLineWidth(),
-                    color = borderColor,
-                    shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                )
-        )
-    }
-    
-    // MARK: - Custom TextField
-    // Custom text field component with consistent styling
+    // Custom text field with consistent styling.
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun CustomTextField(
@@ -783,9 +795,8 @@ object CommonComponents {
         }
     }
     
-    // MARK: - Custom Login TextField
-    // Custom text field component for login screens with password visibility toggle.
-    // Uses OutlinedTextField so that visualTransformation (password mask) is applied correctly.
+    // Login text field with password visibility toggle.
+    // Uses OutlinedTextField for proper masking.
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun CustomLoginTextField(
@@ -866,8 +877,7 @@ object CommonComponents {
         )
     }
     
-    // MARK: - Custom Alert Dialog
-    // Styled alert dialog with consistent design (responsive font/size, Primary accent, proper button hierarchy)
+    // Alert dialog with consistent sizing and emphasis.
     @Composable
     fun CustomAlertDialog(
         title: String,

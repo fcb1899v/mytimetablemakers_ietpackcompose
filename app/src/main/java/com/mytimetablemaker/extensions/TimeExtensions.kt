@@ -302,7 +302,7 @@ fun String.loadAvailableCalendarTypes(sharedPreferences: SharedPreferences, num:
     // Empty cache falls back to weekday and saturdayHoliday.
     val lineCacheKey = "${this}line${num + 1}_calendarTypes"
     val cachedTypes = sharedPreferences.getStringSet(lineCacheKey, null)
-    if (cachedTypes != null && cachedTypes.isNotEmpty()) {
+    if (!cachedTypes.isNullOrEmpty()) {
         val cachedCalendarTypes = cachedTypes.mapNotNull { ODPTCalendarType.fromRawValue(it) }
         if (cachedCalendarTypes.isNotEmpty()) {
             return cachedCalendarTypes.map { it.rawValue }
@@ -409,7 +409,7 @@ val String.minutesOnly: String
 val String.minutesOnlyInt: Int
     get() = this.minutesOnly.toIntOrNull() ?: 0
 
-// Compare two time strings (single or double digit).
+// Compare two time strings (single-digit or double-digit).
 fun String.isTimeLessThan(other: String): Boolean {
     val time1 = this.toIntOrNull() ?: 0
     val time2 = other.toIntOrNull() ?: 0
@@ -420,7 +420,7 @@ fun String.isTimeLessThan(other: String): Boolean {
 val String.timetableComponents: List<String>
     get() = this.split(" ").filter { it.isNotEmpty() }
 
-// Check if timetable contains time in single or double digit format.
+// Check if timetable contains time in single-digit or double-digit format.
 fun String.containsTimeInAnyFormat(departureTime: Int): Boolean {
     val existingTimes = this.timetableComponents
     val singleDigitTime = departureTime.toString()
