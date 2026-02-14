@@ -248,6 +248,20 @@ class SettingsLineViewModel(
         val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode } ?: return false
         return dataSource.hasTrainTimeTable() || dataSource.hasBusTimeTable()
     }
+
+    // Check if selected line supports train timetable auto-generation.
+    fun hasTrainTimetableSupport(): Boolean {
+        val operatorCode = _selectedLine.value?.operatorCode ?: return false
+        val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode } ?: return false
+        return dataSource.hasTrainTimeTable()
+    }
+
+    // Check whether the specified operator supports train timetables.
+    fun hasTrainTimetableSupport(operatorCode: String?): Boolean {
+        if (operatorCode.isNullOrEmpty()) return false
+        val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode } ?: return false
+        return dataSource.hasTrainTimeTable()
+    }
     
     // Load data from cache and LineData, with optional API fetch fallback.
     private suspend fun loadFromCache(
@@ -474,22 +488,15 @@ class SettingsLineViewModel(
                 val dataSourceFromCode = LocalDataSource.entries.firstOrNull { it.operatorCode() == savedOperatorCode }
                 if (dataSourceFromCode != null && selectedTransportationKind.value == TransportationLineKind.BUS &&
                     dataSourceFromCode.apiType() == ODPTAPIType.GTFS) {
-                    viewModelScope.launch {
-                        try {
-                            fetchGTFSLinesForOperator(dataSourceFromCode)
-                        } catch (e: Exception) {
-                            android.util.Log.e(
-                                "SettingsLineViewModel",
-                                "loadSettingsForSelectedLine: failed to fetch GTFS lines for ${dataSourceFromCode.name}",
-                                e
-                            )
-                            // Fallback to SharedPreferences if fetch fails
-                            _selectedGoorback.value.loadOperatorLineList(currentLineIndex, sharedPreferences)?.let { savedLineList ->
-                                _lineSuggestions.value = savedLineList
-                                showLineSuggestions.value = false
-                            }
-                        }
-                    }
+                    // GTFS operators are not selectable in the current app mode.
+                    // Clear stale GTFS selection restored from old preferences.
+                    // To restore GTFS later, uncomment:
+                    // viewModelScope.launch {
+                    //     fetchGTFSLinesForOperator(dataSourceFromCode)
+                    // }
+                    operatorInput.value = ""
+                    selectedOperatorCode.value = null
+                    operatorSelected.value = false
                 }
             } else {
                 // Name is saved but not selected; keep input and clear selection state.
@@ -507,22 +514,15 @@ class SettingsLineViewModel(
                 val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == savedOperatorCode }
                 if (dataSource != null && selectedTransportationKind.value == TransportationLineKind.BUS && 
                     dataSource.apiType() == ODPTAPIType.GTFS) {
-                    viewModelScope.launch {
-                        try {
-                            fetchGTFSLinesForOperator(dataSource)
-                        } catch (e: Exception) {
-                            android.util.Log.e(
-                                "SettingsLineViewModel",
-                                "loadSettingsForSelectedLine: failed to fetch GTFS lines for ${dataSource.name}",
-                                e
-                            )
-                            // Fallback to SharedPreferences if fetch fails
-                            _selectedGoorback.value.loadOperatorLineList(currentLineIndex, sharedPreferences)?.let { savedLineList ->
-                                _lineSuggestions.value = savedLineList
-                                showLineSuggestions.value = false
-                            }
-                        }
-                    }
+                    // GTFS operators are not selectable in the current app mode.
+                    // Clear stale GTFS selection restored from old preferences.
+                    // To restore GTFS later, uncomment:
+                    // viewModelScope.launch {
+                    //     fetchGTFSLinesForOperator(dataSource)
+                    // }
+                    operatorInput.value = ""
+                    selectedOperatorCode.value = null
+                    operatorSelected.value = false
                 }
             } else {
                 // If operator name and code are not saved, clear operator input.
@@ -1050,7 +1050,10 @@ class SettingsLineViewModel(
         val availableDataSources = LocalDataSource.entries
             .filter { dataSource ->
                 dataSource.transportationType() == selectedTransportationKind.value.toTransportationKind() &&
-                dataSource.operatorCode() != null
+                dataSource.operatorCode() != null &&
+                // Exclude GTFS operators from selectable list for now.
+                // To restore GTFS selection later, remove this filter.
+                dataSource.apiType() != ODPTAPIType.GTFS
             }
         
         val availableOperatorsWithSource = availableDataSources.mapNotNull { dataSource ->
@@ -1072,6 +1075,7 @@ class SettingsLineViewModel(
                 val currentOperatorName = selectedOperatorCode.value?.let { operatorCode ->
                     LocalDataSource.entries.firstOrNull {
                         it.transportationType() == selectedTransportationKind.value.toTransportationKind() &&
+                        it.apiType() != ODPTAPIType.GTFS &&
                         it.operatorCode() == operatorCode
                     }?.operatorDisplayName(getApplication())
                 }

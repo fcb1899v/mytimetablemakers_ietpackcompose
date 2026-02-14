@@ -258,9 +258,9 @@ class GTFSDataService(private val context: Context) {
     }
     
     // Download GTFS ZIP and cache it for startup use.
-    suspend fun downloadGTFSZipOnly(url: String, consumerKey: String, transportOperator: LocalDataSource): ByteArray {
-        return downloadGTFSZip(url, consumerKey, transportOperator)
-    }
+//    suspend fun downloadGTFSZipOnly(url: String, consumerKey: String, transportOperator: LocalDataSource): ByteArray {
+//        return downloadGTFSZip(url, consumerKey, transportOperator)
+//    }
     
     // Download GTFS ZIP with cache and conditional updates.
     // Date-based operators use date in cache keys.

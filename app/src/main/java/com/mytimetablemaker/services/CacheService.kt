@@ -2,9 +2,7 @@ package com.mytimetablemaker.services
 
 import android.app.Application
 import android.content.Context
-import com.mytimetablemaker.BuildConfig
 import com.mytimetablemaker.models.*
-import com.mytimetablemaker.models.APIDataType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
@@ -118,8 +116,18 @@ class SharedDataManager private constructor(private val application: Application
     private val initializedKinds = mutableSetOf<TransportationLineKind>()
     private val cache = CacheStore(application)
     private val odptService = ODPTDataService(application)
-    private val gtfsService = GTFSDataService(application)
-    private val consumerKey: String = BuildConfig.ODPT_ACCESS_TOKEN
+    // GTFS bootstrap is intentionally disabled for now.
+    // To restore quickly, uncomment these lines and GTFS branches below.
+    // private val gtfsService = GTFSDataService(application)
+    // private val consumerKey: String = BuildConfig.ODPT_ACCESS_TOKEN
+    // GTFS operators are currently excluded from cache bootstrap.
+    // To resume GTFS bootstrap later, include GTFS operators in this selector.
+    private fun activeOperatorsForKind(kind: TransportationLineKind): List<LocalDataSource> {
+        return LocalDataSource.entries.filter { operator ->
+            operator.transportationType() == kind.toTransportationKind() &&
+                operator.apiType() != ODPTAPIType.GTFS
+        }
+    }
     
     // Get lines for a specific kind.
     // Loads only requested data for performance.
@@ -135,33 +143,23 @@ class SharedDataManager private constructor(private val application: Application
         // Load only the requested kind from cache.
         val cacheLines = mutableListOf<TransportationLine>()
         
-        val operators = LocalDataSource.entries.filter { it.transportationType() == kind.toTransportationKind() }
+        val operators = activeOperatorsForKind(kind)
         
         // Process cached operator data for this kind.
         for (transportOperator in operators) {
-            // Handle GTFS operators separately.
-            // Ensure ZIP cache only; fetch lines lazily on selection.
-            if (transportOperator.apiType() == ODPTAPIType.GTFS) {
-                // Check ZIP cache; download if missing (no extract).
-                val date = GTFSDates.dateFor(transportOperator) ?: ""
-                val gtfsFileName = transportOperator.gtfsFileName()
-                val cacheKey = if (date.isEmpty()) "gtfs_${gtfsFileName}.zip" else "gtfs_${gtfsFileName}_${date}.zip"
-                
-                if (cache.loadData(cacheKey) == null) {
-                    // Download ZIP for caching (without extracting).
-                    try {
-                        val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
-                        if (gtfsURL.isNotEmpty()) {
-                            gtfsService.downloadGTFSZipOnly(gtfsURL, consumerKey, transportOperator)
-                        }
-                    } catch (e: Exception) {
-                            android.util.Log.e("SharedDataManager", "Failed to download GTFS ZIP for ${transportOperator.operatorDisplayName(application)}", e)
-                    }
-                }
-                // Skip line fetch at startup; load on selection.
-                continue
-            }
-            
+            // GTFS bootstrap (disabled)
+            // if (transportOperator.apiType() == ODPTAPIType.GTFS) {
+            //     val date = GTFSDates.dateFor(transportOperator) ?: ""
+            //     val gtfsFileName = transportOperator.gtfsFileName()
+            //     val cacheKey = if (date.isEmpty()) "gtfs_${gtfsFileName}.zip" else "gtfs_${gtfsFileName}_${date}.zip"
+            //     if (cache.loadData(cacheKey) == null) {
+            //         val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
+            //         if (gtfsURL.isNotEmpty()) {
+            //             gtfsService.downloadGTFSZipOnly(gtfsURL, consumerKey, transportOperator)
+            //         }
+            //     }
+            //     continue
+            // }
             val cacheKey = transportOperator.fileName()
             val cachedData = cache.loadData(cacheKey) ?: continue
             
@@ -175,19 +173,18 @@ class SharedDataManager private constructor(private val application: Application
     
     // Ensure cache exists for a specific kind.
     private suspend fun ensureCacheForKind(kind: TransportationLineKind) = withContext(Dispatchers.IO) {
-        val operators = LocalDataSource.entries.filter { it.transportationType() == kind.toTransportationKind() }
+        val operators = activeOperatorsForKind(kind)
         
         // Check if all operators for this kind have cache.
         val allHaveCache = operators.all { transportOperator ->
-            // For GTFS operators, use the GTFS cache key.
-            if (transportOperator.apiType() == ODPTAPIType.GTFS) {
-                val date = GTFSDates.dateFor(transportOperator) ?: ""
-                val gtfsFileName = transportOperator.gtfsFileName()
-                val cacheKey = if (date.isEmpty()) "gtfs_${gtfsFileName}.zip" else "gtfs_${gtfsFileName}_${date}.zip"
-                cache.loadData(cacheKey) != null
-            } else {
-                cache.loadData(transportOperator.fileName()) != null
-            }
+            // GTFS cache check (disabled)
+            // if (transportOperator.apiType() == ODPTAPIType.GTFS) {
+            //     val date = GTFSDates.dateFor(transportOperator) ?: ""
+            //     val gtfsFileName = transportOperator.gtfsFileName()
+            //     val cacheKey = if (date.isEmpty()) "gtfs_${gtfsFileName}.zip" else "gtfs_${gtfsFileName}_${date}.zip"
+            //     return@all cache.loadData(cacheKey) != null
+            // }
+            cache.loadData(transportOperator.fileName()) != null
         }
         
         if (!allHaveCache) {
@@ -198,34 +195,32 @@ class SharedDataManager private constructor(private val application: Application
     
     // Perform initial fetch for a specific kind.
     private suspend fun performInitialFetch(kind: TransportationLineKind) = withContext(Dispatchers.IO) {
-        val operators = LocalDataSource.entries.filter { it.transportationType() == kind.toTransportationKind() }
+        val operators = activeOperatorsForKind(kind)
         
         for (transportOperator in operators) {
             // Fetch data.
             try {
-                // Handle GTFS operators separately.
-                if (transportOperator.apiType() == ODPTAPIType.GTFS) {
-                    // For GTFS, download ZIP for caching at startup.
-                    val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
-                    if (gtfsURL.isNotEmpty()) {
-                        // downloadGTFSZip() handles date-based cache keys.
-                        gtfsService.downloadGTFSZipOnly(gtfsURL, consumerKey, transportOperator)
-                    }
-                } else {
-                    // Check cache for non-GTFS operators.
-                    val cacheKey = transportOperator.fileName()
-                    val hasCache = cache.loadData(cacheKey) != null
-                    
-                    if (hasCache) {
-                        continue
-                    }
-                    
-                    val data = odptService.fetchIndividualOperatorData(transportOperator)
-                    
-                    // Save to cache and LineData for future use.
-                    cache.saveData(data, cacheKey)
-                    odptService.writeIndividualOperatorDataToFile(data, transportOperator)
+                // GTFS initial fetch (disabled)
+                // if (transportOperator.apiType() == ODPTAPIType.GTFS) {
+                //     val gtfsURL = transportOperator.apiLink(APIDataType.LINE, TransportationKind.BUS)
+                //     if (gtfsURL.isNotEmpty()) {
+                //         gtfsService.downloadGTFSZipOnly(gtfsURL, consumerKey, transportOperator)
+                //     }
+                //     continue
+                // }
+                // Check cache for active operators.
+                val cacheKey = transportOperator.fileName()
+                val hasCache = cache.loadData(cacheKey) != null
+                
+                if (hasCache) {
+                    continue
                 }
+                
+                val data = odptService.fetchIndividualOperatorData(transportOperator)
+                
+                // Save to cache and LineData for future use.
+                cache.saveData(data, cacheKey)
+                odptService.writeIndividualOperatorDataToFile(data, transportOperator)
             } catch (e: Exception) {
                     android.util.Log.e("SharedDataManager", "Failed to initialize ${transportOperator.operatorDisplayName(application)}", e)
             }

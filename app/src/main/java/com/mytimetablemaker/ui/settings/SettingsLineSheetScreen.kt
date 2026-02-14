@@ -232,11 +232,19 @@ fun SettingsLineSheetScreen(
                 )
                 
                 Spacer(modifier = Modifier.height(verticalSpacing))
+                val hasTrainTimetableSupportForSelection by remember(selectedOperatorCode, selectedLine) {
+                    derivedStateOf {
+                        viewModel.hasTrainTimetableSupport(
+                            operatorCode = selectedOperatorCode ?: selectedLine?.operatorCode
+                        )
+                    }
+                }
                 
                 // Operator input.
                 OperatorInputSection(
                     operatorInput = operatorInput,
                     isOperatorSelected = selectedOperatorCode != null,
+                    hasTrainTimetableSupport = hasTrainTimetableSupportForSelection,
                     isOperatorFieldFocused = isOperatorFieldFocused,
                     focusRequester = operatorFocusRequester,
                     onOperatorInputChanged = { newValue ->
@@ -287,6 +295,7 @@ fun SettingsLineSheetScreen(
                     lineInput = lineInput,
                     selectedTransportationKind = selectedTransportationKind,
                     isLineSelected = selectedLine != null,
+                    hasTrainTimetableSupport = hasTrainTimetableSupportForSelection,
                     focusRequester = lineFocusRequester,
                     onLineInputChanged = { newValue ->
                         viewModel.processLineInput(newValue)
@@ -337,6 +346,7 @@ fun SettingsLineSheetScreen(
                     departureStopInput = departureStopInput,
                     selectedTransportationKind = selectedTransportationKind,
                     isDepartureSelected = selectedDepartureStop != null,
+                    hasTrainTimetableSupport = hasTrainTimetableSupportForSelection,
                     focusRequester = departureFocusRequester,
                     onDepartureStopInputChanged = { newValue ->
                         viewModel.processDepartureStopInput(newValue)
@@ -359,6 +369,7 @@ fun SettingsLineSheetScreen(
                     arrivalStopInput = arrivalStopInput,
                     selectedTransportationKind = selectedTransportationKind,
                     isArrivalSelected = selectedArrivalStop != null,
+                    hasTrainTimetableSupport = hasTrainTimetableSupportForSelection,
                     focusRequester = arrivalFocusRequester,
                     onArrivalStopInputChanged = { newValue ->
                         viewModel.processArrivalStopInput(newValue)
@@ -378,12 +389,14 @@ fun SettingsLineSheetScreen(
                 
                 // Time header.
                 TimeHeaderText()
+                val hasTrainTimetableSupport by remember { derivedStateOf { viewModel.hasTrainTimetableSupport() } }
                 
                 // Ride time.
                 RideTimeSection(
                     viewModel = viewModel,
                     selectedRideTime = selectedRideTime,
                     isAllSelected = isAllSelected,
+                    hasTrainTimetableSupport = hasTrainTimetableSupport,
                     onRideTimeChanged = { newValue ->
                         viewModel.setSelectedRideTime(newValue)
                     }
@@ -405,6 +418,7 @@ fun SettingsLineSheetScreen(
                             viewModel = viewModel,
                             selectedTransferTime = selectedTransferTime,
                             isAllSelected = isAllSelected,
+                            hasTrainTimetableSupport = hasTrainTimetableSupport,
                             onTransferTimeChanged = { newValue ->
                                 viewModel.selectedTransferTime.value = newValue
                             }
@@ -445,6 +459,7 @@ fun SettingsLineSheetScreen(
                 // Auto-generate timetable action.
                 TimetableAutoSettingsButtonSection(
                     isAllSelected = isAllSelected,
+                    hasTrainTimetableSupport = hasTrainTimetableSupport,
                     onAutoGenerate = {
                         CoroutineScope(Dispatchers.Main).launch {
                             try {
@@ -498,17 +513,16 @@ fun SettingsLineSheetScreen(
                             
                             viewModel.isLineFieldFocused.value = true
                             
-                            if (dataSource.apiType() == ODPTAPIType.GTFS) {
-                                CoroutineScope(Dispatchers.Main).launch {
-                                    try {
-                                        viewModel.fetchGTFSLinesForOperator(dataSource)
-                                    } catch (e: Exception) {
-                                        android.util.Log.e("SettingsLineSheetScreen", "Failed to fetch GTFS lines for ${dataSource.name}", e)
-                                    }
-                                }
-                            } else {
-                                viewModel.processLineInput("")
-                            }
+                            // GTFS line fetch is disabled while GTFS operators are excluded.
+                            // To restore GTFS behavior later:
+                            // if (dataSource.apiType() == ODPTAPIType.GTFS) {
+                            //     CoroutineScope(Dispatchers.Main).launch {
+                            //         viewModel.fetchGTFSLinesForOperator(dataSource)
+                            //     }
+                            // } else {
+                            //     viewModel.processLineInput("")
+                            // }
+                            viewModel.processLineInput("")
                             
                             lineFocusRequester.requestFocus()
                         }
@@ -856,6 +870,7 @@ private fun LineNumberMenu(
 private fun OperatorInputSection(
     operatorInput: String,
     isOperatorSelected: Boolean,
+    hasTrainTimetableSupport: Boolean,
     isOperatorFieldFocused: Boolean,
     focusRequester: FocusRequester,
     onOperatorInputChanged: (String) -> Unit,
@@ -880,7 +895,7 @@ private fun OperatorInputSection(
         focusRequester = focusRequester,
         title = stringResource(R.string.operatorName),
         isCheckmarkValid = operatorInput.isNotEmpty(),
-        isCheckmarkSelected = isOperatorSelected,
+        isCheckmarkSelected = isOperatorSelected && hasTrainTimetableSupport,
         onFocusChanged = onFocusChanged
     )
 }
@@ -891,6 +906,7 @@ private fun LineInputSection(
     lineInput: String,
     selectedTransportationKind: TransportationLineKind,
     isLineSelected: Boolean,
+    hasTrainTimetableSupport: Boolean,
     focusRequester: FocusRequester,
     onLineInputChanged: (String) -> Unit,
     onFocusChanged: (Boolean) -> Unit
@@ -903,7 +919,7 @@ private fun LineInputSection(
         focusRequester = focusRequester,
         title = stringResource(R.string.lineName),
         isCheckmarkValid = lineInput.isNotEmpty(),
-        isCheckmarkSelected = isLineSelected,
+        isCheckmarkSelected = isLineSelected && hasTrainTimetableSupport,
         onFocusChanged = onFocusChanged
     )
 }
@@ -1029,6 +1045,7 @@ private fun DepartureStopInputSection(
     departureStopInput: String,
     selectedTransportationKind: TransportationLineKind,
     isDepartureSelected: Boolean,
+    hasTrainTimetableSupport: Boolean,
     focusRequester: FocusRequester,
     onDepartureStopInputChanged: (String) -> Unit,
     onFocusChanged: (Boolean) -> Unit
@@ -1049,7 +1066,7 @@ private fun DepartureStopInputSection(
             stringResource(R.string.departureStation)
         },
         isCheckmarkValid = departureStopInput.isNotEmpty(),
-        isCheckmarkSelected = isDepartureSelected,
+        isCheckmarkSelected = isDepartureSelected && hasTrainTimetableSupport,
         onFocusChanged = onFocusChanged
     )
 }
@@ -1060,6 +1077,7 @@ private fun ArrivalStopInputSection(
     arrivalStopInput: String,
     selectedTransportationKind: TransportationLineKind,
     isArrivalSelected: Boolean,
+    hasTrainTimetableSupport: Boolean,
     focusRequester: FocusRequester,
     onArrivalStopInputChanged: (String) -> Unit,
     onFocusChanged: (Boolean) -> Unit
@@ -1080,7 +1098,7 @@ private fun ArrivalStopInputSection(
             stringResource(R.string.arrivalStation)
         },
         isCheckmarkValid = arrivalStopInput.isNotEmpty(),
-        isCheckmarkSelected = isArrivalSelected,
+        isCheckmarkSelected = isArrivalSelected && hasTrainTimetableSupport,
         onFocusChanged = onFocusChanged
     )
 }
@@ -1106,6 +1124,7 @@ private fun RideTimeSection(
     viewModel: SettingsLineViewModel,
     selectedRideTime: Int,
     isAllSelected: Boolean,
+    hasTrainTimetableSupport: Boolean,
     onRideTimeChanged: (Int) -> Unit
 ) {
     val context = LocalContext.current
@@ -1160,7 +1179,9 @@ private fun RideTimeSection(
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
-            tint = if (isAllSelected) Primary else if (selectedRideTime == 0 && !hasTimetableSupport) rideTimeColor else Accent,
+            tint = if (isAllSelected && hasTrainTimetableSupport) Primary
+            else if (selectedRideTime == 0 && !hasTimetableSupport) rideTimeColor
+            else Accent,
             modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
         )
     }
@@ -1295,6 +1316,7 @@ private fun TransferTimeSettingsSection(
     viewModel: SettingsLineViewModel,
     selectedTransferTime: Int,
     isAllSelected: Boolean,
+    hasTrainTimetableSupport: Boolean,
     onTransferTimeChanged: (Int) -> Unit
 ) {
     val context = LocalContext.current
@@ -1345,7 +1367,7 @@ private fun TransferTimeSettingsSection(
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
-            tint = if (isAllSelected) Primary else Accent,
+            tint = if (isAllSelected && hasTrainTimetableSupport) Primary else Accent,
             modifier = Modifier.size(ScreenSize.settingsSheetIconSize())
         )
     }
@@ -1393,14 +1415,16 @@ private fun TimetableSettingsButtonSection(
 @Composable
 private fun TimetableAutoSettingsButtonSection(
     isAllSelected: Boolean,
+    hasTrainTimetableSupport: Boolean,
     onAutoGenerate: () -> Unit
 ) {
+    val isAutoGenerateEnabled = isAllSelected && hasTrainTimetableSupport
     CommonComponents.CustomButton(
         title = stringResource(R.string.autoGenerateTimetable),
         onClick = onAutoGenerate,
         icon = Icons.Default.Schedule,
-        backgroundColor = if (isAllSelected) Primary else Gray,
-        isEnabled = isAllSelected,
+        backgroundColor = if (isAutoGenerateEnabled) Primary else Gray,
+        isEnabled = isAutoGenerateEnabled,
         modifier = Modifier.fillMaxWidth()
     )
 }

@@ -81,6 +81,7 @@ enum class LocalDataSource {
     SOTETSU_BUS,                // Sotetsu Bus
     KANACHU_BUS,                // Kanachu Bus
     KOKUSAI_KOGYO,              // Kokusai Kogyo Bus
+    TOBU_BUS,                   // Tobu Bus
     TOEI_BUS,                   // Toei Bus
     YOKOHAMA_BUS,               // Yokohama Municipal Bus
     KEIO_BUS,                   // Keio Bus
@@ -148,6 +149,7 @@ enum class LocalDataSource {
             SOTETSU_BUS -> context.getString(R.string.sotetsuBus)
             KANACHU_BUS -> context.getString(R.string.kanachu)
             KOKUSAI_KOGYO -> context.getString(R.string.kokusaiKogyo)
+            TOBU_BUS -> context.getString(R.string.tobu)
             KEIO_BUS -> context.getString(R.string.keioBus)
             NISHITOKYO_BUS -> context.getString(R.string.nishitokyoBus)
             KAWASAKI_BUS -> context.getString(R.string.kawasakiBus)
@@ -180,8 +182,9 @@ enum class LocalDataSource {
             SOTETSU_BUS -> "odpt.Operator:SotetsuBus"
             KANACHU_BUS -> "odpt.Operator:Kanachu"
             KOKUSAI_KOGYO -> "odpt.Operator:KokusaiKogyoBus"
-            TOEI_BUS -> "Toei/data/ToeiBus-GTFS.zip"
-            YOKOHAMA_BUS -> "YokohamaMunicipal/Bus.zip?"
+            TOBU_BUS -> "odpt.Operator:TobuBus"
+            TOEI_BUS -> "odpt.Operator:Toei"
+            YOKOHAMA_BUS -> "odpt.Operator:YokohamaMunicipal"
             KEIO_BUS -> "KeioBus/AllLines.zip?"
             NISHITOKYO_BUS -> "TokyuBus/tokyubus_community.zip?"
             KAWASAKI_BUS -> "TransportationBureau_CityOfKawasaki/AllLines.zip?"
@@ -202,7 +205,7 @@ enum class LocalDataSource {
             RINKAI, YURIKAMOME, TSUKUBA, TAMA ->
                 TransportationKind.RAILWAY
             TOEI_BUS, YOKOHAMA_BUS, TOKYU_BUS,
-            SEIBU_BUS, SOTETSU_BUS, KANACHU_BUS,
+            SEIBU_BUS, SOTETSU_BUS, KANACHU_BUS, TOBU_BUS,
             KOKUSAI_KOGYO, KEIO_BUS, NISHITOKYO_BUS,
             KAWASAKI_BUS, KAWASAKI_TSURUMI_RINKO_BUS, KANTO_BUS,
             IZUHAKONE_BUS, KEISEI_TRANSIT_BUS ->
@@ -213,18 +216,19 @@ enum class LocalDataSource {
     // Determine the appropriate API type for this operator.
     fun apiType(): ODPTAPIType {
         return when (this) {
-            TOEI_METRO -> ODPTAPIType.PUBLIC_API
+            TOEI_METRO, TOEI_BUS -> ODPTAPIType.PUBLIC_API
             TOKYO_METRO, YOKOHAMA_METRO, TSUKUBA,
             TAMA, YURIKAMOME, RINKAI,
-            TOKYU_BUS, SEIBU_BUS, SOTETSU_BUS ->
+            TOKYU_BUS, SEIBU_BUS, SOTETSU_BUS,
+            YOKOHAMA_BUS ->
                 ODPTAPIType.STANDARD
             JR_EAST, TOKYU, ODAKYU, KEIKYU,
             TOBU, SEIBU, SOTETSU,
-            KANACHU_BUS, KOKUSAI_KOGYO ->
+            KANACHU_BUS, KOKUSAI_KOGYO, TOBU_BUS ->
                 ODPTAPIType.CHALLENGE
             KEIO_BUS, NISHITOKYO_BUS, KAWASAKI_BUS,
             KAWASAKI_TSURUMI_RINKO_BUS, KANTO_BUS, IZUHAKONE_BUS,
-            KEISEI_TRANSIT_BUS, YOKOHAMA_BUS, TOEI_BUS ->
+            KEISEI_TRANSIT_BUS ->
                 ODPTAPIType.GTFS
         }
     }
@@ -245,8 +249,9 @@ enum class LocalDataSource {
         return when (this) {
             TOEI_BUS, YOKOHAMA_BUS, TOKYU_BUS,
             SEIBU_BUS, SOTETSU_BUS, KANACHU_BUS,
-            KOKUSAI_KOGYO, KEIO_BUS, NISHITOKYO_BUS,
-            KAWASAKI_BUS, KAWASAKI_TSURUMI_RINKO_BUS, KANTO_BUS,
+            KOKUSAI_KOGYO, TOBU_BUS, 
+            KEIO_BUS, NISHITOKYO_BUS, KAWASAKI_BUS, 
+            KAWASAKI_TSURUMI_RINKO_BUS, KANTO_BUS,
             IZUHAKONE_BUS, KEISEI_TRANSIT_BUS ->
                 true
             else -> false
