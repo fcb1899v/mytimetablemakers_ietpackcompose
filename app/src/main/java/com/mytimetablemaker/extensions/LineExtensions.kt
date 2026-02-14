@@ -693,24 +693,19 @@ fun String.saveTrainTypeList(
 ) {
     val trainTypeListKey = this.trainTypeListKey(calendarType, num)
     
-    // Extract train types across all transportation times.
-    val allTrainTypes = transportationTimes.mapNotNull { transportationTime ->
-        if (transportationTime is TrainTime) {
-            transportationTime.trainType
-        } else {
-            null // Bus doesn't have trainType
-        }
-    }.mapNotNull { trainType ->
-        if (trainType.isEmpty()) {
-            null
-        } else {
-            val components = trainType.split(".")
-            components.lastOrNull() ?: trainType
-        }
+    // Reuse station timetable helper for train type extraction/normalization.
+    val stationTimetableData = transportationTimes.mapNotNull { transportationTime ->
+        val trainType = (transportationTime as? TrainTime)?.trainType ?: return@mapNotNull null
+        StationTimetableData(
+            trainNumber = "",
+            departureTime = transportationTime.departureTime,
+            destinationStation = "",
+            trainType = trainType
+        )
     }
     
     // Remove duplicates and sort.
-    val uniqueTrainTypes = allTrainTypes.distinct().sorted()
+    val uniqueTrainTypes = stationTimetableData.trainTypeList()
     val trainTypeListString = uniqueTrainTypes.joinToString(" ")
     
     sharedPreferences.edit {
@@ -880,24 +875,19 @@ fun String.loadTrainTypeList(
         allTransportationTimes.addAll(times)
     }
     
-    // Extract train types from transportation times.
-    val allTrainTypes = allTransportationTimes.mapNotNull { transportationTime ->
-        if (transportationTime is TrainTime) {
-            transportationTime.trainType
-        } else {
-            null // Bus doesn't have trainType
-        }
-    }.mapNotNull { trainType ->
-        if (trainType.isEmpty()) {
-            null
-        } else {
-            val components = trainType.split(".")
-            components.lastOrNull() ?: trainType
-        }
+    // Reuse station timetable helper for train type extraction/normalization.
+    val stationTimetableData = allTransportationTimes.mapNotNull { transportationTime ->
+        val trainType = (transportationTime as? TrainTime)?.trainType ?: return@mapNotNull null
+        StationTimetableData(
+            trainNumber = "",
+            departureTime = transportationTime.departureTime,
+            destinationStation = "",
+            trainType = trainType
+        )
     }
     
     // Remove duplicates and sort.
-    val uniqueTrainTypes = allTrainTypes.distinct().sortedWith(compareBy<String> { trainType ->
+    val uniqueTrainTypes = stationTimetableData.trainTypeList().sortedWith(compareBy<String> { trainType ->
         colorForTrainType(trainType).priorityValue
     }.thenBy { it })
     

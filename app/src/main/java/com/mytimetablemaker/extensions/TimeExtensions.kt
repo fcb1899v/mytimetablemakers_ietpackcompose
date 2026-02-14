@@ -189,46 +189,6 @@ fun Date.odptCalendarType(fallbackTo: List<ODPTCalendarType>): ODPTCalendarType 
     return fallbackTo.firstOrNull() ?: ODPTCalendarType.Weekday
 }
 
-// Check if availableTypes contains a calendar type (short form or rawValue).
-private fun List<String>.hasCalendarType(shortForm: String, rawValueSuffix: String): Boolean =
-    any { it.equals(shortForm, ignoreCase = true) || it.endsWith(":$rawValueSuffix") }
-
-// Legacy version: returns String for backward compatibility.
-fun Date.odptCalendarType(availableTypes: List<String>): String {
-    val calendar = Calendar.getInstance()
-    calendar.time = this
-    val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
-    
-    // Check for weekday (Mon-Fri, not a holiday).
-    val isWeekday = dayOfWeek in Calendar.MONDAY..Calendar.FRIDAY
-    // TODO: Implement Japanese holiday detection.
-    val isHoliday = false // Placeholder.
-    
-    if (isWeekday && !isHoliday) {
-        // Check for specific weekday types.
-        when (dayOfWeek) {
-            Calendar.MONDAY -> if (availableTypes.hasCalendarType("monday", "Monday")) return "monday"
-            Calendar.TUESDAY -> if (availableTypes.hasCalendarType("tuesday", "Tuesday")) return "tuesday"
-            Calendar.WEDNESDAY -> if (availableTypes.hasCalendarType("wednesday", "Wednesday")) return "wednesday"
-            Calendar.THURSDAY -> if (availableTypes.hasCalendarType("thursday", "Thursday")) return "thursday"
-            Calendar.FRIDAY -> if (availableTypes.hasCalendarType("friday", "Friday")) return "friday"
-        }
-        // Fall back to weekday.
-        if (availableTypes.hasCalendarType("weekday", "Weekday")) return "weekday"
-    }
-    
-    // Check holiday/weekend calendar types.
-    // For 2-type fallback, weekend/holiday -> saturdayHoliday.
-    if ((isHoliday || dayOfWeek == Calendar.SUNDAY) && availableTypes.hasCalendarType("holiday", "Holiday")) return "holiday"
-    if (dayOfWeek == Calendar.SUNDAY && availableTypes.hasCalendarType("sunday", "Sunday")) return "sunday"
-    if (dayOfWeek == Calendar.SATURDAY && availableTypes.hasCalendarType("saturday", "Saturday")) return "saturday"
-    if ((isHoliday || dayOfWeek == Calendar.SUNDAY || dayOfWeek == Calendar.SATURDAY) &&
-        availableTypes.hasCalendarType("saturdayHoliday", "SaturdayHoliday")) return "saturdayHoliday"
-    
-    // Final fallback.
-    return availableTypes.firstOrNull() ?: "weekday"
-}
-
 // Parse time string (HH:MM:SS) into HHMMSS int.
 val String.currentTime: Int
     get() {
@@ -241,55 +201,6 @@ val String.currentTime: Int
         }
         return 0
     }
-
-// Detect available calendar types from timetable data.
-fun String.detectAvailableCalendarTypesFromData(
-    num: Int,
-    sharedPreferences: SharedPreferences
-): List<ODPTCalendarType> {
-    val detectedTypes = mutableSetOf<ODPTCalendarType>()
-    
-    // Check all possible calendar types.
-    val allCalendarTypes = ODPTCalendarType.allCases
-    
-    for (calendarType in allCalendarTypes) {
-        if (this.hasTimetableDataForType(calendarType, num, sharedPreferences)) {
-            detectedTypes.add(calendarType)
-        }
-    }
-    
-    // Also check cached calendar types, including .specific cases.
-    val lineCacheKey = "${this}line${num + 1}_calendarTypes"
-    val cachedTypes = sharedPreferences.getStringSet(lineCacheKey, null)
-    if (cachedTypes != null) {
-        for (cachedTypeString in cachedTypes) {
-            val cachedCalendarType = ODPTCalendarType.fromRawValue(cachedTypeString)
-            if (cachedCalendarType != null) {
-                // For .specific types, check this line's data only.
-                if (cachedCalendarType is ODPTCalendarType.Specific) {
-                    if (this.hasTimetableDataForType(cachedCalendarType, num, sharedPreferences)) {
-                        detectedTypes.add(cachedCalendarType)
-                        // Add displayCalendarType so it appears in the dropdown.
-                        val displayType = cachedCalendarType.displayCalendarType()
-                        if (displayType != cachedCalendarType && !detectedTypes.contains(displayType)) {
-                            // Check data for the display type as well.
-                            if (this.hasTimetableDataForType(displayType, num, sharedPreferences)) {
-                                detectedTypes.add(displayType)
-                            }
-                        }
-                    }
-                } else {
-                    // For non-specific types, add if data exists.
-                    if (this.hasTimetableDataForType(cachedCalendarType, num, sharedPreferences)) {
-                        detectedTypes.add(cachedCalendarType)
-                    }
-                }
-            }
-        }
-    }
-    
-    return detectedTypes.sortedBy { it.rawValue }
-}
 
 // Fallback when no cache: weekday and SaturdayHoliday.
 private val FALLBACK_CALENDAR_TYPES = listOf(
@@ -362,18 +273,6 @@ fun String.timeArray(
     timeArray.add(0, destinationTime)
     
     return timeArray
-}
-
-// Adjust hours for timetable display (0-3 AM -> 24-27).
-fun String.adjustedForTimetable(): String {
-    val components = this.split(":")
-    if (components.size != 2) return this
-    
-    val hour = components[0].toIntOrNull() ?: return this
-    val minute = components[1].toIntOrNull() ?: return this
-    
-    val adjustedHour = hour.timetableHour
-    return "${adjustedHour.addZeroTime()}:${minute.addZeroTime()}"
 }
 
 // Extract minutes from time string (HH:MM or minutes-only).

@@ -342,7 +342,6 @@ class ODPTDataService(private val context: Context) {
         .followSslRedirects(true)
         .cookieJar(CookieJar.NO_COOKIES)           // Disable cookie handling for API requests
         .build()
-    private val cache: CacheStore = CacheStore(context)
     private val sharedPreferences: SharedPreferences =
         context.getSharedPreferences("ODPTDataService", Context.MODE_PRIVATE)
 
@@ -398,11 +397,6 @@ class ODPTDataService(private val context: Context) {
     
     // ETag and Last-Modified header management for conditional GET requests
     
-    private fun getETag(transportOperator: LocalDataSource): String? {
-        val etagKey = "${transportOperator.fileName()}_etag"
-        return sharedPreferences.getString(etagKey, null)
-    }
-    
     private fun saveETag(etag: String, transportOperator: LocalDataSource) {
         val etagKey = "${transportOperator.fileName()}_etag"
         sharedPreferences.edit {
@@ -410,118 +404,10 @@ class ODPTDataService(private val context: Context) {
         }
     }
     
-    private fun getLastModified(transportOperator: LocalDataSource): String? {
-        val lastModifiedKey = "${transportOperator.fileName()}_last_modified"
-        return sharedPreferences.getString(lastModifiedKey, null)
-    }
-    
     private fun saveLastModified(lastModified: String, transportOperator: LocalDataSource) {
         val lastModifiedKey = "${transportOperator.fileName()}_last_modified"
         sharedPreferences.edit {
             putString(lastModifiedKey, lastModified)
-        }
-    }
-    
-    // Check if operator data needs updating using conditional GET requests
-    suspend fun checkIndividualOperatorForUpdates(
-        transportOperator: LocalDataSource,
-    ): Boolean = withContext(Dispatchers.IO) {
-        // Check if we have cached data
-        val cacheKey = transportOperator.fileName()
-        val cachedData = cache.loadData(cacheKey) ?: return@withContext false
-        
-        // If no cache exists, skip update check (data will be fetched during initial fetch)
-
-        // Check if we have ETag or Last-Modified for conditional GET
-        val etag = getETag(transportOperator)
-        val lastModified = getLastModified(transportOperator)
-        
-        // If we don't have conditional headers, skip update check
-        // Rule: Cache exists but no ETag/Last-Modified -> do nothing
-        if (etag == null && lastModified == null) {
-            return@withContext false
-        }
-        
-        // Use conditional GET request with ETag and Last-Modified headers
-        try {
-            val urlString = transportOperator.apiLink(
-                dataType = APIDataType.LINE,
-                transportationKind = transportOperator.transportationType()
-            )
-            
-            val url = urlString.toHttpUrl()
-            
-            val requestBuilder = Request.Builder().url(url)
-            configureRequest(requestBuilder, Pair(etag, lastModified))
-            
-            val response = client.newCall(requestBuilder.build()).execute()
-            
-            when (response.code) {
-                304 -> {
-                    // No update needed - server confirms data hasn't changed
-                    return@withContext false
-                }
-                200 -> {
-                    // Get current ETag from SharedPreferences
-                    val currentEtag = getETag(transportOperator)
-                    
-                    // Get new ETag from response
-                    val newEtag = response.header("ETag")
-                    
-                    // If ETags match, data not changed (no update needed)
-                    if (currentEtag != null && newEtag != null && currentEtag == newEtag) {
-                        return@withContext false // No update needed - ETag confirms no change
-                    }
-                    
-                    // Save ETag and Last-Modified headers for future conditional requests
-                    newEtag?.let { saveETag(it, transportOperator) }
-                    response.header("Last-Modified")?.let { saveLastModified(it, transportOperator) }
-                    
-                    // Compare data content to determine if update needed
-                    val responseData = response.body.bytes()
-                    val dataMatches = cachedData.contentEquals(responseData)
-                    return@withContext !dataMatches
-                }
-                else -> {
-                    return@withContext false // Don't update on error.
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.d("ODPTDataService", "checkIndividualOperatorForUpdates failed", e)
-            return@withContext false
-        }
-    }
-    
-    // Process operator updates and manage cache/file writes
-    private suspend fun processOperatorUpdate(
-        transportOperator: LocalDataSource,
-    ): Pair<ByteArray, Boolean> {
-        val needsUpdate = checkIndividualOperatorForUpdates(transportOperator)
-        if (needsUpdate) {
-            val data = fetchIndividualOperatorData(transportOperator)
-            
-            // Write updated data to JSON file
-            writeIndividualOperatorDataToFile(data, transportOperator)
-            
-            // Update cache with new data
-            val cacheKey = transportOperator.fileName()
-            cache.saveData(data, cacheKey)
-            
-            return Pair(data, true)
-        } else {
-            return Pair(ByteArray(0), false)
-        }
-    }
-    
-    // Update individual operator data and save to local storage
-    suspend fun updateIndividualOperator(
-        transportOperator: LocalDataSource,
-    ): Result<Unit> {
-        return try {
-            val (_, _) = processOperatorUpdate(transportOperator)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
         }
     }
     

@@ -3,8 +3,8 @@ package com.mytimetablemaker.extensions
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -12,11 +12,15 @@ import androidx.compose.ui.unit.dp
 // Centralizes size rules for layouts.
 object ScreenSize {
     
-    // Basic screen properties from LocalConfiguration.
+    // Basic screen properties from the current window container.
     @Composable
-    fun screenWidth(): Dp = LocalConfiguration.current.screenWidthDp.dp
+    fun screenWidth(): Dp = with(LocalDensity.current) {
+        LocalWindowInfo.current.containerSize.width.toDp()
+    }
     @Composable
-    fun screenHeight(): Dp = LocalConfiguration.current.screenHeightDp.dp
+    fun screenHeight(): Dp = with(LocalDensity.current) {
+        LocalWindowInfo.current.containerSize.height.toDp()
+    }
     @Composable
     fun customWidth(): Dp = if (screenWidth() < 600.dp) screenWidth() else 600.dp
     @Composable
