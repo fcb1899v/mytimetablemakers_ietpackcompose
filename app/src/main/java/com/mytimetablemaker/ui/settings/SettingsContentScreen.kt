@@ -174,21 +174,7 @@ fun SettingsContentScreen(
             
             // Loading overlay.
             if (firestoreViewModel.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Gray.copy(alpha = 0.8f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        modifier = Modifier.padding(horizontal = ScreenSize.settingsSheetHorizontalPadding()),
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius())
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.padding(ScreenSize.settingsSheetHorizontalPadding())
-                        )
-                    }
-                }
+                CommonComponents.CustomProgressIndicator(text = firestoreViewModel.loadingMessage)
             }
             
             // Settings form.

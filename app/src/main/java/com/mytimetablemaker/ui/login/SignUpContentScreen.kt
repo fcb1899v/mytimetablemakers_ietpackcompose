@@ -49,7 +49,8 @@ fun SignUpContentScreen(
     val email by loginViewModel.email.collectAsState()
     val password by loginViewModel.password.collectAsState()
     val passwordConfirm by loginViewModel.passwordConfirm.collectAsState()
-    
+    val loadingMessage by loginViewModel.loadingMessage.collectAsState()
+
     // Dismiss is handled by the alert OK action.
     
     // Clear fields on appear without overwriting alerts.
@@ -182,10 +183,7 @@ fun SignUpContentScreen(
                                 .background(Color.Transparent),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(ScreenSize.customProgressIndicatorSize()),
-                                color = White
-                            )
+                            CommonComponents.CustomProgressIndicator(text = loadingMessage)
                         }
                     }
                 }
@@ -246,21 +244,7 @@ fun SignUpContentScreen(
             
             // Loading indicator overlay.
             if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Gray.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        shape = RoundedCornerShape(ScreenSize.settingsSheetCornerRadius()),
-                        modifier = Modifier.padding(ScreenSize.settingsSheetHorizontalPadding())
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.padding(ScreenSize.settingsSheetHorizontalPadding())
-                        )
-                    }
-                }
+                CommonComponents.CustomProgressIndicator(text = stringResource(id = R.string.signupLoading))
             }
         }
         

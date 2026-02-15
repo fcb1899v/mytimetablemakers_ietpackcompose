@@ -141,7 +141,6 @@ class SettingsLineViewModel(
     val isLineNumberChanging = MutableStateFlow(false)
     val isGoOrBackChanging = MutableStateFlow(false)
     val isChangedOperator = MutableStateFlow(false)
-    val isTransportationKindSwitching = MutableStateFlow(false)
     
     private val _selectedGoorback = MutableStateFlow("back1")
     val selectedGoorbackState: StateFlow<String> = _selectedGoorback.asStateFlow()
@@ -188,6 +187,7 @@ class SettingsLineViewModel(
     private var allData: List<TransportationLine> = emptyList()
     val railwayLines = MutableStateFlow<List<TransportationLine>>(emptyList())
     val busLines = MutableStateFlow<List<TransportationLine>>(emptyList())
+    val nameCounts = MutableStateFlow<Map<String, Int>>(emptyMap())
     
     
     // Convert line kind to transportation kind.
@@ -248,28 +248,10 @@ class SettingsLineViewModel(
         val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode } ?: return false
         return dataSource.hasTrainTimeTable() || dataSource.hasBusTimeTable()
     }
-
-    // Check if selected line supports train timetable auto-generation.
-    fun hasTrainTimetableSupport(): Boolean {
-        val operatorCode = _selectedLine.value?.operatorCode ?: return false
-        val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode } ?: return false
-        return dataSource.hasTrainTimeTable()
-    }
-
-    // Check whether the specified operator supports train timetables.
-    fun hasTrainTimetableSupport(operatorCode: String?): Boolean {
-        if (operatorCode.isNullOrEmpty()) return false
-        val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode } ?: return false
-        return dataSource.hasTrainTimeTable()
-    }
     
-    // Load data from cache and LineData, with optional API fetch fallback.
-    private suspend fun loadFromCache(
-        allowFetch: Boolean = true,
-        restoreSavedSelection: Boolean = true,
-        targetKind: TransportationLineKind = selectedTransportationKind.value
-    ) = withContext(Dispatchers.IO) {
-        val kind = targetKind.toTransportationKind()
+    // Load data from cache, LineData, or API.
+    private suspend fun loadFromCache() = withContext(Dispatchers.IO) {
+        val kind = selectedTransportationKind.value.toTransportationKind()
         val loadedLines = mutableListOf<TransportationLine>()
         
         val isBus = kind == TransportationKind.BUS
@@ -314,8 +296,8 @@ class SettingsLineViewModel(
                 }
             }
             
-            // If still no data, optionally fetch from API.
-            if (cachedData == null && allowFetch) {
+            // If still no data, try to fetch from API.
+            if (cachedData == null) {
                 try {
                     cachedData = odptService.fetchIndividualOperatorData(transportOperator)
                     
@@ -365,7 +347,8 @@ class SettingsLineViewModel(
         // Update state on main thread.
         withContext(Dispatchers.Main) {
             // Only update lines for the selected kind.
-            if (targetKind == TransportationLineKind.RAILWAY) {
+            val kind = selectedTransportationKind.value.toTransportationKind()
+            if (kind == TransportationKind.RAILWAY) {
                 val newRailwayLines = loadedLines.filter { it.kind == TransportationLineKind.RAILWAY }
                 railwayLines.value = newRailwayLines
             } else {
@@ -377,15 +360,15 @@ class SettingsLineViewModel(
             all = railwayLines.value + busLines.value
             allData = all
             
-            if (restoreSavedSelection) {
-                // Restore saved line if available.
+            // Restore saved line if available.
+            viewModelScope.launch {
                 checkSavedLineInData()
-
+                isLineNumberChanging.value = false
+                
                 if (operatorSelected.value && selectedOperatorCode.value != null && isLineFieldFocused.value && lineInput.value.isEmpty()) {
                     filterLine("", isFocused = true)
                 }
             }
-            isLineNumberChanging.value = false
         }
     }
     
@@ -488,15 +471,22 @@ class SettingsLineViewModel(
                 val dataSourceFromCode = LocalDataSource.entries.firstOrNull { it.operatorCode() == savedOperatorCode }
                 if (dataSourceFromCode != null && selectedTransportationKind.value == TransportationLineKind.BUS &&
                     dataSourceFromCode.apiType() == ODPTAPIType.GTFS) {
-                    // GTFS operators are not selectable in the current app mode.
-                    // Clear stale GTFS selection restored from old preferences.
-                    // To restore GTFS later, uncomment:
-                    // viewModelScope.launch {
-                    //     fetchGTFSLinesForOperator(dataSourceFromCode)
-                    // }
-                    operatorInput.value = ""
-                    selectedOperatorCode.value = null
-                    operatorSelected.value = false
+                    viewModelScope.launch {
+                        try {
+                            fetchGTFSLinesForOperator(dataSourceFromCode)
+                        } catch (e: Exception) {
+                            android.util.Log.e(
+                                "SettingsLineViewModel",
+                                "loadSettingsForSelectedLine: failed to fetch GTFS lines for ${dataSourceFromCode.name}",
+                                e
+                            )
+                            // Fallback to SharedPreferences if fetch fails
+                            _selectedGoorback.value.loadOperatorLineList(currentLineIndex, sharedPreferences)?.let { savedLineList ->
+                                _lineSuggestions.value = savedLineList
+                                showLineSuggestions.value = false
+                            }
+                        }
+                    }
                 }
             } else {
                 // Name is saved but not selected; keep input and clear selection state.
@@ -514,15 +504,22 @@ class SettingsLineViewModel(
                 val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == savedOperatorCode }
                 if (dataSource != null && selectedTransportationKind.value == TransportationLineKind.BUS && 
                     dataSource.apiType() == ODPTAPIType.GTFS) {
-                    // GTFS operators are not selectable in the current app mode.
-                    // Clear stale GTFS selection restored from old preferences.
-                    // To restore GTFS later, uncomment:
-                    // viewModelScope.launch {
-                    //     fetchGTFSLinesForOperator(dataSource)
-                    // }
-                    operatorInput.value = ""
-                    selectedOperatorCode.value = null
-                    operatorSelected.value = false
+                    viewModelScope.launch {
+                        try {
+                            fetchGTFSLinesForOperator(dataSource)
+                        } catch (e: Exception) {
+                            android.util.Log.e(
+                                "SettingsLineViewModel",
+                                "loadSettingsForSelectedLine: failed to fetch GTFS lines for ${dataSource.name}",
+                                e
+                            )
+                            // Fallback to SharedPreferences if fetch fails
+                            _selectedGoorback.value.loadOperatorLineList(currentLineIndex, sharedPreferences)?.let { savedLineList ->
+                                _lineSuggestions.value = savedLineList
+                                showLineSuggestions.value = false
+                            }
+                        }
+                    }
                 }
             } else {
                 // If operator name and code are not saved, clear operator input.
@@ -908,6 +905,7 @@ class SettingsLineViewModel(
         val operatorCode = selectedOperatorCode.value
         if (operatorCode == null || !operatorSelected.value) {
             _lineSuggestions.value = emptyList()
+            nameCounts.value = emptyMap()
             showLineSuggestions.value = false
             return@withContext
         }
@@ -962,10 +960,13 @@ class SettingsLineViewModel(
                 
                 _lineSuggestions.value = uniqueResults
                 showLineSuggestions.value = fieldIsFocused && _lineSuggestions.value.isNotEmpty()
+                nameCounts.value = emptyMap()
             } else {
                 val uniqueResults = removeDuplicates(searchData)
                 _lineSuggestions.value = uniqueResults
                 showLineSuggestions.value = fieldIsFocused && _lineSuggestions.value.isNotEmpty()
+                nameCounts.value = _lineSuggestions.value.groupBy { lineDisplayName(it) }
+                    .mapValues { it.value.size }
             }
             return@withContext
         }
@@ -1011,6 +1012,7 @@ class SettingsLineViewModel(
             
             _lineSuggestions.value = uniqueResults
             showLineSuggestions.value = isLineFieldFocused.value && _lineSuggestions.value.isNotEmpty()
+            nameCounts.value = emptyMap()
             return@withContext
         }
         
@@ -1035,6 +1037,8 @@ class SettingsLineViewModel(
             showLineSuggestions.value = fieldIsFocused && _lineSuggestions.value.isNotEmpty()
         }
         
+        nameCounts.value = _lineSuggestions.value.groupBy { lineDisplayName(it) }
+            .mapValues { it.value.size }
     }
     
     // Operator search and filtering
@@ -1050,10 +1054,7 @@ class SettingsLineViewModel(
         val availableDataSources = LocalDataSource.entries
             .filter { dataSource ->
                 dataSource.transportationType() == selectedTransportationKind.value.toTransportationKind() &&
-                dataSource.operatorCode() != null &&
-                // Exclude GTFS operators from selectable list for now.
-                // To restore GTFS selection later, remove this filter.
-                dataSource.apiType() != ODPTAPIType.GTFS
+                dataSource.operatorCode() != null
             }
         
         val availableOperatorsWithSource = availableDataSources.mapNotNull { dataSource ->
@@ -1075,7 +1076,6 @@ class SettingsLineViewModel(
                 val currentOperatorName = selectedOperatorCode.value?.let { operatorCode ->
                     LocalDataSource.entries.firstOrNull {
                         it.transportationType() == selectedTransportationKind.value.toTransportationKind() &&
-                        it.apiType() != ODPTAPIType.GTFS &&
                         it.operatorCode() == operatorCode
                     }?.operatorDisplayName(getApplication())
                 }
@@ -1421,59 +1421,38 @@ class SettingsLineViewModel(
     }
     
     fun switchTransportationKind(isRailway: Boolean) {
-        if (isTransportationKindSwitching.value) return
-        val toggleKind = if (isRailway) TransportationLineKind.RAILWAY else TransportationLineKind.BUS
-        selectedTransportationKind.value = toggleKind
-        isTransportationKindSwitching.value = true
-
-        // Clear suggestion UI state.
-        showOperatorSuggestions.value = false
+        selectedTransportationKind.value = if (isRailway) TransportationLineKind.RAILWAY else TransportationLineKind.BUS
+        _lineSuggestions.value = emptyList()
         showLineSuggestions.value = false
+        nameCounts.value = emptyMap()
         showDepartureSuggestions.value = false
         showArrivalSuggestions.value = false
-
-        operatorSuggestions.value = emptyList()
-        _lineSuggestions.value = emptyList()
         departureSuggestions.value = emptyList()
         arrivalSuggestions.value = emptyList()
-
-        // Reset focus-related flags.
-        showStationSelection.value = false
         isDepartureFieldFocused.value = false
         isArrivalFieldFocused.value = false
-
-        // Keep this as in-memory UI state reset only (no persistence here).
+        showStationSelection.value = false
+        
+        operatorSuggestions.value = emptyList()
+        showOperatorSuggestions.value = false
         operatorSelected.value = false
-        lineSelected.value = false
-        departureStopSelected.value = false
-        arrivalStopSelected.value = false
-
         selectedOperatorCode.value = null
+        
+        lineSelected.value = false
         _selectedLine.value = null
-        _selectedDepartureStop.value = null
-        _selectedArrivalStop.value = null
-
-        lineStations.value = emptyList()
-        lineBusStops.value = emptyList()
-
         viewModelScope.launch {
             try {
-                loadFromCache(
-                    allowFetch = false,
-                    restoreSavedSelection = false,
-                    targetKind = toggleKind
-                )
-                if (lineInput.value.isNotEmpty() && lineInput.value.trim().isNotEmpty()) {
-                    filterLine(lineInput.value, isFocused = isLineFieldFocused.value)
-                }
-
-                if (operatorInput.value.isNotEmpty() && operatorInput.value.trim().isNotEmpty()) {
-                    filterOperators(operatorInput.value, isFocused = isOperatorFieldFocused.value)
-                }
+                loadFromCache()
             } catch (e: Exception) {
-                android.util.Log.e("SettingsLineViewModel", "switchTransportationKind failed", e)
-            } finally {
-                isTransportationKindSwitching.value = false
+                android.util.Log.e("SettingsLineViewModel", "switchTransportationKind: loadFromCache failed", e)
+            }
+            
+            if (lineInput.value.isNotEmpty() && lineInput.value.trim().isNotEmpty()) {
+                filterLine(lineInput.value, isFocused = isLineFieldFocused.value)
+            }
+            
+            if (operatorInput.value.isNotEmpty() && operatorInput.value.trim().isNotEmpty()) {
+                filterOperators(operatorInput.value, isFocused = isOperatorFieldFocused.value)
             }
         }
     }
@@ -1695,21 +1674,24 @@ class SettingsLineViewModel(
         syncTimetableRideTimeWhenAllSame(lineIndex, selectedRideTimeFlow.value)
         
         sharedPreferences.edit {
-            val lineNameKey = _selectedGoorback.value.lineNameKey(lineIndex)
             if (lineInput.value.trim().isNotEmpty()) {
+                val lineNameKey = _selectedGoorback.value.lineNameKey(lineIndex)
                 putString(lineNameKey, lineInput.value)
-            } else {
-                remove(lineNameKey)
             }
 
             // Save line code for Firestore synchronization.
             val lineCodeKey = _selectedGoorback.value.lineCodeKey(lineIndex)
-            val lineCodeToSave = _selectedLine.value?.lineCode?.takeIf { it.isNotEmpty() }
-                ?: findSavedLineInData()?.lineCode?.takeIf { it.isNotEmpty() }
-            if (!lineCodeToSave.isNullOrEmpty()) {
-                putString(lineCodeKey, lineCodeToSave)
-            } else {
-                remove(lineCodeKey)
+            _selectedLine.value?.let { selectedLine ->
+                val codeToSave = if (!selectedLine.lineCode.isNullOrEmpty()) selectedLine.lineCode else ""
+                putString(lineCodeKey, codeToSave)
+            } ?: run {
+                val existingLineCode = sharedPreferences.getString(lineCodeKey, null) ?: ""
+                if (existingLineCode.isEmpty()) {
+                    findSavedLineInData()?.let { foundLine ->
+                        val codeToSave = if (!foundLine.lineCode.isNullOrEmpty()) foundLine.lineCode else ""
+                        putString(lineCodeKey, codeToSave)
+                    }
+                }
             }
 
             // Save line color.
@@ -1723,19 +1705,15 @@ class SettingsLineViewModel(
             }
 
             // Save operator name.
-            val operatorNameKey = _selectedGoorback.value.operatorNameKey(lineIndex)
             if (operatorInput.value.trim().isNotEmpty()) {
+                val operatorNameKey = _selectedGoorback.value.operatorNameKey(lineIndex)
                 putString(operatorNameKey, operatorInput.value)
-            } else {
-                remove(operatorNameKey)
             }
             // Save operator code when available.
             val operatorCodeToSave = _selectedLine.value?.operatorCode ?: selectedOperatorCode.value
-            val operatorCodeKey = _selectedGoorback.value.operatorCodeKey(lineIndex)
             if (!operatorCodeToSave.isNullOrEmpty()) {
+                val operatorCodeKey = _selectedGoorback.value.operatorCodeKey(lineIndex)
                 putString(operatorCodeKey, operatorCodeToSave)
-            } else {
-                remove(operatorCodeKey)
             }
 
             // Save transportation kind.
@@ -1745,11 +1723,9 @@ class SettingsLineViewModel(
             // Save line direction.
             val savedLineDirection = _selectedLine.value?.lineDirection 
                 ?: _selectedGoorback.value.lineDirection(sharedPreferences, lineIndex)
-            val lineDirectionKey = _selectedGoorback.value.lineDirectionKey(lineIndex)
             if (savedLineDirection.isNotEmpty()) {
+                val lineDirectionKey = _selectedGoorback.value.lineDirectionKey(lineIndex)
                 putString(lineDirectionKey, savedLineDirection)
-            } else {
-                remove(lineDirectionKey)
             }
 
             // Save line selected flag.
@@ -1757,49 +1733,41 @@ class SettingsLineViewModel(
             putBoolean(lineSelectedKey, lineSelected.value)
 
             // Save departure stop information.
-            val departureKey = _selectedGoorback.value.departStationKey(lineIndex)
-            val departureCodeKey = _selectedGoorback.value.departStationCodeKey(lineIndex)
-            val departureLineCodeKey =
-                "${_selectedGoorback.value.departStationCodeKey(lineIndex)}_lineCode"
             if (departureStopInput.value.trim().isNotEmpty()) {
+                val departureKey = _selectedGoorback.value.departStationKey(lineIndex)
                 putString(departureKey, departureStopInput.value)
 
                 // Save departure stop ODPT code.
                 _selectedDepartureStop.value?.code?.let { stationCode ->
+                    val departureCodeKey = _selectedGoorback.value.departStationCodeKey(lineIndex)
                     putString(departureCodeKey, stationCode)
-                } ?: remove(departureCodeKey)
+                }
 
                 // Save departure stop lineCode if available.
                 _selectedDepartureStop.value?.lineCode?.let { stationLineCode ->
+                    val departureLineCodeKey =
+                        "${_selectedGoorback.value.departStationCodeKey(lineIndex)}_lineCode"
                     putString(departureLineCodeKey, stationLineCode)
-                } ?: remove(departureLineCodeKey)
-            } else {
-                remove(departureKey)
-                remove(departureCodeKey)
-                remove(departureLineCodeKey)
+                }
             }
 
             // Save arrival stop information.
-            val arrivalKey = _selectedGoorback.value.arriveStationKey(lineIndex)
-            val arrivalCodeKey = _selectedGoorback.value.arriveStationCodeKey(lineIndex)
-            val arrivalLineCodeKey =
-                "${_selectedGoorback.value.arriveStationCodeKey(lineIndex)}_lineCode"
             if (arrivalStopInput.value.trim().isNotEmpty()) {
+                val arrivalKey = _selectedGoorback.value.arriveStationKey(lineIndex)
                 putString(arrivalKey, arrivalStopInput.value)
 
                 // Save arrival stop ODPT code.
                 _selectedArrivalStop.value?.code?.let { stationCode ->
+                    val arrivalCodeKey = _selectedGoorback.value.arriveStationCodeKey(lineIndex)
                     putString(arrivalCodeKey, stationCode)
-                } ?: remove(arrivalCodeKey)
+                }
 
                 // Save arrival stop lineCode if available.
                 _selectedArrivalStop.value?.lineCode?.let { stationLineCode ->
+                    val arrivalLineCodeKey =
+                        "${_selectedGoorback.value.arriveStationCodeKey(lineIndex)}_lineCode"
                     putString(arrivalLineCodeKey, stationLineCode)
-                } ?: remove(arrivalLineCodeKey)
-            } else {
-                remove(arrivalKey)
-                remove(arrivalCodeKey)
-                remove(arrivalLineCodeKey)
+                }
             }
 
             // Save ride time.
@@ -1835,17 +1803,11 @@ class SettingsLineViewModel(
         // Save operator line list to SharedPreferences.
         if (_lineSuggestions.value.isNotEmpty()) {
             saveOperatorLineList(_lineSuggestions.value, _selectedGoorback.value, lineIndex)
-        } else {
-            val operatorLineListKey = _selectedGoorback.value.operatorLineListKey(lineIndex)
-            sharedPreferences.edit { remove(operatorLineListKey) }
         }
         
         // Save line stop list to SharedPreferences.
         if (lineStops.isNotEmpty()) {
             saveLineStopList(lineStops, _selectedGoorback.value, lineIndex)
-        } else {
-            val lineStopListKey = _selectedGoorback.value.lineStopListKey(lineIndex)
-            sharedPreferences.edit { remove(lineStopListKey) }
         }
         
         // Update display without overriding user-selected color.

@@ -53,8 +53,8 @@ val Int.countdownColor: Color
     get() = when {
         this % 2 == 1 -> Gray
         this in 1000..9999 -> Accent
-        this in 500..999 -> Yellow
-        this in 0..499 -> Red
+        this in 100..499 -> Yellow
+        this in 0..99 -> Red
         else -> Gray
     }
 

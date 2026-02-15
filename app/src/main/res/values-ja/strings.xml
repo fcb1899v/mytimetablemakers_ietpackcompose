@@ -375,5 +375,15 @@
     <string name="termsAgreement">利用規約への同意</string>
     <string name="appIcon">アプリアイコン</string>
     <string name="splashImage">スプラッシュ画像</string>
+
+    <!-- MARK: - Loading Messages (CustomProgressIndicator) -->
+    <string name="loggingIn">ログイン中</string>
+    <string name="signupLoading">アカウント作成中</string>
+    <string name="loggingOut">ログアウト中</string>
+    <string name="deletingAccount">アカウント削除中</string>
+    <string name="sendingPasswordResetEmail">パスワードリセットメール送信中</string>
+    <string name="savingData">データ保存中</string>
+    <string name="gettingData">データ取得中</string>
+    
 </resources>
 

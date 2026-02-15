@@ -43,6 +43,10 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
         private set
     var isLoading by mutableStateOf(false)
         private set
+
+    // Loading message for progress indicator
+    var loadingMessage by mutableStateOf("")
+        private set
     
     // Dismiss Firestore result alert.
     fun dismissMessage() {
@@ -66,6 +70,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
         }
         viewModelScope.launch {
             isLoading = true
+            loadingMessage = getApplication<Application>().getString(R.string.savingData)
             isShowAlert = false
             isShowMessage = false
             isFirestoreSuccess = false
@@ -77,6 +82,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             } catch (e: Exception) {
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
                 isLoading = false
+                loadingMessage = ""
                 isShowMessage = true
                 return@launch
             }
@@ -85,6 +91,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 if (user == null || user.email.isNullOrEmpty()) {
                     message = getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
                     isLoading = false
+                    loadingMessage = ""
                     isShowMessage = true
                     return@launch
                 }
@@ -93,6 +100,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             } catch (e: Exception) {
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
                 isLoading = false
+                loadingMessage = ""
                 isShowMessage = true
                 return@launch
             }
@@ -108,6 +116,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 android.util.Log.e("FirestoreViewModel", "Error in setFirestore", e)
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeSaved)
                 isLoading = false
+                loadingMessage = ""
                 isShowMessage = true
             }
         }
@@ -229,12 +238,14 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 message = ""
                 isFirestoreSuccess = true
                 isLoading = false
+                loadingMessage= ""
                 isShowMessage = true
             }
         } catch (e: Exception) {
             android.util.Log.e("FirestoreViewModel", "Error uploading line info", e)
             if (goorback == "go2") {
                 isLoading = false
+                loadingMessage= ""
                 isShowMessage = true
             }
         }
@@ -250,6 +261,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
         }
         viewModelScope.launch {
             isLoading = true
+            loadingMessage = getApplication<Application>().getString(R.string.gettingData)
             isShowAlert = false
             isShowMessage = false
             isFirestoreSuccess = false
@@ -261,6 +273,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             } catch (e: Exception) {
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                 isLoading = false
+                loadingMessage = ""
                 isShowMessage = true
                 return@launch
             }
@@ -269,6 +282,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 if (user == null || user.email.isNullOrEmpty()) {
                     message = getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                     isLoading = false
+                    loadingMessage= ""
                     isShowMessage = true
                     return@launch
                 }
@@ -277,6 +291,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             } catch (e: Exception) {
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                 isLoading = false
+                loadingMessage = ""
                 isShowMessage = true
                 return@launch
             }
@@ -293,6 +308,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                 android.util.Log.e("FirestoreViewModel", "Error in getFirestore", e)
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                 isLoading = false
+                loadingMessage = ""
                 isShowMessage = true
             }
         }
@@ -340,12 +356,14 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
                     message = ""
                     isFirestoreSuccess = true
                     isLoading = false
+                    loadingMessage = ""
                     isShowMessage = true
                 }
             } else {
                 if (goorback == "go2") {
                     message = getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                     isLoading = false
+                    loadingMessage = ""
                     isShowMessage = true
                 }
             }
@@ -354,6 +372,7 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
             if (goorback == "go2") {
                 message = e.message ?: getApplication<Application>().getString(R.string.dataCouldNotBeGot)
                 isLoading = false
+                loadingMessage = ""
                 isShowMessage = true
             }
             throw e
@@ -403,3 +422,4 @@ class FirestoreViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 }
+

@@ -51,6 +51,7 @@ fun LoginContentScreen(
     val email by loginViewModel.email.collectAsState()
     val password by loginViewModel.password.collectAsState()
     val resetEmail by loginViewModel.resetEmail.collectAsState()
+    val loadingMessage by loginViewModel.loadingMessage.collectAsState()
     
     // Clear fields on appear without overwriting logout messages.
     LaunchedEffect(Unit) {
@@ -226,9 +227,7 @@ fun LoginContentScreen(
 
             // Loading indicator.
             if (isLoading) {
-                CommonComponents.CustomProgressIndicator(
-                    text = null
-                )
+                CommonComponents.CustomProgressIndicator(text = loadingMessage)
             }
         }
     }

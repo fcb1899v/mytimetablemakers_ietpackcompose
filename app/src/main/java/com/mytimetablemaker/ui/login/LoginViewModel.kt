@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
+import com.mytimetablemaker.R
 import com.mytimetablemaker.extensions.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -61,6 +62,9 @@ class LoginViewModel(context: Context) : ViewModel() {
     
     private val _isSignUpSuccess = MutableStateFlow(false)
     val isSignUpSuccess: StateFlow<Boolean> = _isSignUpSuccess.asStateFlow()
+
+    private val _loadingMessage = MutableStateFlow("")
+    val loadingMessage: StateFlow<String> = _loadingMessage.asStateFlow()
     
     // Update email value; optionally skip alert overwrite.
     fun updateEmail(value: String, updateAlert: Boolean = true) {
@@ -95,6 +99,7 @@ class LoginViewModel(context: Context) : ViewModel() {
         }
         if (_isLoginSuccess.value) {
             _isLoading.value = true
+            _loadingMessage.value = appContext.getString(R.string.loggingOut)
             viewModelScope.launch {
                 try {
                     auth.signOut()
@@ -107,6 +112,7 @@ class LoginViewModel(context: Context) : ViewModel() {
                     }
                     _isLoginSuccess.value = false
                     _isLoading.value = false
+                    _loadingMessage.value = ""
                     _isShowMessage.value = true
                 } catch (_: Exception) {
                     if (!preserveMessage) {
@@ -118,6 +124,7 @@ class LoginViewModel(context: Context) : ViewModel() {
                     }
                     _isLoginSuccess.value = true
                     _isLoading.value = false
+                    _loadingMessage.value = ""
                     _isShowMessage.value = true
                 }
             }
@@ -144,6 +151,7 @@ class LoginViewModel(context: Context) : ViewModel() {
             _alertMessage.value = ""
             _isLoginSuccess.value = false
             _isLoading.value = true
+            _loadingMessage.value = appContext.getString(R.string.loggingIn)
             viewModelScope.launch {
                 try {
                     val result = auth.signInWithEmailAndPassword(_email.value, _password.value).await()
@@ -156,11 +164,13 @@ class LoginViewModel(context: Context) : ViewModel() {
                             }
                             _isLoginSuccess.value = true
                             _isLoading.value = false
+                            _loadingMessage.value = ""
                             _isShowMessage.value = true
                         } else {
                             _alertTitle.value = ValidationMessages.notVerifiedAccount(appContext)
                             _alertMessage.value = ValidationMessages.confirmEmail(appContext)
                             _isLoading.value = false
+                            _loadingMessage.value = ""
                             _isShowMessage.value = true
                         }
                     }
@@ -170,6 +180,7 @@ class LoginViewModel(context: Context) : ViewModel() {
                     _alertMessage.value = authException?.getLocalizedMessage(appContext)
                         ?: ValidationMessages.loginErrorTitle(appContext)
                     _isLoading.value = false
+                    _loadingMessage.value = ""
                     _isShowMessage.value = true
                 }
             }
@@ -201,6 +212,7 @@ class LoginViewModel(context: Context) : ViewModel() {
             _alertMessage.value = ""
             _isSignUpSuccess.value = false
             _isLoading.value = true
+            _loadingMessage.value = appContext.getString(R.string.signupLoading)
             _isShowMessage.value = false
             viewModelScope.launch {
                 try {
@@ -213,11 +225,13 @@ class LoginViewModel(context: Context) : ViewModel() {
                             _alertMessage.value = ValidationMessages.verificationEmailSent(appContext)
                             _isSignUpSuccess.value = true
                             _isLoading.value = false
+                            _loadingMessage.value = ""
                             _isShowMessage.value = true
                         } catch (_: Exception) {
                             _alertTitle.value = ValidationMessages.signUpErrorTitle(appContext)
                             _alertMessage.value = ValidationMessages.signUpErrorTitle(appContext)
                             _isLoading.value = false
+                            _loadingMessage.value = ""
                             _isShowMessage.value = true
                         }
                     }
@@ -227,6 +241,7 @@ class LoginViewModel(context: Context) : ViewModel() {
                     _alertMessage.value = authException?.getLocalizedMessage(appContext)
                         ?: ValidationMessages.signUpErrorTitle(appContext)
                     _isLoading.value = false
+                    _loadingMessage.value = ""
                     _isShowMessage.value = true
                 }
             }
@@ -241,6 +256,7 @@ class LoginViewModel(context: Context) : ViewModel() {
             _alertTitle.value = ""
             _alertMessage.value = ""
             _isLoading.value = true
+            _loadingMessage.value = appContext.getString(R.string.sendingPasswordResetEmail)
             _isShowMessage.value = false
             viewModelScope.launch {
                 try {
@@ -248,6 +264,7 @@ class LoginViewModel(context: Context) : ViewModel() {
                     _alertTitle.value = ValidationMessages.passwordResetTitle(appContext)
                     _alertMessage.value = ValidationMessages.passwordResetSent(appContext)
                     _isLoading.value = false
+                    _loadingMessage.value = ""
                     _isShowMessage.value = true
                 } catch (e: Exception) {
                     val authException = e as? FirebaseAuthException
@@ -256,6 +273,7 @@ class LoginViewModel(context: Context) : ViewModel() {
                         ValidationMessages.incorrectEmail(appContext)
                     } else authException?.getLocalizedMessage(appContext) ?: ValidationMessages.signUpErrorTitle(appContext)
                     _isLoading.value = false
+                    _loadingMessage.value = ""
                     _isShowMessage.value = true
                 }
             }
@@ -263,6 +281,7 @@ class LoginViewModel(context: Context) : ViewModel() {
             _alertTitle.value = ValidationMessages.inputError(appContext)
             _alertMessage.value = ValidationMessages.enterEmailAgain(appContext)
             _isLoading.value = false
+            _loadingMessage.value = ""
             _isShowMessage.value = true
         }
     }
@@ -296,6 +315,7 @@ class LoginViewModel(context: Context) : ViewModel() {
             return
         }
         _isLoading.value = true
+        _loadingMessage.value = appContext.getString(R.string.deletingAccount)
         _alertTitle.value = ValidationMessages.deleteAccountErrorTitle(appContext)
         _alertMessage.value = ValidationMessages.accountNotDeleted(appContext)
         viewModelScope.launch {
@@ -305,6 +325,7 @@ class LoginViewModel(context: Context) : ViewModel() {
                     _alertTitle.value = ValidationMessages.deleteAccountErrorTitle(appContext)
                     _alertMessage.value = ValidationMessages.accountNotDeleted(appContext)
                     _isLoading.value = false
+                    _loadingMessage.value = ""
                     _isShowMessage.value = true
                     return@launch
                 }
@@ -313,6 +334,7 @@ class LoginViewModel(context: Context) : ViewModel() {
                 user.delete().await()
                 _alertTitle.value = ValidationMessages.deleteAccountSuccess(appContext)
                 _alertMessage.value = ValidationMessages.accountDeletedSuccess(appContext)
+                _loadingMessage.value = ""
                 logOut(preserveMessage = true)
             } catch (e: Exception) {
                 val authException = e as? FirebaseAuthException
@@ -320,6 +342,7 @@ class LoginViewModel(context: Context) : ViewModel() {
                 _alertMessage.value = authException?.getLocalizedMessage(appContext)
                     ?: ValidationMessages.accountNotDeleted(appContext)
                 _isLoading.value = false
+                _loadingMessage.value = ""
                 _isShowMessage.value = true
             }
         }

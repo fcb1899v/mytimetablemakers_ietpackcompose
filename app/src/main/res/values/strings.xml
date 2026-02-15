@@ -375,4 +375,14 @@
     <string name="termsAgreement">Terms agreement</string>
     <string name="appIcon">App Icon</string>
     <string name="splashImage">Splash Image</string>
+
+    <!-- MARK: - Loading Messages (CustomProgressIndicator) -->
+    <string name="loggingIn">Logging in</string>
+    <string name="signupLoading">Creating account</string>
+    <string name="loggingOut">Logging out</string>
+    <string name="deletingAccount">Deleting account</string>
+    <string name="sendingPasswordResetEmail">Sending password reset email</string>
+    <string name="savingData">Saving data</string>
+    <string name="gettingData">Getting data</string>
+
 </resources>
