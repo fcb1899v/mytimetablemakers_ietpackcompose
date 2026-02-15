@@ -40,8 +40,8 @@ android {
         applicationId = "com.mytimetablemaker"
         minSdk = 24
         targetSdk = 36
-        versionCode = 54
-        versionName = "2.0.0"
+        versionCode = 55
+        versionName = "2.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
@@ -67,13 +67,12 @@ android {
         }
         
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            
-            // Get AdMob Banner Unit ID from local.properties or use test ID as fallback
             val admobBannerUnitId = localProperties.getProperty("ADMOB_BANNER_UNIT_ID") 
                 ?: "ca-app-pub-3940256099942544/6300978111"
             
