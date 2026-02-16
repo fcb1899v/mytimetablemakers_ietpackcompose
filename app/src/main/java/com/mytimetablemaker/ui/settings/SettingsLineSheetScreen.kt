@@ -132,15 +132,24 @@ fun SettingsLineSheetScreen(
     val selectedLineDisplayName = remember(selectedLine) {
         selectedLine?.let { viewModel.lineDisplayName(it) } ?: ""
     }
-    
-    // Checkmark Primary only when selection exists AND input text matches selected display name
-    val isOperatorCheckmarkSelected = selectedOperatorCode != null &&
-        (selectedOperatorDisplayName != null && operatorInput.trim() == selectedOperatorDisplayName)
-    val isLineCheckmarkSelected = selectedLine != null && lineInput.trim() == selectedLineDisplayName
-    val isDepartureCheckmarkSelected = selectedDepartureStop != null &&
-        departureStopInput.trim() == (selectedDepartureStop?.displayName() ?: "")
-    val isArrivalCheckmarkSelected = selectedArrivalStop != null &&
-        arrivalStopInput.trim() == (selectedArrivalStop?.displayName() ?: "")
+
+    // Timetable support is determined only by the selected operator (LocalDataSource.hasTrainTimeTable()).
+    val hasTimetableSupport = remember(selectedOperatorCode) { viewModel.hasTimetableSupport() }
+    val isBus = selectedTransportationKind == TransportationLineKind.BUS
+
+    // When hasTimetableSupport is false (e.g. railway without train timetable), treat as not selected so checkmark is not Primary.
+    val isOperatorCheckmarkSelected = (selectedOperatorCode != null &&
+        (selectedOperatorDisplayName != null && operatorInput.trim() == selectedOperatorDisplayName)) &&
+        (isBus || hasTimetableSupport)
+    val isLineCheckmarkSelected = (selectedLine != null &&
+        lineInput.trim() == selectedLineDisplayName) &&
+        (isBus || hasTimetableSupport)
+    val isDepartureCheckmarkSelected = (selectedDepartureStop != null &&
+        departureStopInput.trim() == (selectedDepartureStop?.displayName() ?: "")) &&
+        (isBus || hasTimetableSupport)
+    val isArrivalCheckmarkSelected = (selectedArrivalStop != null &&
+        arrivalStopInput.trim() == (selectedArrivalStop?.displayName() ?: "")) &&
+        (isBus || hasTimetableSupport)
     
     // Track form completeness.
     val isAllNotEmpty by remember(operatorInput, lineInput, departureStopInput, arrivalStopInput, selectedRideTime) {
@@ -404,6 +413,7 @@ fun SettingsLineSheetScreen(
                 // Ride time.
                 RideTimeSection(
                     viewModel = viewModel,
+                    hasTimetableSupport = hasTimetableSupport,
                     selectedRideTime = selectedRideTime,
                     isAllSelected = isAllSelected,
                     onRideTimeChanged = { newValue ->
@@ -1125,13 +1135,13 @@ private fun TimeHeaderText() {
 @Composable
 private fun RideTimeSection(
     viewModel: SettingsLineViewModel,
+    hasTimetableSupport: Boolean,
     selectedRideTime: Int,
     isAllSelected: Boolean,
     onRideTimeChanged: (Int) -> Unit
 ) {
     val context = LocalContext.current
     val sharedPreferences = context.getSharedPreferences("SettingsLineViewModel", Context.MODE_PRIVATE)
-    val hasTimetableSupport by remember { derivedStateOf { viewModel.hasTimetableSupport() } }
     val selectedGoorback by viewModel.selectedGoorbackState.collectAsState()
     val selectedLineNumber by viewModel.selectedLineNumberState.collectAsState()
     

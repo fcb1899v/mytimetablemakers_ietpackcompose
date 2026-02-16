@@ -242,11 +242,11 @@ class SettingsLineViewModel(
     // Localized display name for a line.
     fun lineDisplayName(line: TransportationLine): String = line.displayName()
 
-    // Check if selected line supports timetables.
+    // Whether the selected operator supports timetables. True/false is determined only by LocalDataSource.hasTrainTimeTable() (Enums.kt).
     fun hasTimetableSupport(): Boolean {
-        val operatorCode = _selectedLine.value?.operatorCode ?: return false
+        val operatorCode = selectedOperatorCode.value ?: return false
         val dataSource = LocalDataSource.entries.firstOrNull { it.operatorCode() == operatorCode } ?: return false
-        return dataSource.hasTrainTimeTable() || dataSource.hasBusTimeTable()
+        return dataSource.hasTrainTimeTable()
     }
     
     // Load data from cache, LineData, or API.
