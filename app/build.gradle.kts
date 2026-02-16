@@ -7,14 +7,14 @@ plugins {
 }
 
 // Load local.properties for environment variables
-val localPropertiesFile = rootProject.file("local.properties")
+val localPropertiesFile: File = rootProject.file("local.properties")
 val localProperties = Properties()
 if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use { localProperties.load(it) }
 }
 
 // Load .env file for environment variables (if exists)
-val envFile = rootProject.file(".env")
+val envFile: File = rootProject.file(".env")
 if (envFile.exists()) {
     envFile.readLines().forEach { line ->
         val trimmedLine = line.trim()
@@ -40,8 +40,8 @@ android {
         applicationId = "com.mytimetablemaker"
         minSdk = 24
         targetSdk = 36
-        versionCode = 56
-        versionName = "2.0.2"
+        versionCode = 57
+        versionName = "2.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
