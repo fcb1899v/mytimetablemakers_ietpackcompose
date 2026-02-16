@@ -40,8 +40,8 @@ android {
         applicationId = "com.mytimetablemaker"
         minSdk = 24
         targetSdk = 36
-        versionCode = 55
-        versionName = "2.0.1"
+        versionCode = 56
+        versionName = "2.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
