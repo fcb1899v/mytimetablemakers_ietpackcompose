@@ -114,8 +114,7 @@ fun SplashContentScreen(
                 painter = painterResource(id = R.drawable.splash),
                 contentDescription = stringResource(R.string.splashImage),
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height((ScreenSize.screenHeight().value * 0.7f).dp),
+                    .fillMaxWidth(),
                 contentScale = ContentScale.FillWidth
             )
             

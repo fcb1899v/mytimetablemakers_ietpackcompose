@@ -208,9 +208,7 @@ fun LoginContentScreen(
                 Image(
                     painter = painterResource(id = R.drawable.splash),
                     contentDescription = "Splash Image",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height((ScreenSize.screenHeight().value * 0.7f).dp),
+                    modifier = Modifier.fillMaxWidth(),
                     contentScale = ContentScale.FillWidth
                 )
 

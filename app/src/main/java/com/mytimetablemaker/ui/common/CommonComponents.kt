@@ -53,7 +53,7 @@ import com.mytimetablemaker.ui.theme.*
 // Shared UI components for consistent styling.
 object CommonComponents {
     
-    // Custom button with consistent styling.
+    // Custom button with consistent styling. Optional fontSize/height/cornerRadius for header (scale with screenHeight).
     @Composable
     fun CustomButton(
         title: String,
@@ -62,21 +62,26 @@ object CommonComponents {
         backgroundColor: Color = Accent,
         textColor: Color = White,
         isEnabled: Boolean = true,
+        fontSize: Dp? = null,
+        buttonHeight: Dp? = null,
+        cornerRadius: Dp? = null,
         onClick: () -> Unit
     ) {
+        val effectiveFontSize = fontSize ?: ScreenSize.settingsSheetButtonFontSize()
+        val effectiveHeight = buttonHeight ?: ScreenSize.settingsSheetButtonHeight()
+        val effectiveCornerRadius = cornerRadius ?: ScreenSize.settingsSheetButtonCornerRadius()
+        val sizeModifier = if (buttonHeight != null) Modifier.height(effectiveHeight) else Modifier.fillMaxWidth().height(effectiveHeight)
         Button(
             onClick = onClick,
             enabled = isEnabled,
-            modifier = modifier
-                .fillMaxWidth()
-                .height(ScreenSize.settingsSheetButtonHeight()),
+            modifier = modifier.then(sizeModifier),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isEnabled) backgroundColor else Gray,
                 disabledContainerColor = Gray,
                 contentColor = textColor,
                 disabledContentColor = textColor
             ),
-            shape = RoundedCornerShape(ScreenSize.settingsSheetButtonCornerRadius()),
+            shape = RoundedCornerShape(effectiveCornerRadius),
             contentPadding = PaddingValues(horizontal = 0.dp)
         ) {
             Row(
@@ -95,7 +100,7 @@ object CommonComponents {
                 }
                 Text(
                     text = title,
-                    fontSize = ScreenSize.settingsSheetButtonFontSize().value.sp,
+                    fontSize = effectiveFontSize.value.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor,
                     maxLines = 1,

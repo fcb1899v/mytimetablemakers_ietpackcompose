@@ -1,7 +1,5 @@
 package com.mytimetablemaker.extensions
 
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -23,10 +21,10 @@ object ScreenSize {
     }
     @Composable
     fun customWidth(): Dp = if (screenWidth() < 600.dp) screenWidth() else 600.dp
-    @Composable
-    fun statusBarHeight(): Dp = with(LocalDensity.current) {
-        WindowInsets.statusBars.getTop(this).toDp()
-    }
+//    @Composable
+//    fun statusBarHeight(): Dp = with(LocalDensity.current) {
+//        WindowInsets.statusBars.getTop(this).toDp()
+//    }
 
     // Splash screen sizing.
     @Composable
@@ -38,21 +36,27 @@ object ScreenSize {
     @Composable
     fun splashLoadingSpacing(): Dp = screenHeight() * 0.02f
     
-    // Header and navigation sizing.
+    // Header and navigation sizing. Use screenHeight() so header content scales on tablet portrait.
     @Composable
-    fun headerHeight(): Dp = operationButtonWidth()
+    fun headerHeight(): Dp = screenHeight() * 0.084f
     @Composable
-    fun headerDateFontSize(): Dp = customWidth() / 20f
+    fun headerDateFontSize(): Dp = screenHeight() * 0.024f
     @Composable
-    fun headerDateHeight(): Dp = customWidth() / 30f
+    fun headerDateHeight(): Dp = screenHeight() * 0.024f
     @Composable
-    fun headerDateMargin(): Dp = customWidth() / 6f
+    fun headerDateMargin(): Dp = customWidth() * 0.1f
     @Composable
-    fun headerSettingsButtonSize(): Dp = customWidth() * 0.08f
+    fun headerSettingsButtonSize(): Dp = screenHeight() * 0.03f
+    @Composable
+    fun headerVerticalSpacing(): Dp = screenHeight() * 0.001f
     @Composable
     fun operationButtonWidth(): Dp = customWidth() / 6f
     @Composable
-    fun operationButtonHeight(): Dp = customWidth() / 12f
+    fun operationButtonHeight(): Dp = screenHeight() * 0.036f
+    @Composable
+    fun operationButtonFontSize(): Dp = screenHeight() * 0.016f
+    @Composable
+    fun operationButtonCornerRadius(): Dp = screenHeight() * 0.018f
     @Composable
     fun operationButtonMargin(): Dp = customWidth() / 24f
     
@@ -64,7 +68,7 @@ object ScreenSize {
     @Composable
     fun routeWidth(isShowRoute2: Boolean): Dp = if (isShowRoute2) routeDoubleWidth() else routeSingleWidth()
     @Composable
-    fun routeHeight(): Dp = screenHeight() - admobBannerHeight() - statusBarHeight()
+    fun routeHeight(): Dp = screenHeight() - admobBannerHeight() - headerHeight()
     @Composable
     fun routeSidePadding(): Dp = customWidth() * 0.025f
     @Composable
@@ -100,7 +104,7 @@ object ScreenSize {
     @Composable
     fun admobBannerMinWidth(): Dp = 320.dp
     @Composable
-    fun admobBannerHeight(): Dp = if ((screenHeight() - headerHeight() - 75.dp) < 500.dp) 50.dp else (screenHeight() - headerHeight() - 75.dp) / 10
+    fun admobBannerHeight(): Dp = if (screenHeight() * 0.05f < 50.dp) 50.dp else screenHeight() * 0.05f
 
     // Login screen sizing.
     @Composable
@@ -194,7 +198,7 @@ object ScreenSize {
     @Composable
     fun settingsHeaderIconSize(): Dp = screenHeight() * 0.020f
     @Composable
-    fun settingsHeaderIconSpace(): Dp = screenHeight() * 0.005f
+    fun settingsHeaderIconSpace(): Dp = customWidth() * 0.007f
     @Composable
     fun settingsFontSize(): Dp = screenHeight() * 0.018f
     
@@ -214,7 +218,7 @@ object ScreenSize {
     @Composable
     fun settingsSheetInputFontSize(): Dp = customWidth() * 0.036f
     @Composable
-    fun settingsSheetButtonFontSize(): Dp = customWidth() * 0.036f
+    fun settingsSheetButtonFontSize(): Dp = screenHeight() * 0.018f
     @Composable
     fun settingsSheetInputPaddingHorizontal(): Dp = customWidth() * 0.04f
     @Composable
@@ -258,7 +262,7 @@ object ScreenSize {
     @Composable
     fun settingsLineSheetPickerPadding(): Dp = screenHeight() * 0.000f
     @Composable
-    fun settingsLineSheetGridSpacing(): Dp = screenHeight() * 0.01f
+    fun settingsLineSheetGridSpacing(): Dp = customWidth() * 0.013f
     @Composable
     fun settingsLineSheetSuggestionItemHeight(): Dp = screenHeight() * 0.046f
     @Composable
@@ -302,15 +306,15 @@ object ScreenSize {
 
     // Custom component sizing.
     @Composable
-    fun customToggleSpacing(): Dp = screenHeight() * 0.006f
+    fun customToggleSpacing(): Dp = customWidth() * 0.008f
     @Composable
-    fun customToggleHeight(): Dp = screenHeight() * 0.018f
+    fun customToggleHeight(): Dp = screenHeight() * 0.03f
     @Composable
     fun customTogglePaddingHorizontal(): Dp = customWidth() * 0.02f
     @Composable
-    fun customTextFieldPaddingVertical(): Dp = customWidth() * 0.012f
+    fun customTextFieldPaddingVertical(): Dp = screenHeight() * 0.009f
     @Composable
-    fun customSwitchDefaultHeight(): Dp = customWidth() * 0.05f
+    fun customSwitchDefaultHeight(): Dp = screenHeight() * 0.037f
     @Composable
     fun customProgressIndicatorSize(): Dp = customWidth() * 0.1f
 

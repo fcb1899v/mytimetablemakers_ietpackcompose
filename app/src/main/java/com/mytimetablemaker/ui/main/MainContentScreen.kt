@@ -194,8 +194,10 @@ fun MainContentScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(ScreenSize.headerHeight())
                     .background(Primary),
                 horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(ScreenSize.headerVerticalSpacing()),
             ) {
                 // Date and time display.
                 val context = LocalContext.current
@@ -323,36 +325,40 @@ fun MainContentScreen(
                     CommonComponents.CustomButton(
                         title = stringResource(R.string.back),
                         backgroundColor = if (isBack) Accent else Gray,
-                        modifier = Modifier
-                            .width(ScreenSize.operationButtonWidth())
-                            .height(ScreenSize.operationButtonHeight()),
+                        modifier = Modifier.width(ScreenSize.operationButtonWidth()),
+                        fontSize = ScreenSize.operationButtonFontSize(),
+                        buttonHeight = ScreenSize.operationButtonHeight(),
+                        cornerRadius = ScreenSize.operationButtonCornerRadius(),
                         onClick = { mainViewModel.backButton() }
                     )
                     
                     CommonComponents.CustomButton(
                         title = stringResource(R.string.go),
                         backgroundColor = if (!isBack) Accent else Gray,
-                        modifier = Modifier
-                            .width(ScreenSize.operationButtonWidth())
-                            .height(ScreenSize.operationButtonHeight()),
+                        modifier = Modifier.width(ScreenSize.operationButtonWidth()),
+                        fontSize = ScreenSize.operationButtonFontSize(),
+                        buttonHeight = ScreenSize.operationButtonHeight(),
+                        cornerRadius = ScreenSize.operationButtonCornerRadius(),
                         onClick = { mainViewModel.goButton() }
                     )
                     
                     CommonComponents.CustomButton(
                         title = stringResource(R.string.start),
                         backgroundColor = if (!isTimeStop) Accent else Gray,
-                        modifier = Modifier
-                            .width(ScreenSize.operationButtonWidth())
-                            .height(ScreenSize.operationButtonHeight()),
+                        modifier = Modifier.width(ScreenSize.operationButtonWidth()),
+                        fontSize = ScreenSize.operationButtonFontSize(),
+                        buttonHeight = ScreenSize.operationButtonHeight(),
+                        cornerRadius = ScreenSize.operationButtonCornerRadius(),
                         onClick = { mainViewModel.startButton() }
                     )
                     
                     CommonComponents.CustomButton(
                         title = stringResource(R.string.stop),
                         backgroundColor = if (isTimeStop) Accent else Gray,
-                        modifier = Modifier
-                            .width(ScreenSize.operationButtonWidth())
-                            .height(ScreenSize.operationButtonHeight()),
+                        modifier = Modifier.width(ScreenSize.operationButtonWidth()),
+                        fontSize = ScreenSize.operationButtonFontSize(),
+                        buttonHeight = ScreenSize.operationButtonHeight(),
+                        cornerRadius = ScreenSize.operationButtonCornerRadius(),
                         onClick = { mainViewModel.stopButton() }
                     )
                     
